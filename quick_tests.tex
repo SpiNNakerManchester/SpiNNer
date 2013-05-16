@@ -1,0 +1,21 @@
+\documentclass{article}
+
+\usepackage{savetrees}
+
+\usepackage{tikz}
+\usetikzlibrary{hexagon}
+\usetikzlibrary{positioning}
+
+\usetikzlibrary{external}
+\tikzexternalize[prefix=figures/]
+
+\begin{document}
+	
+	\input{|"python quick_tests.py 1 1"}
+	\input{|"python quick_tests.py 4 4"}
+	\input{|"python quick_tests.py 5 4"}
+	\input{|"python quick_tests.py 5 3"}
+	\input{|"python quick_tests.py 6 4"}
+	\input{|"python quick_tests.py 4 6"}
+	
+\end{document}

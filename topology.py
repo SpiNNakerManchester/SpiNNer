@@ -123,13 +123,27 @@ def to_xy(vector):
 	return (vector[0] - vector[2], vector[1] - vector[2])
 
 
+def hex_to_cartesian(coords):
+	"""
+	Convert a set of hexagonal coordinates into equivalent (for presentation
+	purposes) Cartesian values.
+	"""
+	
+	old_x, old_y = to_xy(coords)
+	
+	new_x = old_x
+	new_y = old_y - (old_x / 2)
+	
+	return (new_x, new_y)
+
+
 def wrap_around(coord, bounds):
 	"""
 	Wrap the coordinate given around the edges of a torus made of hexagonal
 	pieces. Assumes that the world is a NxM arrangement of threeboards (see
 	threeboards function) with bounds = (N, M).
 	
-	XXX: Implementation could be nicer...
+	XXX: Implementation could be nicer (and non iterative)...
 	"""
 	
 	w,h = bounds
@@ -156,12 +170,12 @@ def wrap_around(coord, bounds):
 			continue
 		
 		if left:
-			x += w+h
+			x += w*2
 			y += w
 			continue
 		
 		if right:
-			x -= w+h
+			x -= w*2
 			y -= w
 			continue
 		
