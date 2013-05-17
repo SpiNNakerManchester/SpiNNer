@@ -22,6 +22,8 @@ left-to-right, Y points from bottom-to-top and Z points from
 top-right-to-bottom-left.
 """
 
+from math import cos, pi
+
 ################################################################################
 # Directions
 ################################################################################
@@ -132,9 +134,82 @@ def hex_to_cartesian(coords):
 	old_x, old_y = to_xy(coords)
 	
 	new_x = old_x
-	new_y = old_y - (old_x / 2)
+	new_y = (old_y * 2) - old_x
 	
 	return (new_x, new_y)
+
+
+def hex_to_skew_cartesian(coords):
+	"""
+	Convert a set of hexagonal coordinates into equivalent Cartesian values
+	skewed to make x and y in the coordinate space match x and y in Cartesian
+	space.
+	"""
+	
+	old_x, old_y = to_xy(coords)
+	
+	new_x = old_x + old_y
+	new_y = (old_y * 2) - old_x
+	
+	return (new_x, new_y)
+
+
+def fold_dimension(x, w, f):
+	r"""
+	Takes a coordinate, x, on a single dimension of length w. Returns a tuple
+	(new_x, fold) where new_x is the coordinate after the dimension has been
+	folded into f pieces and fold is the fold number it is on.
+	
+	Input::
+		
+		 ______ w _____
+		|              |
+		-----+----------
+		     |
+		     x
+		
+		      | |
+		     \| |/
+		      \./
+		
+		new_x ___\__.\    f = 3
+		          \/| \
+		            |
+		          fold
+	"""
+	# Must be evenly divisible
+	assert(w % f == 0)
+	
+	# Width of the folded sections
+	fold_width = w / f
+	
+	new_x = x % fold_width
+	fold = (x / fold_width)
+	
+	# If on a reverse-facing fold, flip the coordinate
+	if fold%2:
+		new_x = fold_width - new_x - 1
+	
+	return (new_x, fold)
+
+
+def fold_interleave_dimension(x, w, f):
+	r"""
+	As fold_dimension but returns a new x such that if the following points were
+	folded, they would be mapped like so::
+		
+		 _______   ---\  (0,0) \  / (0,1)  ---\   _______
+		 0 1 2 3   ---/   (1,0) \/ (1,1)   ---/   0 3 1 2
+	
+	That is, it interleaves points which would be mapped to the same position by
+	fold_dimension.
+	"""
+	new_x, fold = fold_dimension(x,w,f)
+	
+	new_x *= f
+	new_x += fold
+	
+	return new_x
 
 
 def wrap_around(coord, bounds):

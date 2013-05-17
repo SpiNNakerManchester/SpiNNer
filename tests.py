@@ -256,12 +256,105 @@ class TopologyTests(unittest.TestCase):
 		self.assertEqual(topology.wrap_around((-2,2,0), (1,1)), (0,0,0))
 	
 	
-	def test_boardxyz_to_cartesian(self):
+	def test_hex_to_cartesian(self):
 		# Test single element cases
 		self.assertEqual(topology.hex_to_cartesian((0,0,0)), (0,0))
-		self.assertEqual(topology.hex_to_cartesian((1,0,0)), (1,0))
-		self.assertEqual(topology.hex_to_cartesian((10,0,0)), (10,-5))
-		self.assertEqual(topology.hex_to_cartesian((0,10,0)), (0,10))
+		self.assertEqual(topology.hex_to_cartesian((0,1,0)), (0,2))
+		self.assertEqual(topology.hex_to_cartesian((1,1,0)), (1,1))
+	
+	
+	def test_hex_to_skew_cartesian(self):
+		# Test single element cases
+		self.assertEqual(topology.hex_to_skew_cartesian((0,0,0)), (0,0))
+		self.assertEqual(topology.hex_to_skew_cartesian((0,1,0)), (1,2))
+		self.assertEqual(topology.hex_to_skew_cartesian((1,1,0)), (2,1))
+	
+	
+	def test_fold_dimension(self):
+		# No folding
+		self.assertEqual(topology.fold_dimension(0, 4, 1), (0,0))
+		self.assertEqual(topology.fold_dimension(1, 4, 1), (1,0))
+		self.assertEqual(topology.fold_dimension(2, 4, 1), (2,0))
+		self.assertEqual(topology.fold_dimension(3, 4, 1), (3,0))
+		
+		# Single fold (into two sides)
+		# Folds for things on the first side
+		self.assertEqual(topology.fold_dimension(0, 4, 2), (0,0))
+		self.assertEqual(topology.fold_dimension(1, 4, 2), (1,0))
+		# Folds on the inside
+		self.assertEqual(topology.fold_dimension(2, 4, 2), (1,1))
+		self.assertEqual(topology.fold_dimension(3, 4, 2), (0,1))
+		
+		# Odd number of folds (into three pieces)
+		self.assertEqual(topology.fold_dimension(0, 9, 3), (0,0))
+		self.assertEqual(topology.fold_dimension(1, 9, 3), (1,0))
+		self.assertEqual(topology.fold_dimension(2, 9, 3), (2,0))
+		
+		self.assertEqual(topology.fold_dimension(3, 9, 3), (2,1))
+		self.assertEqual(topology.fold_dimension(4, 9, 3), (1,1))
+		self.assertEqual(topology.fold_dimension(5, 9, 3), (0,1))
+		
+		self.assertEqual(topology.fold_dimension(6, 9, 3), (0,2))
+		self.assertEqual(topology.fold_dimension(7, 9, 3), (1,2))
+		self.assertEqual(topology.fold_dimension(8, 9, 3), (2,2))
+		
+		
+		# Folded twice (into four sides)
+		# Front
+		self.assertEqual(topology.fold_dimension(0, 12, 4), (0,0))
+		self.assertEqual(topology.fold_dimension(1, 12, 4), (1,0))
+		self.assertEqual(topology.fold_dimension(2, 12, 4), (2,0))
+		# Mid Front
+		self.assertEqual(topology.fold_dimension(3, 12, 4), (2,1))
+		self.assertEqual(topology.fold_dimension(4, 12, 4), (1,1))
+		self.assertEqual(topology.fold_dimension(5, 12, 4), (0,1))
+		# Mid Back
+		self.assertEqual(topology.fold_dimension(6, 12, 4), (0,2))
+		self.assertEqual(topology.fold_dimension(7, 12, 4), (1,2))
+		self.assertEqual(topology.fold_dimension(8, 12, 4), (2,2))
+		# Back
+		self.assertEqual(topology.fold_dimension(9, 12, 4), (2,3))
+		self.assertEqual(topology.fold_dimension(10, 12, 4), (1,3))
+		self.assertEqual(topology.fold_dimension(11, 12, 4), (0,3))
+	
+	
+	def test_fold_interleave_dimension(self):
+		# No folds
+		self.assertEqual(topology.fold_interleave_dimension(0, 4, 1), 0)
+		self.assertEqual(topology.fold_interleave_dimension(1, 4, 1), 1)
+		self.assertEqual(topology.fold_interleave_dimension(2, 4, 1), 2)
+		self.assertEqual(topology.fold_interleave_dimension(3, 4, 1), 3)
+		
+		# Two sides (one fold)
+		self.assertEqual(topology.fold_interleave_dimension(0, 4, 2), 0)
+		self.assertEqual(topology.fold_interleave_dimension(3, 4, 2), 1)
+		self.assertEqual(topology.fold_interleave_dimension(1, 4, 2), 2)
+		self.assertEqual(topology.fold_interleave_dimension(2, 4, 2), 3)
+		
+		# Odd number of sides
+		self.assertEqual(topology.fold_interleave_dimension(0, 9, 3), 0)
+		self.assertEqual(topology.fold_interleave_dimension(5, 9, 3), 1)
+		self.assertEqual(topology.fold_interleave_dimension(6, 9, 3), 2)
+		self.assertEqual(topology.fold_interleave_dimension(1, 9, 3), 3)
+		self.assertEqual(topology.fold_interleave_dimension(4, 9, 3), 4)
+		self.assertEqual(topology.fold_interleave_dimension(7, 9, 3), 5)
+		self.assertEqual(topology.fold_interleave_dimension(2, 9, 3), 6)
+		self.assertEqual(topology.fold_interleave_dimension(3, 9, 3), 7)
+		self.assertEqual(topology.fold_interleave_dimension(8, 9, 3), 8)
+		
+		# Four sides (2 folds)
+		self.assertEqual(topology.fold_interleave_dimension(0, 12, 4), 0)
+		self.assertEqual(topology.fold_interleave_dimension(5, 12, 4), 1)
+		self.assertEqual(topology.fold_interleave_dimension(6, 12, 4), 2)
+		self.assertEqual(topology.fold_interleave_dimension(11, 12, 4), 3)
+		self.assertEqual(topology.fold_interleave_dimension(1, 12, 4), 4)
+		self.assertEqual(topology.fold_interleave_dimension(4, 12, 4), 5)
+		self.assertEqual(topology.fold_interleave_dimension(7, 12, 4), 6)
+		self.assertEqual(topology.fold_interleave_dimension(10, 12, 4), 7)
+		self.assertEqual(topology.fold_interleave_dimension(2, 12, 4), 8)
+		self.assertEqual(topology.fold_interleave_dimension(3, 12, 4), 9)
+		self.assertEqual(topology.fold_interleave_dimension(8, 12, 4), 10)
+		self.assertEqual(topology.fold_interleave_dimension(9, 12, 4), 11)
 
 
 class ModelTests(unittest.TestCase):
@@ -270,12 +363,12 @@ class ModelTests(unittest.TestCase):
 	"""
 	
 	TEST_CASES = [ (1,1), (2,2), (3,3), (4,4), # Square: odd & even
-	               (3,5), (5,3), # Rectangular: odd/odd
-	               (2,4), (4,2), # Rectangular: even/even
-	               (3,4), (4,3), # Rectangular: odd/even
-	               (1,4), (4,1), # 1-dimension: even
-	               (1,3), (3,1), # 1-dimension: odd
-	               (20,20) # Full size (106 machine)
+	               #(3,5), (5,3), # Rectangular: odd/odd
+	               #(2,4), (4,2), # Rectangular: even/even
+	               #(3,4), (4,3), # Rectangular: odd/even
+	               #(1,4), (4,1), # 1-dimension: even
+	               #(1,3), (3,1), # 1-dimension: odd
+	               #(20,20) # Full size (106 machine)
 	             ]
 	
 	def lcm(self, a,b):

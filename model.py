@@ -54,6 +54,10 @@ class Board(object):
 		Follow the path of a packet which entered in to the board via the wire
 		in_wire_side following packet_direction through the chips in the board.
 		Returns a tuple (next_in_wire_side, next_board).
+		
+		We only need to know the side on which the incoming link is on (not the
+		exact chip) because for any incoming side there is a fixed outgoing side
+		when travelling in a fixed direction.
 		"""
 		
 		# Mapping of {(in_wire_side, packet_direction) : out_wire_side,...}
@@ -144,27 +148,23 @@ def follow_packet_loop(start_board, in_wire_side, direction):
 		in_wire_side, cur_board = cur_board.follow_packet(in_wire_side, direction)
 
 
-def rhombus_to_rect(boards, bounds):
-	r"""
-	Takes a rhombus of boards with the bottom left corner at (0,0) (e.g. from
-	create_threeboards) and produces a rectangular arrangement with all
-	coordinates positive like so::
-		
-		_________         ___   ______             _________
-		\        \        \  | |      \           |         |
-		 \        \   -->  \ | |       \      --> |         |
-		  \._______\        \| |._______\ .       |.________|
-		   |                             /;\       |
-		 (0,0)               \___________/       (0,0)
+def compress_layout(boards):
 	"""
-	width, height = bounds
-	
+	Takes a layout with entries spaced out on the x and y axes and compresses them
+	to take up minimal width.
+	"""
 	out = []
-	for board, (old_x,old_y) in boards:
-		# Wrap the elements
-		new_x = old_x + (0 if old_x >= 0 else width*2)
-		new_y = old_y + (0 if old_x >= 0 else width)
-		out.append((board, (new_x, new_y)))
+	
+	boards = [(b,(x,y/2)) for (b,(x,y)) in boards]
+	
+	cur_row = None
+	cur_col = None
+	for board, coords in sorted(boards, key=(lambda (b,c): (c[1], c[0]))):
+		if cur_row != coords[1]:
+			cur_row = coords[1]
+			cur_col = 0
+		out.append((board, (cur_col, cur_row)))
+		cur_col += 1
 	
 	return out
 

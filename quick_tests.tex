@@ -1,21 +1,21 @@
 \documentclass{article}
 
-\usepackage{savetrees}
-
 \usepackage{tikz}
 \usetikzlibrary{hexagon}
 \usetikzlibrary{positioning}
 
-\usetikzlibrary{external}
-\tikzexternalize[prefix=figures/]
+\usepackage[graphics,tightpage,active]{preview}
+
+\newlength{\imagewidth}
+\newlength{\imagescale}
+\pagestyle{empty}
+\thispagestyle{empty}
+
+\PreviewEnvironment{tikzpicture}
 
 \begin{document}
-	
-	\input{|"python quick_tests.py 1 1"}
-	\input{|"python quick_tests.py 4 4"}
-	\input{|"python quick_tests.py 5 4"}
-	\input{|"python quick_tests.py 5 3"}
-	\input{|"python quick_tests.py 6 4"}
-	\input{|"python quick_tests.py 4 6"}
-	
+	%\begin{preview}
+		%\input{|"python quick_tests.py 8 8 4 2 5 1"}
+		\input{|"python quick_tests.py 20 20 4 2 5 1"}
+	%\end{preview}
 \end{document}
