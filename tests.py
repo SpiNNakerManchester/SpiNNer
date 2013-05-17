@@ -363,12 +363,12 @@ class ModelTests(unittest.TestCase):
 	"""
 	
 	TEST_CASES = [ (1,1), (2,2), (3,3), (4,4), # Square: odd & even
-	               #(3,5), (5,3), # Rectangular: odd/odd
-	               #(2,4), (4,2), # Rectangular: even/even
-	               #(3,4), (4,3), # Rectangular: odd/even
-	               #(1,4), (4,1), # 1-dimension: even
-	               #(1,3), (3,1), # 1-dimension: odd
-	               #(20,20) # Full size (106 machine)
+	               (3,5), (5,3), # Rectangular: odd/odd
+	               (2,4), (4,2), # Rectangular: even/even
+	               (3,4), (4,3), # Rectangular: odd/even
+	               (1,4), (4,1), # 1-dimension: even
+	               (1,3), (3,1), # 1-dimension: odd
+	               (20,20) # Full size (106 machine)
 	             ]
 	
 	def lcm(self, a,b):
