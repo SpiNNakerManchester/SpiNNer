@@ -43,7 +43,6 @@ else:
 	
 	b2hc = dict(boards)
 
-max_x,max_y = map(max, *((x,y) for (b,(x,y)) in boards))
 #if not skew:
 #	max_x = w*2 
 #	max_y = (h*3)/2
@@ -52,6 +51,7 @@ max_x,max_y = map(max, *((x,y) for (b,(x,y)) in boards))
 #	max_y = h*3
 
 # Show With Folds
+max_x,max_y = map(max, *((x,y) for (b,(x,y)) in boards))
 boards = [(b, ( topology.fold_interleave_dimension(x,max_x+1,x_folds)
               , topology.fold_interleave_dimension(y,max_y+1,y_folds)
               ))
@@ -64,12 +64,14 @@ boards = [(b, ( topology.fold_interleave_dimension(x,max_x+1,x_folds)
 b2c = dict(boards)
 
 ## Show Fold Gaps
+#max_x,max_y = map(max, *((x,y) for (b,(x,y)) in boards))
 #boards = [(b, ( x + 2*topology.fold_dimension(x,max_x+1,x_folds)[1]
 #              , y + 2*topology.fold_dimension(y,max_y+1,y_folds)[1]
 #              ))
 #          for (b,(x,y)) in boards]
 
 # Show Cabinate Gaps
+max_x,max_y = map(max, *((x,y) for (b,(x,y)) in boards))
 boards = [(b, ( x + 2*topology.fold_dimension(x,max_x+1,x_cabinates)[1]
               , y + 2*topology.fold_dimension(y,max_y+1,y_racks)[1]
               ))
