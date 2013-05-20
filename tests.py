@@ -330,6 +330,98 @@ class TopologyTests(unittest.TestCase):
 		self.assertEqual(topology.cabinetise((3,3), (4,4), 2, 2, 4), (1,1,3))
 
 
+
+class CoordinateTests(unittest.TestCase):
+	"""
+	Tests the coordinate classes
+	"""
+	
+	def test_hexagonal(self):
+		a = coordinates.Hexagonal(1,2,3)
+		b = coordinates.Hexagonal(-1,-1,-1)
+		
+		# Should always equal their equivilent tuples
+		self.assertEqual(a, (1,2,3))
+		self.assertEqual(b, (-1,-1,-1))
+		
+		# Basic operators
+		self.assertEqual(a+b, (0,1,2))
+		self.assertEqual(a-b, (2,3,4))
+		self.assertEqual(abs(b), (1,1,1))
+		
+		# Magnitude
+		self.assertEqual(a.magnitude(), 2)
+		self.assertEqual(b.magnitude(), 0)
+	
+	
+	def test_hexagonal2d(self):
+		a = coordinates.Hexagonal2D(1,2)
+		b = coordinates.Hexagonal2D(-1,-1)
+		
+		# Should always equal their equivilent tuples
+		self.assertEqual(a, (1,2))
+		self.assertEqual(b, (-1,-1))
+		
+		# Basic operators
+		self.assertEqual(a+b, (0,1))
+		self.assertEqual(a-b, (2,3))
+		self.assertEqual(abs(b), (1,1))
+		
+		# Magnitude
+		self.assertEqual(a.magnitude(), 2)
+		self.assertEqual(b.magnitude(), 1)
+	
+	
+	def test_cartesian3d(self):
+		a = coordinates.Cartesian3D(1,2,3)
+		b = coordinates.Cartesian3D(-1,-1,-1)
+		
+		# Should always equal their equivilent tuples
+		self.assertEqual(a, (1,2,3))
+		self.assertEqual(b, (-1,-1,-1))
+		
+		# Basic operators
+		self.assertEqual(a+b, (0,1,2))
+		self.assertEqual(a-b, (2,3,4))
+		self.assertEqual(abs(b), (1,1,1))
+		
+		# Magnitude
+		self.assertEqual(a.magnitude(), (1**2 + 2**2 + 3**2)**0.5)
+		self.assertEqual(b.magnitude(), (3)**0.5)
+	
+	
+	def test_cartesian2d(self):
+		a = coordinates.Cartesian2D(1,2)
+		b = coordinates.Cartesian2D(-1,-1)
+		
+		# Should always equal their equivilent tuples
+		self.assertEqual(a, (1,2))
+		self.assertEqual(b, (-1,-1))
+		
+		# Basic operators
+		self.assertEqual(a+b, (0,1))
+		self.assertEqual(a-b, (2,3))
+		self.assertEqual(abs(b), (1,1))
+		
+		# Magnitude
+		self.assertEqual(a.magnitude(), (1**2 + 2**2)**0.5)
+		self.assertEqual(b.magnitude(), (2)**0.5)
+	
+	
+	def test_cabinet(self):
+		a = coordinates.Cabinet(1,2,3)
+		b = coordinates.Cabinet(-1,-1,-1)
+		
+		# Should always equal their equivilent tuples
+		self.assertEqual(a, (1,2,3))
+		self.assertEqual(b, (-1,-1,-1))
+		
+		# Basic operators
+		self.assertEqual(a+b, (0,1,2))
+		self.assertEqual(a-b, (2,3,4))
+		self.assertEqual(abs(b), (1,1,1))
+
+
 class BoardTests(unittest.TestCase):
 	"""
 	Tests the board model's wiring.
