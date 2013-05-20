@@ -109,10 +109,9 @@ Note: The three axes are non-orthogonal and so various strange things can happen
 when working with such schemes. See the topology module for various useful
 functions.
 """
-class Hexagonal(_HexCoordsMixin , _HexagonalTuple):
+class Hexagonal(_HexCoordsMixin, _HexagonalTuple):
 	def __init__(self, *args, **kwargs):
 		_HexCoordsMixin.__init__(self)
-		_HexagonalTuple.__init__(self, *args, **kwargs)
 
 
 """
@@ -121,7 +120,6 @@ Special case of Hexagonal. Represents the Hexagonal() value with z fixed as 0.
 class Hexagonal2D(_HexCoordsMixin , _Hexagonal2DTuple):
 	def __init__(self, *args, **kwargs):
 		_HexCoordsMixin.__init__(self)
-		_Hexagonal2DTuple.__init__(self, *args, **kwargs)
 
 
 """
@@ -130,12 +128,10 @@ Cartesian coordinates in either 2D or 3D space.
 class Cartesian2D(_CartesianCoordsMixin, _Cartesian2DTuple):
 	def __init__(self, *args, **kwargs):
 		_CartesianCoordsMixin.__init__(self)
-		_Cartesian2DTuple.__init__(self, *args, **kwargs)
 
 class Cartesian3D(_CartesianCoordsMixin, _Cartesian3DTuple):
 	def __init__(self, *args, **kwargs):
 		_CartesianCoordsMixin.__init__(self)
-		_Cartesian3DTuple.__init__(self, *args, **kwargs)
 
 """
 Logical coordinates for locations in a series of cabinets containing racks
@@ -172,11 +168,8 @@ Cabinets are numbered from 0 left-to-right. Racks are numbered from 0
 bottom-to-top. Slots are numbered from 0 left-to-right. Therefore, the slot
 marked with "#" is at the coordinate (2,1,0).
 """
-class Cabinet(namedtuple("Cabinet", ["cabinet","rack","slot"])):
-	pass
 class Cabinet(_ElementwiseCoordsMixin, _CabinetTuple):
 	def __init__(self, *args, **kwargs):
 		_ElementwiseCoordsMixin.__init__(self)
-		_CabinetTuple.__init__(self, *args, **kwargs)
 
 
