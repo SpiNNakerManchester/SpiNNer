@@ -27,7 +27,7 @@ def hex_to_cartesian(boards):
 	"""
 	_assert_coord(boards, coordinates.Hexagonal)
 	
-	return [ (board, coordinates.Cartesian2D(topology.hex_to_cartesian(coord)))
+	return [ (board, topology.hex_to_cartesian(coord))
 	         for (board, coord) in boards
 	       ]
 
@@ -41,7 +41,7 @@ def hex_to_skewed_cartesian(boards):
 	"""
 	_assert_coord(boards, coordinates.Hexagonal)
 	
-	return [ (board, coordinates.Cartesian2D(topology.hex_to_skewed_cartesian(coord)))
+	return [ (board, topology.hex_to_skew_cartesian(coord))
 	         for (board, coord) in boards
 	       ]
 
@@ -67,7 +67,9 @@ def rhombus_to_rect(boards):
 	
 	maxes = map(max, *(c for (b,c) in boards))
 	
-	return [(board, tuple(v%(m+1) for (v,m) in zip(c, maxes))) for (board, c) in boards]
+	return [ (board, type(boards[0][1])(v%(m+1) for (v,m) in zip(c, maxes)))
+	         for (board, c) in boards
+	       ]
 
 
 def compress(boards, x_div = 1, y_div = 2):
@@ -121,10 +123,13 @@ def space_folds(boards, folds, gaps):
 	
 	# Use topology.fold_dimension() to get the fold number and multiply this by
 	# the gap size to get an offset for each value.
-	return [(board, tuple(v + (g*topology.fold_dimension(v,m+1,f)[1])
-	                      for (v,m,f,g)
-	                      in zip(c, maxes, folds, gaps)))
-	        for (board, c) in boards]
+	return [ ( board, type(board[0][1])( v + (g*topology.fold_dimension(v,m+1,f)[1])
+	                                     for (v,m,f,g)
+	                                     in zip(c, maxes, folds, gaps)
+	                                   )
+	         )
+	         for (board, c) in boards
+	       ]
 
 
 def fold(boards, folds):
@@ -154,10 +159,12 @@ def fold(boards, folds):
 	
 	# Use topology.fold_dimension() to get the fold number and multiply this by
 	# the gap size to get an offset for each value.
-	return [(board, tuple(topology.fold_interleave_dimension(v,m+1,f)[1]
-	                      for (v,m,f)
-	                      in zip(c, maxes, folds)))
-	        for (board, c) in boards]
+	return [ (board, type(board[0][1])( topology.fold_interleave_dimension(v,m+1,f)[1]
+	                                    for (v,m,f)
+	                                    in zip(c, maxes, folds)
+	                                  ))
+	         for (board, c) in boards
+	       ]
 
 
 def cabinetise(boards, num_cabinets, racks_per_cabinet, slots_per_rack = None):
@@ -178,6 +185,11 @@ def cabinetise(boards, num_cabinets, racks_per_cabinet, slots_per_rack = None):
 	
 	max_x, max_y = map(max, *(c for (b,c) in boards))
 	
-	return [(board, topology.cabinetise((x,y), (max_x+1, max_y+1),
-	                                    num_cabinets, racks_per_cabinet, slots_per_rack))
-	        for (board, (x,y)) in boards]
+	return [ (board, topology.cabinetise( (x,y)
+	                                    , (max_x+1, max_y+1)
+	                                    , num_cabinets,
+	                                    , racks_per_cabinet,
+	                                    , slots_per_rack
+	                                    )
+	         for (board, (x,y)) in boards
+	       ]
