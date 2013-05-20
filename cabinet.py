@@ -27,22 +27,25 @@ class Slot(object):
 		
 		self.dimensions = dimensions
 		
-		self.wire_position = wire_position \
-		                     or { topology.EAST       : coordinates.Cartesian3D(0.0,0.0,0.0)
-		                        , topology.NORTH_EAST : coordinates.Cartesian3D(0.0,0.0,0.0)
-		                        , topology.NORTH      : coordinates.Cartesian3D(0.0,0.0,0.0)
-		                        , topology.WEST       : coordinates.Cartesian3D(0.0,0.0,0.0)
-		                        , topology.SOUTH_WEST : coordinates.Cartesian3D(0.0,0.0,0.0)
-		                        , topology.SOUTH      : coordinates.Cartesian3D(0.0,0.0,0.0)
-		                        }
+		self.wire_position = wire_position or {}
 	
 	
 	@property
-	def width(self):  return self.dimensions.x
+	def width(self):  return self.dimensions[0]
 	@property
-	def height(self): return self.dimensions.y
+	def height(self): return self.dimensions[1]
 	@property
-	def depth(self):  return self.dimensions.z
+	def depth(self):  return self.dimensions[2]
+	
+	
+	def get_position(self, direction):
+		"""
+		Get the position of the given wire relative to (0,0,0) in this slot. If the
+		direction given is None or was not defined, returns (0,0,0).
+		"""
+		
+		return coordinates.Cartesian3D(
+			*self.wire_position.get(direction, coordinates.Cartesian3D(0.0,0.0,0.0)))
 
 
 class _Container(object):
@@ -80,41 +83,41 @@ class _Container(object):
 		self.grid_size  = grid_size
 		self.spacing    = spacing
 		
-		self.offset = offset if offset not None \
+		self.offset = offset if offset is not None \
 		              else coordinates.Cartesian3D(
-		                     (self.width/2) - (self.bay_width/2),
-		                     (self.height/2) - (self.bay_height/2),
+		                     (self.width/2.0) - (self.bay_width/2.0),
+		                     (self.height/2.0) - (self.bay_height/2.0),
 		                     0,
 		                   )
 		
 		# Make sure the slots fit inside the cabinet...
-		assert(self.bay_width  + self.offset.x <= self.width)
-		assert(self.bay_height + self.offset.y <= self.height)
-		assert(self.bay_depth                  <= self.depth)
+		assert(self.bay_width  + self.offset[0] <= self.width)
+		assert(self.bay_height + self.offset[1] <= self.height)
+		assert(self.bay_depth                   <= self.depth)
 	
 	
 	@property
-	def width(self):  return self.dimensions.x
+	def width(self):  return self.dimensions[0]
 	@property
-	def height(self): return self.dimensions.y
+	def height(self): return self.dimensions[1]
 	@property
-	def depth(self):  return self.dimensions.z
+	def depth(self):  return self.dimensions[2]
 	
 	
 	@property
-	def slot_bay_width(self):
+	def bay_width(self):
 		"""
 		Width of the area holding volumes
 		"""
-		return ((self.volume.width + self.spacing.x) * self.grid_size[0]) - self.spacing.x
+		return ((self.volume.width + self.spacing[0]) * self.grid_size[0]) - self.spacing[0]
 	@property
-	def slot_bay_height(self):
+	def bay_height(self):
 		"""
 		Height of the area holding volumes
 		"""
-		return ((self.volume.height + self.spacing.y) * self.grid_size[1]) - self.spacing.y
+		return ((self.volume.height + self.spacing[1]) * self.grid_size[1]) - self.spacing[1]
 	@property
-	def slot_bay_depth(self): return self.volume.depth
+	def bay_depth(self): return self.volume.depth
 	
 	
 	def get_volume_position(self, volume):
@@ -125,11 +128,11 @@ class _Container(object):
 		col, row = volume
 		
 		return coordinates.Cartesian3D(
-			x = self.offset.x
+			x = self.offset[0]
 			    + ((self.volume.width + self.spacing.x) * col),
-			y = self.offset.y
+			y = self.offset[1]
 			    + ((self.volume.height + self.spacing.y) * row),
-			z = self.offset.z,
+			z = self.offset[2],
 		)
 
 
@@ -139,11 +142,11 @@ class Rack(_Container):
 	"""
 	
 	def __init__( self
+	            , slot = None
 	            , dimensions = coordinates.Cartesian3D(20.0,15.0,20.0)
 	            , num_slots = 16
 	            , slot_spacing = 0.1
 	            , slot_offset = None
-	            , slot = None
 	            ):
 		"""
 		dimensions is a Cartesian3D(width, height, depth).
@@ -177,8 +180,7 @@ class Rack(_Container):
 		
 		slot_position = self.get_volume_position((slot, 0))
 		
-		wire_position = self.slot.wire_position[direction] \
-		                if direction else coordinates.Cartesian3D(0,0,0)
+		wire_position = self.slot.get_position(direction)
 		
 		return coordinates.Cartesian3D( slot_position.x + wire_position.x
 		                              , slot_position.y + wire_position.y
@@ -193,11 +195,11 @@ class Cabinet(_Container):
 	"""
 	
 	def __init__( self
+	            , rack = None
 	            , dimensions = coordinates.Cartesian3D(25.0,100.0,25.0)
 	            , num_racks = 5
 	            , rack_spacing = 2
 	            , rack_offset = None
-	            , rack = None
 	            ):
 		"""
 		dimensions is a Cartesian3D(width, height, depth).
@@ -218,7 +220,7 @@ class Cabinet(_Container):
 		_Container.__init__( self
 		                   , dimensions
 		                   , (1, num_racks)
-		                   , coordinates.Cartesian2D(0.0, slot_spacing)
+		                   , coordinates.Cartesian2D(0.0, rack_spacing)
 		                   , rack_offset
 		                   )
 	
@@ -231,7 +233,7 @@ class Cabinet(_Container):
 		
 		rack_position = self.get_volume_position((0, rack))
 		
-		wire_position = self.rack.get_position(slot, 0)
+		wire_position = self.rack.get_position(slot, direction)
 		
 		return coordinates.Cartesian3D( rack_position.x + wire_position.x
 		                              , rack_position.y + wire_position.y
@@ -246,9 +248,9 @@ class System(object):
 	"""
 	
 	def __init__( self
+	            , cabinet = None
 	            , num_cabinets = 5
 	            , cabinet_spacing = 1
-	            , cabinet = None
 	            ):
 		"""
 		num_cabinets is the number of cabinets in the system
@@ -268,10 +270,10 @@ class System(object):
 		wire) in the system.
 		"""
 		
-		wire_position = self.cabinet.get_position(coord.rack, coord.slot, direction)
+		wire_position = self.cabinet.get_position(coord[1], coord[2], direction)
 		
 		return coordinates.Cartesian3D(
-			wire_position.x + (self.num_cabinets + self.cabinet_spacing) * coord.cabinet,
+			wire_position.x + (self.cabinet.width + self.cabinet_spacing) * coord[0],
 			wire_position.y,
 			wire_position.z,
 		)
