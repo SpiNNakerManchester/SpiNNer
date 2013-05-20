@@ -187,15 +187,15 @@ def cabinetise(boards, num_cabinets, racks_per_cabinet, slots_per_rack = None):
 	
 	return [ (board, topology.cabinetise( (x,y)
 	                                    , (max_x+1, max_y+1)
-	                                    , num_cabinets,
-	                                    , racks_per_cabinet,
+	                                    , num_cabinets
+	                                    , racks_per_cabinet
 	                                    , slots_per_rack
-	                                    )
+	                                    ))
 	         for (board, (x,y)) in boards
 	       ]
 
 
-def cabinet_to_real(boards, system):
+def cabinet_to_physical(boards, system):
 	"""
 	Takes Cabinet coordinates and converts them into Cartesian3D coordinates
 	representing the physical positions of cabinets based on a cabinet.System()
