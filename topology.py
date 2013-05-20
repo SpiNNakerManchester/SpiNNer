@@ -21,8 +21,6 @@ This uses the hexagonal addressing scheme suggested in
 	Mobile Users and Connection Rerouting in Cellular Networks by Nocetti et. al.
 """
 
-from collections import namedtuple
-
 from coordinates import *
 
 ################################################################################
@@ -206,6 +204,14 @@ def wrap_around(coord, bounds):
 ################################################################################
 # Cartesian Coordinate Manipulations
 ################################################################################
+
+
+def euclidean(v):
+	"""
+	The Euclidean distance represented by the given vector.
+	"""
+	return sum(x**2 for x in v) ** 0.5
+
 
 def fold_dimension(x, w, f):
 	r"""
