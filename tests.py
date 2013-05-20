@@ -11,7 +11,7 @@ import unittest
 from itertools import product
 import fractions
 
-import model
+import board
 
 import topology
 
@@ -93,25 +93,6 @@ class TopologyTests(unittest.TestCase):
 		self.assertEqual(topology.to_xy((-2,0,2)), (-4,-2))
 	
 	
-	def test_get_path(self):
-		gp = topology.get_path
-		# Simple case (just a delta and to_shortest_path
-		self.assertEqual(gp((0,0,0), (0,0,0)),   (0,0,0))
-		self.assertEqual(gp((0,0,0), (1,1,0)),   (0,0,-1))
-		self.assertEqual(gp((5,5,0), (10,10,0)), (0,0,-5))
-		
-		# In a repeating 12-12 mesh.
-		# Simple cases: just go straight there
-		self.assertEqual(gp((0,0,0), (0,0,0),   (12,12)), (0,0,0))
-		self.assertEqual(gp((0,0,0), (1,1,0),   (12,12)), (0,0,-1))
-		self.assertEqual(gp((5,5,0), (10,10,0), (12,12)), (0,0,-5))
-		
-		# Have to wrap around the edges for shortest path
-		self.assertEqual(gp((0,0,0), (11,0,0),  (12,12)), (-1,0,0))
-		self.assertEqual(gp((0,0,0), (0,11,0),  (12,12)), (0,-1,0))
-		self.assertEqual(gp((0,0,0), (11,11,0), (12,12)), (0,0,1))
-	
-	
 	def test_hexagon(self):
 		it = topology.hexagon(2)
 		
@@ -134,60 +115,13 @@ class TopologyTests(unittest.TestCase):
 		# Stop now
 		self.assertRaises(StopIteration, it.next)
 	
-	def test_hexagon_edge_link(self):
-		# Get the set of edge nodes for a 4-layer hexagon
-		all_nodes   = set(topology.hexagon(4))
-		inner_nodes = set(topology.hexagon(3))
-		outer_nodes = all_nodes - inner_nodes
-		
-		directions = [
-			topology.EAST,
-			topology.NORTH_EAST,
-			topology.NORTH,
-			topology.WEST,
-			topology.SOUTH_WEST,
-			topology.SOUTH
-		]
-		
-		edges = [
-			topology.EDGE_TOP_LEFT,
-			topology.EDGE_TOP,
-			topology.EDGE_TOP_RIGHT,
-			topology.EDGE_BOTTOM_RIGHT,
-			topology.EDGE_BOTTOM,
-		  topology.EDGE_BOTTOM_LEFT,
-		]
-		
-		# Get the set of outward-facing links as (node_xy,direction) pairs
-		outward_facing_links = []
-		for node in all_nodes:
-			for direction in directions:
-				# Get the node that this link would connect to
-				facing_node = topology.to_xy(
-					topology.add_direction(topology.zero_pad(node), direction))
-				# If that node isn't part of our set, it is an edge link
-				if facing_node not in all_nodes:
-					outward_facing_links.append((node, direction))
-		
-		# Get the set of outward facing links according to the function under test
-		all_links = []
-		for edge in edges:
-			for num in range(8):
-				all_links.append(topology.hexagon_edge_link(edge, num, 4))
-		
-		# No duplicates
-		self.assertEqual(len(all_links), len(set(all_links)))
-		
-		# The algorithm gets every outward facing edge
-		self.assertEqual(set(all_links), set(outward_facing_links))
-	
 	
 	def test_threeboards(self):
 		# Creating no threeboards makes no boards...
 		self.assertEqual(list(topology.threeboards(0)), [])
 		
 		# Creating 2x2 threeboards (throw away the boards...)
-		boards = list(topology.threeboards(2))
+		boards = [topology.to_xy(c) for c in topology.threeboards(2)]
 		self.assertEqual(len(boards), 3*2*2)
 		# Threeboard (0,0)
 		self.assertTrue((0,0) in boards)
@@ -355,11 +289,46 @@ class TopologyTests(unittest.TestCase):
 		self.assertEqual(topology.fold_interleave_dimension(3, 12, 4), 9)
 		self.assertEqual(topology.fold_interleave_dimension(8, 12, 4), 10)
 		self.assertEqual(topology.fold_interleave_dimension(9, 12, 4), 11)
+	
+	
+	def test_cabinetise(self):
+		# Test a 4x4 system exhaustively
+		#                          +---+---+  +---+---+
+		# +---+---+---+---+        |0,3|1,3|  |2,3|3,3|
+		# |0,3|1,3|2,3|3,3|        +---+---+  +---+---+        +-------------+ +-------------+
+		# +---+---+---+---+        |0,2|1,2|  |2,2|3,2|        |+-----------+| |+-----------+|
+		# |0,2|1,2|2,2|3,2|  ---\  +---+---+  +---+---+  ---\  ||02:03:12:13|| ||22:23:32:33||
+		# +---+---+---+---+  ---/                        ---/  |+-----------+| |+-----------+|
+		# |0,1|1,1|2,1|3,1|        +---+---+  +---+---+        ||00:01:10:11:| ||20:21:30:31||
+		# +---+---+---+---+        |0,1|1,1|  |2,1|3,1|        |+-----------+| |+-----------+|
+		# |0,0|1,0|2,0|3,0|        +---+---+  +---+---+        +-------------+ +-------------+
+		# +---+---+---+---+        |0,0|1,0|  |2,0|3,0|
+		#                          +---+---+  +---+---+
+		
+		self.assertEqual(topology.cabinetise((0,0), (4,4), 2, 2, 4), (0,0,0))
+		self.assertEqual(topology.cabinetise((0,1), (4,4), 2, 2, 4), (0,0,1))
+		self.assertEqual(topology.cabinetise((1,0), (4,4), 2, 2, 4), (0,0,2))
+		self.assertEqual(topology.cabinetise((1,1), (4,4), 2, 2, 4), (0,0,3))
+		
+		self.assertEqual(topology.cabinetise((0,2), (4,4), 2, 2, 4), (0,1,0))
+		self.assertEqual(topology.cabinetise((0,3), (4,4), 2, 2, 4), (0,1,1))
+		self.assertEqual(topology.cabinetise((1,2), (4,4), 2, 2, 4), (0,1,2))
+		self.assertEqual(topology.cabinetise((1,3), (4,4), 2, 2, 4), (0,1,3))
+		
+		self.assertEqual(topology.cabinetise((2,0), (4,4), 2, 2, 4), (1,0,0))
+		self.assertEqual(topology.cabinetise((2,1), (4,4), 2, 2, 4), (1,0,1))
+		self.assertEqual(topology.cabinetise((3,0), (4,4), 2, 2, 4), (1,0,2))
+		self.assertEqual(topology.cabinetise((3,1), (4,4), 2, 2, 4), (1,0,3))
+		
+		self.assertEqual(topology.cabinetise((2,2), (4,4), 2, 2, 4), (1,1,0))
+		self.assertEqual(topology.cabinetise((2,3), (4,4), 2, 2, 4), (1,1,1))
+		self.assertEqual(topology.cabinetise((3,2), (4,4), 2, 2, 4), (1,1,2))
+		self.assertEqual(topology.cabinetise((3,3), (4,4), 2, 2, 4), (1,1,3))
 
 
-class ModelTests(unittest.TestCase):
+class BoardTests(unittest.TestCase):
 	"""
-	Tests the model functions
+	Tests the board model's wiring.
 	"""
 	
 	TEST_CASES = [ (1,1), (2,2), (3,3), (4,4), # Square: odd & even
@@ -381,9 +350,9 @@ class ModelTests(unittest.TestCase):
 	def test_threeboard_packets(self):
 		# Exhaustively check that packets travelling in each direction take the
 		# correct number of hops to wrap back according to Simon Davidson's model.
-		for testcase in ModelTests.TEST_CASES:
+		for testcase in BoardTests.TEST_CASES:
 			w, h = testcase
-			boards = model.create_threeboards(w, h)
+			boards = board.create_torus(w, h)
 			
 			# Try starting from every board
 			for start_board, start_coord in boards:
@@ -400,7 +369,7 @@ class ModelTests(unittest.TestCase):
 					for entry_point in [topology.opposite(direction)
 					                   , topology.next_ccw(topology.opposite(direction))
 					                   ]:
-						num_boards = len(list(model.follow_packet_loop(start_board, entry_point, direction)))
+						num_boards = len(list(board.follow_packet_loop(start_board, entry_point, direction)))
 						# For every threeboard traversed, the number of chips traversed is 3*l
 						# where l is the number of rings in the hexagon. Travelling in one
 						# direction we pass through a threeboard every two boards traversed so

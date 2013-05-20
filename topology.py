@@ -11,6 +11,9 @@ Contains:
     as directions)
   * Functions for addressing in a hexagonal world.
   * Functions for generating arrangements of hexagons.
+  * Functions for Generation arrangements of spinnaker boards
+  * Functions for transforming Cartesian coordinates
+  * Functions for working with cabinets
 
 This uses the addressing scheme suggested in
 
@@ -22,7 +25,7 @@ left-to-right, Y points from bottom-to-top and Z points from
 top-right-to-bottom-left.
 """
 
-from math import cos, pi
+from coordinates import *
 
 ################################################################################
 # Directions
@@ -86,7 +89,8 @@ def add_direction(vector, direction):
 		SOUTH_WEST: ( 0, 0, 1),
 	}
 	
-	return tuple(v + a for (v,a) in zip(vector, add[direction]))
+	return Hexagonal(*(v + a for (v,a) in zip(vector, add[direction])))
+
 
 def manhattan(vector):
 	"""
@@ -115,14 +119,14 @@ def to_shortest_path(vector):
 	# freely without effect on the destination reached. As a result, simply
 	# subtract the median value from all dimensions to yield the shortest path.
 	median = median_element(vector)
-	return tuple(v - median for v in vector)
+	return Hexagonal(*(v - median for v in vector))
 
 
 def to_xy(vector):
 	"""
 	Takes a 3D vector and returns the equivalent 2D version.
 	"""
-	return (vector[0] - vector[2], vector[1] - vector[2])
+	return Hexagonal2D(vector[0] - vector[2], vector[1] - vector[2])
 
 
 def hex_to_cartesian(coords):
@@ -136,7 +140,7 @@ def hex_to_cartesian(coords):
 	new_x = old_x
 	new_y = (old_y * 2) - old_x
 	
-	return (new_x, new_y)
+	return Cartesian2D(new_x, new_y)
 
 
 def hex_to_skew_cartesian(coords):
@@ -151,7 +155,9 @@ def hex_to_skew_cartesian(coords):
 	new_x = old_x + old_y
 	new_y = (old_y * 2) - old_x
 	
-	return (new_x, new_y)
+	return Hexagonal2D(new_x, new_y)
+
+
 def wrap_around(coord, bounds):
 	"""
 	Wrap the coordinate given around the edges of a torus made of hexagonal
@@ -206,59 +212,7 @@ def wrap_around(coord, bounds):
 		
 		break
 	
-	return (x,y,0)
-
-
-def get_path(src, dst, bounds = None):
-	"""
-	Gets the shortest path from src to dst.
-	
-	XXX: Might be buggy.
-	
-	If bounds is given it must be a 2-tuple specifying the (x,y) dimensions of the
-	mesh size. The path will then be allowed to 'wrap-around', otherwise it will
-	not.
-	"""
-	assert(len(src) == len(dst) == 3)
-	assert(bounds is None or len(bounds) == 2)
-	
-	src = to_xy(src)
-	dst = to_xy(dst)
-	
-	# If bounded, re-centre the world around the source
-	if bounds is not None:
-		delta = None
-		# This is a terrible hack. Re-centre the world around the bottom left,
-		# center and top-right in order to find the /actual/ shortest path. I and
-		# a number of other very helpful people have spent literally hours and hours
-		# on trying to solve this problem elegantly before I gave up and did this...
-		for centre in (0.0, 0.5, 1):
-			new_dst = ( ((dst[0] - src[0]) + int(bounds[0]*centre))   % bounds[0]
-			          , ((dst[1] - src[1]) + int(bounds[1]*centre))   % bounds[1]
-			          , 0
-			          )
-			new_src = ( int(bounds[0]*centre)
-			          , int(bounds[1]*centre)
-			          , 0
-			          )
-			new_delta = to_shortest_path(zero_pad(tuple(d-s for (s,d) in zip(new_src, new_dst))))
-			if delta is None or manhattan(new_delta) < manhattan(delta):
-				delta = new_delta
-		
-	else:
-		# The path is simply a delta of the source and destination
-		delta = to_shortest_path(zero_pad(tuple(d-s for (s,d) in zip(src, dst))))
-	
-	# Return the shortest path to the given point
-	return delta
-
-
-def zero_pad(vector, length = 3):
-	"""
-	Zero pad a vector to the required length.
-	"""
-	return tuple((list(vector) + ([0]*length))[:length])
-
+	return Hexagonal(x,y,0)
 
 
 
@@ -325,6 +279,11 @@ def fold_interleave_dimension(x, w, f):
 	return new_x
 
 
+################################################################################
+# Cabinets
+################################################################################
+
+
 def cabinetise(coord, bounds, num_cabinets, racks_per_cabinet, slots_per_rack = None):
 	r"""
 	Takes a set of Cartesian coordinates and maps them into a series of cabinets.
@@ -355,8 +314,8 @@ def cabinetise(coord, bounds, num_cabinets, racks_per_cabinet, slots_per_rack = 
 	assert(slots_per_rack is None or
 	       ((w * h)) / num_cabinets / racks_per_cabinet <= slots_per_rack)
 	
-	cols_per_cabinet = (max_x+1) / num_cabinets
-	rows_per_rack    = (max_y+1) / racks_per_cabinet
+	cols_per_cabinet = w / num_cabinets
+	rows_per_rack    = h / racks_per_cabinet
 	
 	cabinet = x / cols_per_cabinet
 	rack    = y / rows_per_rack
@@ -366,9 +325,9 @@ def cabinetise(coord, bounds, num_cabinets, racks_per_cabinet, slots_per_rack = 
 	y %= rows_per_rack
 	
 	# Interleave into slot number
-	slot = x + (cols_per_cabinet * y)
+	slot = y + (cols_per_cabinet * x)
 	
-	return (cabinet, rack, slot)
+	return Cabinet(cabinet, rack, slot)
 
 
 
@@ -424,84 +383,10 @@ def hexagon(layers = 4):
 			next_position[X] += 1
 
 
-def hexagon_edge_link(edge, num, layers=4):
-	"""
-	Given an edge (EDGE_*) and an num (0-(layers*2 - 1)) returns the ((x,y),
-	direction) pair of the relevant link.
-	
-	The "edges" of a layers=4 hexagon are given below
-	           11111111
-	         00# # # #22
-	       00# # # # #22   0 = EDGE_TOP_LEFT
-	     00# # # # # #22   1 = EDGE_TOP
-	   00# # # # # # #22   2 = EDGE_TOP_RIGHT
-	  5# # # # 0 # # #3    3 = EDGE_BOTTOM_RIGHT
-	 55# # # # # # #33     4 = EDGE_BOTTOM
-	 55# # # # # #33       5 = EDGE_BOTTOM_LEFT
-	 55# # # # #33
-	  5444444443
-	
-	XXX: This function is implemented in a way which works but which may not be
-	especially logical, unfortunately I don't understand how these edges are
-	defined well enough to do better...
-	"""
-	assert(0 <= num < layers*2)
-	
-	# The coordinate to start iterating over the links
-	edge_start = {
-		EDGE_TOP         : (0,           layers    ),
-		EDGE_TOP_LEFT    : (-layers,     0         ),
-		EDGE_BOTTOM_LEFT : (-layers,    -layers + 1),
-		EDGE_BOTTOM      : (-layers,    -layers + 1),
-		EDGE_BOTTOM_RIGHT: (0,          -layers + 1),
-		EDGE_TOP_RIGHT   : (layers - 1, 0),
-	}[edge]
-	
-	# The direction in which consecutive nodes on the edge go
-	edge_direction = {
-		EDGE_TOP         : ( 1, 0),
-		EDGE_TOP_LEFT    : ( 1, 1),
-		EDGE_BOTTOM_LEFT : ( 0, 1),
-		EDGE_BOTTOM      : ( 1, 0),
-		EDGE_BOTTOM_RIGHT: ( 1, 1),
-		EDGE_TOP_RIGHT   : ( 0, 1),
-	}[edge]
-	
-	# The pair of directions of links which this edge exposes.
-	edge_links = {
-		EDGE_TOP         : (NORTH,      NORTH_EAST),
-		EDGE_TOP_LEFT    : (NORTH,      WEST),
-		EDGE_BOTTOM_LEFT : (SOUTH_WEST, WEST),
-		EDGE_BOTTOM      : (SOUTH,      SOUTH_WEST), # Opposite links for the opposite edge
-		EDGE_BOTTOM_RIGHT: (SOUTH,      EAST),
-		EDGE_TOP_RIGHT   : (NORTH_EAST, EAST),
-	}[edge]*layers
-	
-	# Does the first (and last) node in this set of links only have one link exposed?
-	first_node_single = {
-		EDGE_TOP         : False,
-		EDGE_TOP_LEFT    : True,
-		EDGE_BOTTOM_LEFT : False,
-		EDGE_BOTTOM      : True,
-		EDGE_BOTTOM_RIGHT: False,
-		EDGE_TOP_RIGHT   : True,
-	}[edge]
-	
-	# Get the offset into the edges nodes
-	node_offset = (num+first_node_single) / 2
-	
-	# Get the address of the node at that offset
-	node = tuple(s+(o*node_offset) for (s,o) in zip(edge_start, edge_direction))
-	
-	# The link direction from the target node
-	link_direction = edge_links[num%2]
-	
-	return node, link_direction
-
 
 
 ################################################################################
-# Tripple Generation
+# Threeboard Generation
 ################################################################################
 
 
@@ -562,4 +447,4 @@ def threeboards(width = 1, height = None):
 				#           |       |        |
 				x_coord = (x*2) + (-y) + (z >= 2)
 				y_coord = (x  ) + ( y) + (z >= 1)
-				yield (x_coord,y_coord,0)
+				yield Hexagonal(x_coord,y_coord,0)

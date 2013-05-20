@@ -17,6 +17,13 @@ functions.
 """
 Hexagonal = namedtuple("Hexagonal", ["x","y","z"])
 
+
+"""
+Special case of Hexagonal. Represents the Hexagonal() value with z fixed as 0.
+"""
+Hexagonal2D = namedtuple("Hexagonal2D", ["x","y"])
+
+
 """
 Cartesian coordinates in either 2D or 3D space.
 """
