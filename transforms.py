@@ -193,3 +193,15 @@ def cabinetise(boards, num_cabinets, racks_per_cabinet, slots_per_rack = None):
 	                                    )
 	         for (board, (x,y)) in boards
 	       ]
+
+
+def cabinet_to_real(boards, system):
+	"""
+	Takes Cabinet coordinates and converts them into Cartesian3D coordinates
+	representing the physical positions of cabinets based on a cabinet.System()
+	specification.
+	"""
+	_assert_coord(boards, coordinates.Cabinet)
+	
+	return [(board, system.get_position(coord)) for (board,coord) in boards]
+
