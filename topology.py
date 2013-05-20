@@ -25,6 +25,8 @@ left-to-right, Y points from bottom-to-top and Z points from
 top-right-to-bottom-left.
 """
 
+from collections import namedtuple
+
 from coordinates import *
 
 ################################################################################
@@ -58,18 +60,6 @@ def opposite(direction):
 	Returns the opposite direction
 	"""
 	return (direction+3)%6
-
-
-################################################################################
-# Edges of a hexagon of chips
-################################################################################
-
-EDGE_TOP         = 0
-EDGE_TOP_LEFT    = 1
-EDGE_BOTTOM_LEFT = 2
-EDGE_BOTTOM      = 3
-EDGE_BOTTOM_RIGHT= 4
-EDGE_TOP_RIGHT   = 5
 
 
 ################################################################################
@@ -155,7 +145,7 @@ def hex_to_skew_cartesian(coords):
 	new_x = old_x + old_y
 	new_y = (old_y * 2) - old_x
 	
-	return Hexagonal2D(new_x, new_y)
+	return Cartesian2D(new_x, new_y)
 
 
 def wrap_around(coord, bounds):
@@ -328,7 +318,6 @@ def cabinetise(coord, bounds, num_cabinets, racks_per_cabinet, slots_per_rack = 
 	slot = y + (cols_per_cabinet * x)
 	
 	return Cabinet(cabinet, rack, slot)
-
 
 
 
