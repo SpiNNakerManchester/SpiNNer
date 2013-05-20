@@ -5,6 +5,7 @@ The representation of a board in a system.
 """
 
 import topology
+import coordinates
 
 
 class Board(object):
@@ -84,3 +85,34 @@ class Board(object):
 	def __repr__(self):
 		return "Board()"
 
+
+
+def create_torus(width = 1, height = None):
+	"""
+	Returns a mapping of boards containing width * height threeboards connected in
+	a torus with corresponding hexagonal coordinates. If height is not specified,
+	height = width.
+	"""
+	
+	height = width if height is None else height
+	
+	boards = {}
+	
+	# Create the boards
+	for coord in topology.threeboards(width, height):
+		boards[coordinates.Hexagonal(*coord)] = Board()
+	
+	# Link the boards together
+	for coord in boards:
+		for direction in [ topology.EAST
+		                 , topology.NORTH_EAST
+		                 , topology.NORTH
+		                 ]:
+			# Get the coordinate of the neighbour in each direction
+			n_coord = topology.wrap_around(
+			            topology.add_direction(list(coord)+[0], direction), (width, height))
+			
+			# Connect the boards together
+			boards[coord].connect_wire(boards[n_coord], direction)
+	
+	return [(b, c) for (c, b) in boards.iteritems()]

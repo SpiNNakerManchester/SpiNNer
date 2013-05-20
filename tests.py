@@ -351,6 +351,20 @@ class BoardTests(unittest.TestCase):
 		return abs(a * b) / fractions.gcd(a,b) if a and b else 0
 	
 	
+	def follow_packet_loop(self, start_board, in_wire_side, direction):
+		"""
+		Follows the path of a packet entering on in_wire_side of start_board
+		travelling in the direction given.
+		
+		Generates a sequence of (in_wire_side, board) tuples that were traversed.
+		"""
+		yield(in_wire_side, start_board)
+		in_wire_side, cur_board = start_board.follow_packet(in_wire_side, direction)
+		while cur_board != start_board:
+			yield(in_wire_side, cur_board)
+			in_wire_side, cur_board = cur_board.follow_packet(in_wire_side, direction)
+	
+	
 	def test_threeboard_packets(self):
 		# Exhaustively check that packets travelling in each direction take the
 		# correct number of hops to wrap back according to Simon Davidson's model.
@@ -373,7 +387,7 @@ class BoardTests(unittest.TestCase):
 					for entry_point in [topology.opposite(direction)
 					                   , topology.next_ccw(topology.opposite(direction))
 					                   ]:
-						num_boards = len(list(board.follow_packet_loop(start_board, entry_point, direction)))
+						num_boards = len(list(self.follow_packet_loop(start_board, entry_point, direction)))
 						# For every threeboard traversed, the number of chips traversed is 3*l
 						# where l is the number of rings in the hexagon. Travelling in one
 						# direction we pass through a threeboard every two boards traversed so
