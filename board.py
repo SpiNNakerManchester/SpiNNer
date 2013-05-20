@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
 """
-The representation of a board in a system.
+A representation of Boards linked by wires in a SpiNNaker system along with
+utilities for creating systems of them and iterating over them.
 """
 
 import topology
@@ -116,3 +117,32 @@ def create_torus(width = 1, height = None):
 			boards[coord].connect_wire(boards[n_coord], direction)
 	
 	return [(b, c) for (c, b) in boards.iteritems()]
+
+
+
+def follow_wiring_loop(start_board, direction):
+	"""
+	Follows the 'direction' wire until it gets back to the starting board. Yields
+	a sequence of boards starting with start_board along this path.
+	"""
+	yield(start_board)
+	cur_board = start_board.follow_wire(direction)
+	while cur_board != start_board:
+		yield(cur_board)
+		cur_board = cur_board.follow_wire(direction)
+
+
+
+def follow_packet_loop(start_board, in_wire_side, direction):
+	"""
+	Follows the path of a packet entering on in_wire_side of start_board
+	travelling in the direction given.
+	
+	Yields a sequence of (in_wire_side, board) tuples starting with those
+	supplied.
+	"""
+	yield(in_wire_side, start_board)
+	in_wire_side, cur_board = start_board.follow_packet(in_wire_side, direction)
+	while cur_board != start_board:
+		yield(in_wire_side, cur_board)
+		in_wire_side, cur_board = cur_board.follow_packet(in_wire_side, direction)
