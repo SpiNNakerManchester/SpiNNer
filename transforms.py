@@ -178,31 +178,6 @@ def cabinetise(boards, num_cabinets, racks_per_cabinet, slots_per_rack = None):
 	
 	max_x, max_y = map(max, *(c for (b,c) in boards))
 	
-	# Must be divisible into cabinets
-	assert((max_x+1) % num_cabinets == 0)
-	
-	# Must be divisible into racks
-	assert((max_y+1) % racks_per_cabinet == 0)
-	
-	# Must be able to fit in the given number of slots.
-	assert(slots_per_rack is None or
-	       (((max_x + 1) * (max_y + 1))) / num_cabinets / racks_per_cabinet
-	         <= slots_per_rack)
-	
-	cols_per_cabinet = (max_x+1) / num_cabinets
-	rows_per_rack    = (max_y+1) / racks_per_cabinet
-	
-	def to_position(x,y):
-		cabinet = x / cols_per_cabinet
-		rack    = y / rows_per_rack
-		
-		# Sub coordinate within the rack
-		x %= cols_per_cabinet
-		y %= rows_per_rack
-		
-		# Interleave into slot number
-		slot = x + (cols_per_cabinet * y)
-		
-		return coordinates.Cabinet(cabinet, rack, slot)
-	
-	return [(board, to_position(x,y)) for (board, (x,y)) in boards]
+	return [(board, topology.cabinetise((x,y), (max_x+1, max_y+1),
+	                                    num_cabinets, racks_per_cabinet, slots_per_rack))
+	        for (board, (x,y)) in boards]

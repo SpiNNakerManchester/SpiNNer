@@ -152,66 +152,6 @@ def hex_to_skew_cartesian(coords):
 	new_y = (old_y * 2) - old_x
 	
 	return (new_x, new_y)
-
-
-def fold_dimension(x, w, f):
-	r"""
-	Takes a coordinate, x, on a single dimension of length w. Returns a tuple
-	(new_x, fold) where new_x is the coordinate after the dimension has been
-	folded into f pieces and fold is the fold number it is on.
-	
-	Input::
-		
-		 ______ w _____
-		|              |
-		-----+----------
-		     |
-		     x
-		
-		      | |
-		     \| |/
-		      \./
-		
-		new_x ___\__.\    f = 3
-		          \/| \
-		            |
-		          fold
-	"""
-	# Must be evenly divisible
-	assert(w % f == 0)
-	
-	# Width of the folded sections
-	fold_width = w / f
-	
-	new_x = x % fold_width
-	fold = (x / fold_width)
-	
-	# If on a reverse-facing fold, flip the coordinate
-	if fold%2:
-		new_x = fold_width - new_x - 1
-	
-	return (new_x, fold)
-
-
-def fold_interleave_dimension(x, w, f):
-	r"""
-	As fold_dimension but returns a new x such that if the following points were
-	folded, they would be mapped like so::
-		
-		 _______   ---\  (0,0) \  / (0,1)  ---\   _______
-		 0 1 2 3   ---/   (1,0) \/ (1,1)   ---/   0 3 1 2
-	
-	That is, it interleaves points which would be mapped to the same position by
-	fold_dimension.
-	"""
-	new_x, fold = fold_dimension(x,w,f)
-	
-	new_x *= f
-	new_x += fold
-	
-	return new_x
-
-
 def wrap_around(coord, bounds):
 	"""
 	Wrap the coordinate given around the edges of a torus made of hexagonal
@@ -318,6 +258,118 @@ def zero_pad(vector, length = 3):
 	Zero pad a vector to the required length.
 	"""
 	return tuple((list(vector) + ([0]*length))[:length])
+
+
+
+
+
+################################################################################
+# Cartesian Coordinate Manipulations
+################################################################################
+
+def fold_dimension(x, w, f):
+	r"""
+	Takes a coordinate, x, on a single dimension of length w. Returns a tuple
+	(new_x, fold) where new_x is the coordinate after the dimension has been
+	folded into f pieces and fold is the fold number it is on.
+	
+	Input::
+		
+		 ______ w _____
+		|              |
+		-----+----------
+		     |
+		     x
+		
+		      | |
+		     \| |/
+		      \./
+		
+		new_x ___\__.\    f = 3
+		          \/| \
+		            |
+		          fold
+	"""
+	# Must be evenly divisible
+	assert(w % f == 0)
+	
+	# Width of the folded sections
+	fold_width = w / f
+	
+	new_x = x % fold_width
+	fold = (x / fold_width)
+	
+	# If on a reverse-facing fold, flip the coordinate
+	if fold%2:
+		new_x = fold_width - new_x - 1
+	
+	return (new_x, fold)
+
+
+def fold_interleave_dimension(x, w, f):
+	r"""
+	As fold_dimension but returns a new x such that if the following points were
+	folded, they would be mapped like so::
+		
+		 _______   ---\  (0,0) \  / (0,1)  ---\   _______
+		 0 1 2 3   ---/   (1,0) \/ (1,1)   ---/   0 3 1 2
+	
+	That is, it interleaves points which would be mapped to the same position by
+	fold_dimension.
+	"""
+	new_x, fold = fold_dimension(x,w,f)
+	
+	new_x *= f
+	new_x += fold
+	
+	return new_x
+
+
+def cabinetise(coord, bounds, num_cabinets, racks_per_cabinet, slots_per_rack = None):
+	r"""
+	Takes a set of Cartesian coordinates and maps them into a series of cabinets.
+	Splits the system into columns, one per cabinet. Splits each column into rows,
+	one per rack. These rows likely consist of several columns and rows in
+	Cartesian space and so values are interleaved to yield a slot allocation.
+	
+	coord is an (x,y) tuple containing the coordinate to map
+	
+	bounds is a (w,h) tuple containing the width and height of the Cartesian space
+	
+	If slots_per_rack is given then an assertion checks that the number of slots
+	is adequate.
+	
+	Returns a tuple (cabinet, rack, slot).
+	"""
+	
+	x, y = coord
+	w, h = bounds
+	
+	# Must be divisible into cabinets
+	assert(w % num_cabinets == 0)
+	
+	# Must be divisible into racks
+	assert(h % racks_per_cabinet == 0)
+	
+	# Must be able to fit in the given number of slots.
+	assert(slots_per_rack is None or
+	       ((w * h)) / num_cabinets / racks_per_cabinet <= slots_per_rack)
+	
+	cols_per_cabinet = (max_x+1) / num_cabinets
+	rows_per_rack    = (max_y+1) / racks_per_cabinet
+	
+	cabinet = x / cols_per_cabinet
+	rack    = y / rows_per_rack
+	
+	# Sub coordinate within the rack
+	x %= cols_per_cabinet
+	y %= rows_per_rack
+	
+	# Interleave into slot number
+	slot = x + (cols_per_cabinet * y)
+	
+	return (cabinet, rack, slot)
+
 
 
 
@@ -456,8 +508,8 @@ def hexagon_edge_link(edge, num, layers=4):
 def threeboards(width = 1, height = None):
 	r"""
 	Generates a list of width x height threeboards. If height is not specified,
-	height = width. Width defaults to 1. Coordinates are given as (x,y) tuples. on
-	a hexagonal coordinate system like so::
+	height = width. Width defaults to 1. Coordinates are given as (x,y,0) tuples
+	on a hexagonal coordinate system like so::
 		
 		
 		    | y
@@ -510,4 +562,4 @@ def threeboards(width = 1, height = None):
 				#           |       |        |
 				x_coord = (x*2) + (-y) + (z >= 2)
 				y_coord = (x  ) + ( y) + (z >= 1)
-				yield (x_coord,y_coord)
+				yield (x_coord,y_coord,0)
