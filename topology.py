@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 """
-Utilities for working with the hexagonal toroidal-mesh topology used in
-SpiNNaker.
+Utilities for working with coordinates of various types, notably ones in
+hexagonal space.
 
 Contains:
 
-  * Constants/Functions for directions in the space that the chips sit.
+  * Constants/Functions for directions in the space that the chips/boards sit.
   * Constants for identifying edges of a hexagon of chips (uses same functions
     as directions)
   * Functions for addressing in a hexagonal world.
@@ -15,14 +15,10 @@ Contains:
   * Functions for transforming Cartesian coordinates
   * Functions for working with cabinets
 
-This uses the addressing scheme suggested in
+This uses the hexagonal addressing scheme suggested in
 
-Addressing and Routing in Hexagonal Networks with Applications for Tracking
-Mobile Users and Connection Rerouting in Cellular Networks by Nocetti et. al.
-
-With the "z" dimension omitted (and assumed to be zero). X points from
-left-to-right, Y points from bottom-to-top and Z points from
-top-right-to-bottom-left.
+	Addressing and Routing in Hexagonal Networks with Applications for Tracking
+	Mobile Users and Connection Rerouting in Cellular Networks by Nocetti et. al.
 """
 
 from collections import namedtuple
