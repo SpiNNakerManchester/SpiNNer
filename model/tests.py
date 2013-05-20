@@ -202,9 +202,9 @@ class TopologyTests(unittest.TestCase):
 	
 	def test_hex_to_skew_cartesian(self):
 		# Test single element cases
-		self.assertEqual(topology.hex_to_skew_cartesian((0,0,0)), (0,0))
-		self.assertEqual(topology.hex_to_skew_cartesian((0,1,0)), (1,2))
-		self.assertEqual(topology.hex_to_skew_cartesian((1,1,0)), (2,1))
+		self.assertEqual(topology.hex_to_skewed_cartesian((0,0,0)), (0,0))
+		self.assertEqual(topology.hex_to_skewed_cartesian((0,1,0)), (1,2))
+		self.assertEqual(topology.hex_to_skewed_cartesian((1,1,0)), (2,1))
 	
 	
 	def test_fold_dimension(self):

@@ -27,7 +27,14 @@ class Slot(object):
 		
 		self.dimensions = dimensions
 		
-		self.wire_position = wire_position or {}
+		self.wire_position = wire_position or {
+			topology.NORTH      : coordinates.Cartesian3D(self.width/2.0, (self.height/6.0)*0, 0.0),
+			topology.NORTH_EAST : coordinates.Cartesian3D(self.width/2.0, (self.height/6.0)*1, 0.0),
+			topology.EAST       : coordinates.Cartesian3D(self.width/2.0, (self.height/6.0)*2, 0.0),
+			topology.SOUTH      : coordinates.Cartesian3D(self.width/2.0, (self.height/6.0)*3, 0.0),
+			topology.SOUTH_WEST : coordinates.Cartesian3D(self.width/2.0, (self.height/6.0)*4, 0.0),
+			topology.WEST       : coordinates.Cartesian3D(self.width/2.0, (self.height/6.0)*5, 0.0),
+		}
 	
 	
 	@property
@@ -143,8 +150,8 @@ class Rack(_Container):
 	
 	def __init__( self
 	            , slot = None
-	            , dimensions = coordinates.Cartesian3D(20.0,15.0,20.0)
-	            , num_slots = 16
+	            , dimensions = coordinates.Cartesian3D(30.0,15.0,20.0)
+	            , num_slots = 24
 	            , slot_spacing = 0.1
 	            , slot_offset = None
 	            ):
@@ -161,8 +168,12 @@ class Rack(_Container):
 		
 		slot is a Slot definition.
 		"""
+		slot = slot or Slot()
 		self.volume = slot
 		self.slot   = slot
+		
+		self.num_slots    = num_slots
+		self.slot_spacing = slot_spacing
 		
 		_Container.__init__( self
 		                   , dimensions
@@ -196,8 +207,8 @@ class Cabinet(_Container):
 	
 	def __init__( self
 	            , rack = None
-	            , dimensions = coordinates.Cartesian3D(25.0,100.0,25.0)
-	            , num_racks = 5
+	            , dimensions = coordinates.Cartesian3D(40.0,180.0,25.0)
+	            , num_racks = 10
 	            , rack_spacing = 2
 	            , rack_offset = None
 	            ):
@@ -214,8 +225,12 @@ class Cabinet(_Container):
 		
 		rack is a Rack definition.
 		"""
+		rack = rack or Rack()
 		self.volume = rack
 		self.rack   = rack
+		
+		self.num_racks    = num_racks
+		self.rack_spacing = rack_spacing
 		
 		_Container.__init__( self
 		                   , dimensions

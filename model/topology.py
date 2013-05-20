@@ -21,7 +21,7 @@ This uses the hexagonal addressing scheme suggested in
 	Mobile Users and Connection Rerouting in Cellular Networks by Nocetti et. al.
 """
 
-from coordinates import *
+import coordinates
 
 ################################################################################
 # Directions
@@ -73,7 +73,7 @@ def add_direction(vector, direction):
 		SOUTH_WEST: ( 0, 0, 1),
 	}
 	
-	return Hexagonal(*(v + a for (v,a) in zip(vector, add[direction])))
+	return coordinates.Hexagonal(*(v + a for (v,a) in zip(vector, add[direction])))
 
 
 def manhattan(vector):
@@ -103,14 +103,14 @@ def to_shortest_path(vector):
 	# freely without effect on the destination reached. As a result, simply
 	# subtract the median value from all dimensions to yield the shortest path.
 	median = median_element(vector)
-	return Hexagonal(*(v - median for v in vector))
+	return coordinates.Hexagonal(*(v - median for v in vector))
 
 
 def to_xy(vector):
 	"""
 	Takes a 3D vector and returns the equivalent 2D version.
 	"""
-	return Hexagonal2D(vector[0] - vector[2], vector[1] - vector[2])
+	return coordinates.Hexagonal2D(vector[0] - vector[2], vector[1] - vector[2])
 
 
 def hex_to_cartesian(coords):
@@ -124,10 +124,10 @@ def hex_to_cartesian(coords):
 	new_x = old_x
 	new_y = (old_y * 2) - old_x
 	
-	return Cartesian2D(new_x, new_y)
+	return coordinates.Cartesian2D(new_x, new_y)
 
 
-def hex_to_skew_cartesian(coords):
+def hex_to_skewed_cartesian(coords):
 	"""
 	Convert a set of hexagonal coordinates into equivalent Cartesian values
 	skewed to make x and y in the coordinate space match x and y in Cartesian
@@ -139,7 +139,7 @@ def hex_to_skew_cartesian(coords):
 	new_x = old_x + old_y
 	new_y = (old_y * 2) - old_x
 	
-	return Cartesian2D(new_x, new_y)
+	return coordinates.Cartesian2D(new_x, new_y)
 
 
 def wrap_around(coord, bounds):
@@ -196,7 +196,7 @@ def wrap_around(coord, bounds):
 		
 		break
 	
-	return Hexagonal(x,y,0)
+	return coordinates.Hexagonal(x,y,0)
 
 
 
@@ -317,9 +317,9 @@ def cabinetise(coord, bounds, num_cabinets, racks_per_cabinet, slots_per_rack = 
 	y %= rows_per_rack
 	
 	# Interleave into slot number
-	slot = y + (cols_per_cabinet * x)
+	slot = y + (rows_per_rack * x)
 	
-	return Cabinet(cabinet, rack, slot)
+	return coordinates.Cabinet(cabinet, rack, slot)
 
 
 
@@ -438,4 +438,4 @@ def threeboards(width = 1, height = None):
 				#           |       |        |
 				x_coord = (x*2) + (-y) + (z >= 2)
 				y_coord = (x  ) + ( y) + (z >= 1)
-				yield Hexagonal(x_coord,y_coord,0)
+				yield coordinates.Hexagonal(x_coord,y_coord,0)
