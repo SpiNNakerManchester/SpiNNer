@@ -24,7 +24,10 @@ import diagram
 # Load Parameters
 ################################################################################
 
-from params_spin106 import *
+#from params_spin_threeboard import *
+#from params_spin104 import *
+from params_spin105 import *
+#from params_spin106 import *
 
 
 ################################################################################
@@ -234,7 +237,7 @@ def generate_wiring_loop(boards, direction, diagram, start = (0,0,0)):
 	start_board = c2b[start]
 	loop = list(board.follow_wiring_loop(start_board, direction))
 	
-	style = ["thick",dict(DIRECTION_COLOURS)[direction]]
+	style = ["thick", dict(DIRECTION_COLOURS)[direction]]
 	
 	for b in loop:
 		diagram.add_wire( b
@@ -244,7 +247,7 @@ def generate_wiring_loop(boards, direction, diagram, start = (0,0,0)):
 		diagram.add_packet_path( b
 		                       , direction
 		                       , topology.opposite(direction)
-		                       , style
+		                       , ["dashed"] + style
 		                       )
 	
 	return len(loop)
@@ -257,13 +260,13 @@ def generate_packet_loop(boards, direction, diagram, start = (0,0,0)):
 	                                    , topology.opposite(direction)
 	                                    , direction
 	                                    ))
-	style = ["thick",dict(DIRECTION_COLOURS)[direction]]
+	style = ["thick", dict(DIRECTION_COLOURS)[direction]]
 	
 	for in_direction, b in loop:
 		diagram.add_packet_path( b
 		                       , in_direction
 		                       , topology.opposite(b.follow_packet(in_direction, direction)[0])
-		                       , style
+		                       , ["dashed"] + style
 		                       )
 		diagram.add_wire( b
 		                , in_direction
@@ -293,7 +296,7 @@ d = generate_diagram( torus
                     , show_wires = False
                     )
 
-packet_loop_north_length      = generate_packet_loop(torus, NORTH,      d, (0,2,0))
+packet_loop_north_length      = generate_packet_loop(torus, NORTH,      d, (0,1,0))
 packet_loop_east_length       = generate_packet_loop(torus, EAST,       d, (1,1,0))
 packet_loop_south_west_length = generate_packet_loop(torus, SOUTH_WEST, d, (0,0,0))
 
@@ -755,6 +758,7 @@ scale-drawing of the system as assigned to cabinets is given in Figure
 ################################################################################
 
 if show_wiring_metrics: print (r"""
+\newpage
 \section{Wiring Metrics}
 
 \begin{table}[h]
@@ -801,6 +805,7 @@ if show_wiring_metrics: print (r"""
 ################################################################################
 
 if show_topology_metrics: print (r"""
+\newpage
 \section{Topology Metrics}
 
 \begin{table}[h]
@@ -841,7 +846,8 @@ if show_topology_metrics: print (r"""
 		\end{tikzpicture}
 		
 		\label{fig:wiring-loop}
-		\caption{Example wiring loops from (0,0). Colour key: %(colour_key)s}
+		\caption{Example wiring loops from (0,0). Solid lines are wires, dashed
+		lines are paths through a board. Colour key: %(colour_key)s.}
 	\end{figure}
 \end{landscape}
 
@@ -853,7 +859,9 @@ if show_topology_metrics: print (r"""
 		\end{tikzpicture}
 		
 		\label{fig:packet-loop}
-		\caption{Example packet loops from (0,2), (1,1) and (0,0) for %(colour_key)s}
+		\caption{Example packet loops from (0,2), (1,1) and (0,0) for
+		%(colour_key)s. Solid lines are wires, dashed lines are paths through a
+		board.}
 	\end{figure}
 \end{landscape}
 

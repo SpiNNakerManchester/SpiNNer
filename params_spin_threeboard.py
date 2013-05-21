@@ -2,6 +2,8 @@
 
 """
 Parameter file for wiring_guide.py
+
+A single threeboard.
 """
 
 
@@ -12,33 +14,33 @@ from model.topology import NORTH, NORTH_EAST, EAST, SOUTH, SOUTH_WEST, WEST
 ################################################################################
 
 # The number of boards in the system (in threeboards)
-width  = 20
-height = 20
+width  = 1
+height = 1
 
 # The number of folds (actually the number of faces of a folded sheet)
-num_folds_x = 4
-num_folds_y = 2
+num_folds_x = 1
+num_folds_y = 1
 
 # How is the machine split up into physical units
-num_cabinets          = 5
-num_racks_per_cabinet = 10
-num_slots_per_rack    = 24
+num_cabinets          = 1
+num_racks_per_cabinet = 1
+num_slots_per_rack    = 4
 
 
 ################################################################################
 # Report Parameters
 ################################################################################
 
-title = "SpiNNaker $10^6$ Machine Wiring"
+title = "SpiNNaker Three-Board Machine Wiring"
 
 # Scale all diagrams by this factor
-diagram_scaling = 0.5
+diagram_scaling = 1.0
 
 # Include the development section in the report
 show_development = True
 
 # Show metrics relating to the 
-show_wiring_metrics = True
+show_wiring_metrics = False
 
 # Show information relating to the topology
 show_topology_metrics = True
@@ -60,12 +62,12 @@ wire_length_histogram_bins = 5
 cabinet_unit = "cm"
 
 # The scaling factor applied to drawing of the racks/cabinets
-cabinet_diagram_scaling_factor = 0.17
+cabinet_diagram_scaling_factor = 0.5
 
 # How big is each slot in a rack (not including spacing between slots) cm
 slot_width  = 1.0
 slot_height = 10.0
-slot_depth = 10.0
+slot_depth  = 10.0
 
 # Horizontal space between slots. cm
 slot_spacing = 0.1
@@ -93,7 +95,7 @@ wire_positions = None
 #}
 
 # Size of a rack. cm
-rack_width  = 30.0
+rack_width  =  6.0
 rack_height = 15.0
 rack_depth  = 20.0
 
@@ -106,8 +108,8 @@ slot_offset = None
 #slot_offset = (1.0, 1.0, 0.0)
 
 # Size of a cabinet. cm
-cabinet_width  = 40.0
-cabinet_height = 180.0
+cabinet_width  = 10
+cabinet_height = 20.0
 cabinet_depth  = 25.0
 
 # Space in-between cabinets. cm
