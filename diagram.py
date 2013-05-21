@@ -28,7 +28,7 @@ class Diagram(object):
 
 % Mapping for hexagonal coordinates in TikZ
 \tikzset{
-	hexagonal coords/.style={ x=( -30:1cm)
+	hexagon coords/.style={ x=( -30:1cm)
 	                        , y=(  90:1cm)
 	                        , z=(-150:1cm)
 	                        }
@@ -358,6 +358,17 @@ class Diagram(object):
 		) + "\n"
 	
 	
+	def get_tikz_ref(self, board, direction = None):
+		"""
+		Get a TikZ reference to a particular board. If no direction is given, a
+		reference to the center of the board is given.
+		"""
+		return (r"board %d %s"%(
+			id(board),
+			Diagram.DIRECTION_POSTFIX[direction] if direction is not None else ""
+		)).strip()
+	
+	
 	def _add_path(self, locations, styles = None):
 		"""
 		For internal use.
@@ -386,6 +397,15 @@ class Diagram(object):
 			],
 			styles
 		)
+	
+	
+	def add_packet_path(self, board, in_direction, out_direction, styles = None):
+		self._add_path(
+			[ "board %d %s"%(id(board), Diagram.DIRECTION_POSTFIX[in_direction])
+			, "board %d %s"%(id(board), Diagram.DIRECTION_POSTFIX[out_direction])
+			],
+			styles
+		)
 
 
 if __name__=="__main__":
@@ -398,7 +418,6 @@ if __name__=="__main__":
 	boards = transforms.fold(boards, (4,2))
 	
 	boards = transforms.cabinetise(boards, 5, 10, 24)
-	#boards = transforms.cabinetise(boards, 2, 1)
 	
 	d.set_cabinet_system(cabinet.System(), 0.1)
 	
@@ -410,5 +429,3 @@ if __name__=="__main__":
 		d.add_wire(board, topology.SOUTH_WEST, ["blue"])
 	
 	print d.get_tikz()
-	
-	#print "\n".join(map(repr, [c for (b,c) in boards]))

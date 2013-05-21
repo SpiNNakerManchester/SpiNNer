@@ -28,12 +28,12 @@ class Slot(object):
 		self.dimensions = dimensions
 		
 		self.wire_position = wire_position or {
-			topology.NORTH      : coordinates.Cartesian3D(self.width/2.0, (self.height/6.0)*0, 0.0),
-			topology.NORTH_EAST : coordinates.Cartesian3D(self.width/2.0, (self.height/6.0)*1, 0.0),
-			topology.EAST       : coordinates.Cartesian3D(self.width/2.0, (self.height/6.0)*2, 0.0),
-			topology.SOUTH      : coordinates.Cartesian3D(self.width/2.0, (self.height/6.0)*3, 0.0),
-			topology.SOUTH_WEST : coordinates.Cartesian3D(self.width/2.0, (self.height/6.0)*4, 0.0),
-			topology.WEST       : coordinates.Cartesian3D(self.width/2.0, (self.height/6.0)*5, 0.0),
+			topology.NORTH      : (self.width/2.0, (self.height/6.0)*0, 0.0),
+			topology.NORTH_EAST : (self.width/2.0, (self.height/6.0)*1, 0.0),
+			topology.EAST       : (self.width/2.0, (self.height/6.0)*2, 0.0),
+			topology.SOUTH      : (self.width/2.0, (self.height/6.0)*3, 0.0),
+			topology.SOUTH_WEST : (self.width/2.0, (self.height/6.0)*4, 0.0),
+			topology.WEST       : (self.width/2.0, (self.height/6.0)*5, 0.0),
 		}
 	
 	
