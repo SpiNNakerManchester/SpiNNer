@@ -32,11 +32,17 @@ title = "SpiNNaker $10^6$ Machine Wiring"
 # Scale all diagrams by this factor
 diagram_scaling = 0.5
 
+# The scaling factor applied to drawing of the racks/cabinets
+cabinet_diagram_scaling_factor = 7.0
+
 # Show metrics relating to the 
 show_wiring_metrics = True
 
 # Show information relating to the topology
 show_topology_metrics = True
+
+# Include the development section in the report
+show_development = True
 
 # Show metrics relating to the 
 show_board_position_list = True

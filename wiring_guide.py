@@ -26,10 +26,10 @@ import diagram
 
 from params_physical import *
 
-from params_spin103 import *
+#from params_spin103 import *
 #from params_spin104 import *
 #from params_spin105 import *
-#from params_spin106 import *
+from params_spin106 import *
 
 
 ################################################################################
@@ -71,9 +71,6 @@ rect_torus = transforms.rhombus_to_rect(cart_torus)
 # Compress the coordinates to eliminate the "wavy" pattern on the y-axis turning
 # the board coordinates into a continuous mesh.
 comp_torus = transforms.compress(rect_torus, 1, 2)
-
-## Rotate the coordinates 90*deg
-#comp_torus = [(b,type(comp_torus[0][1])(((height*3)/2)-y,x)) for (b,(x,y)) in comp_torus]
 
 # Show where the folds will occur
 fold_spaced_torus = transforms.space_folds(comp_torus, (num_folds_x, num_folds_y))
@@ -155,7 +152,7 @@ def generate_diagram(boards, b2l, add_board_func,
 		# Add wires
 		if show_wires:
 			for direction, colour in DIRECTION_COLOURS:
-				d.add_wire(board, direction, [colour])
+				d.add_wire(board, direction, ["thick",colour])
 	
 	return d
 
@@ -858,7 +855,8 @@ scale-drawing of the system as assigned to cabinets is given in Figure
 \begin{landscape}
 	\begin{figure}
 		\center
-		\begin{tikzpicture}[scale=%(scale)f]
+		%% Scaled already.
+		\begin{tikzpicture}
 			%(cabinet_torus_diagram_tikz)s
 		\end{tikzpicture}
 		

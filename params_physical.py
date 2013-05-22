@@ -23,25 +23,25 @@ slot_spacing = 0.1/100.0
 
 # Human-readable names the sockets on a spinnaker board
 socket_names = {
-	NORTH      : "North",
-	NORTH_EAST : "North East",
-	EAST       : "East",
-	SOUTH      : "South",
-	SOUTH_WEST : "South West",
-	WEST       : "West",
+	SOUTH_WEST : "J1 (SW)",
+	NORTH_EAST : "J2 (NE)",
+	EAST       : "J3 (E)",
+	WEST       : "J4 (W)",
+	NORTH      : "J5 (N)",
+	SOUTH      : "J6 (S)",
 }
 
 # The position of the sockets on the spinnaker boards relative to the
 # bottom-left corner of a slot or None to spread evenly over the slot. cm
-wire_positions = None
-#wire_positions = {
-#	NORTH      : (0.0, 0.0, 0.0),
-#	NORTH_EAST : (0.0, 1.0, 0.0),
-#	EAST       : (0.0, 2.0, 0.0),
-#	SOUTH      : (0.0, 3.0, 0.0),
-#	SOUTH_WEST : (0.0, 4.0, 0.0),
-#	WEST       : (0.0, 5.0, 0.0),
-#}
+#wire_positions = None
+wire_positions = {
+	SOUTH_WEST : (slot_width/2, slot_height - (0.02 * 0.5), 0.0), # J1
+	NORTH_EAST : (slot_width/2, slot_height - (0.02 * 1.5), 0.0), # J2
+	EAST       : (slot_width/2, slot_height - (0.02 * 2.5), 0.0), # J3
+	WEST       : (slot_width/2, slot_height - (0.02 * 3.5), 0.0), # J4
+	NORTH      : (slot_width/2, slot_height - (0.02 * 4.5), 0.0), # J5
+	SOUTH      : (slot_width/2, slot_height - (0.02 * 5.5), 0.0), # J6
+}
 
 # Size of a rack. cm
 rack_width  = 48.0/100.0

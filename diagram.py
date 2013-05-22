@@ -23,8 +23,8 @@ class Diagram(object):
 % Colours for cabinets
 \tikzset{ cabinet/.style={fill,color=gray} }
 \tikzset{ rack/.style={fill,color=gray!50!white} }
-\tikzset{ slot/.style={fill,color=black} }
-\tikzset{ occupied slot/.style={slot,color=green!20!black} }
+\tikzset{ slot/.style={} }
+\tikzset{ occupied slot/.style={fill,color=green!20!white} }
 
 % Mapping for hexagonal coordinates in TikZ
 \tikzset{
@@ -211,10 +211,11 @@ class Diagram(object):
 		for cabinet_num in range(system.num_cabinets):
 			cabinet_x = cabinet_num * (cabinet.width + system.cabinet_spacing)
 			cabinet_y = 0.0
-			self.cabinet_definitions += r"\path [cabinet] (%f,%f) rectangle ++(%f,%f);"%(
-				cabinet_x, cabinet_y,
-				cabinet.width, cabinet.height
-			) + "\n"
+			if system.num_cabinets > 1:
+				self.cabinet_definitions += r"\path [cabinet] (%f,%f) rectangle ++(%f,%f);"%(
+					cabinet_x, cabinet_y,
+					cabinet.width, cabinet.height
+				) + "\n"
 			for rack_num in range(cabinet.num_racks):
 				rack_x = cabinet_x + cabinet.offset.x
 				rack_y = cabinet_y + cabinet.offset.y \

@@ -33,6 +33,9 @@ title = "SpiNNaker $10^3$ Machine Wiring"
 # Scale all diagrams by this factor
 diagram_scaling = 1.0
 
+# Scale the cabinet diagram by this factor
+cabinet_diagram_scaling_factor = 40
+
 # Show metrics relating to the 
 show_wiring_metrics = False
 
