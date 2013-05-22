@@ -24,9 +24,11 @@ import diagram
 # Load Parameters
 ################################################################################
 
-#from params_spin_threeboard import *
+from params_physical import *
+
+from params_spin103 import *
 #from params_spin104 import *
-from params_spin105 import *
+#from params_spin105 import *
 #from params_spin106 import *
 
 
@@ -69,6 +71,9 @@ rect_torus = transforms.rhombus_to_rect(cart_torus)
 # Compress the coordinates to eliminate the "wavy" pattern on the y-axis turning
 # the board coordinates into a continuous mesh.
 comp_torus = transforms.compress(rect_torus, 1, 2)
+
+## Rotate the coordinates 90*deg
+#comp_torus = [(b,type(comp_torus[0][1])(((height*3)/2)-y,x)) for (b,(x,y)) in comp_torus]
 
 # Show where the folds will occur
 fold_spaced_torus = transforms.space_folds(comp_torus, (num_folds_x, num_folds_y))
@@ -150,7 +155,7 @@ def generate_diagram(boards, b2l, add_board_func,
 		# Add wires
 		if show_wires:
 			for direction, colour in DIRECTION_COLOURS:
-				d.add_wire(board, direction, [colour, "thick"])
+				d.add_wire(board, direction, [colour])
 	
 	return d
 
@@ -619,6 +624,136 @@ others, Simon and Steve Furber.
 
 
 ################################################################################
+# Wring Metrics
+################################################################################
+
+if show_wiring_metrics: print (r"""
+\newpage
+\section{Wiring Metrics}
+
+\begin{table}[h]
+	\center
+	\begin{tabular}{l r r r r}
+		\toprule
+			Axis & Total Wires & Staying In-Rack & Between Racks & Between Cabinets \\
+		\midrule
+			%(wire_cabinet_stats)s
+		\addlinespace
+			%(total_wire_cabinet_stats)s
+		\bottomrule
+	\end{tabular}
+	\label{tab:wire-cabinet-stats}
+	\caption{Wire counts within racks. Note: `Between Racks' counts wires which only
+	leave the rack but stay in the same cabinet.}
+\end{table}
+
+\begin{table}[h]
+	\center
+	\begin{tabular}{l r r r r}
+		\toprule
+			Axis & Length (%(cabinet_unit)s) & Number of Wires\\
+		\midrule
+			%(wire_length_stats)s
+		\bottomrule
+	\end{tabular}
+	\label{tab:wire-length-stats}
+	\caption{Lengths of wires in the system based on given cabinet measurements.
+	Note: no slack is given to any of the wires.}
+\end{table}
+
+"""%{
+	"wire_cabinet_stats":wire_cabinet_stats,
+	"total_wire_cabinet_stats":total_wire_cabinet_stats,
+	"wire_length_stats":wire_length_stats,
+	"cabinet_unit":cabinet_unit,
+}).strip()
+
+
+
+################################################################################
+# Topology Metrics
+################################################################################
+
+if show_topology_metrics: print (r"""
+\newpage
+\section{Topology Metrics}
+
+\begin{table}[h]
+	\center
+	\begin{tabular}{l r l}
+		\toprule
+			Property & Value & Unit \\
+		\midrule
+			Width  & %(width)d  & Threeboards \\
+			Height & %(height)d & Threeboards \\
+			\addlinespace
+			Width  & %(width_chips)d & Chips \\
+			Height & %(height_chips)d & Chips \\
+			\addlinespace
+			Wiring Loop North Length      & %(wiring_loop_north_length)d      & Wires \\
+			Wiring Loop East Length       & %(wiring_loop_east_length)d       & Wires \\
+			Wiring Loop South West Length & %(wiring_loop_south_west_length)d & Wires \\
+			\addlinespace
+			Packet Loop North Length      & %(packet_loop_north_length)d      & Chips \\
+			Packet Loop East Length       & %(packet_loop_east_length)d       & Chips \\
+			Packet Loop South West Length & %(packet_loop_south_west_length)d & Chips \\
+		\bottomrule
+	\end{tabular}
+	\label{tab:topology-overview}
+	\caption{Overview of properties of the system. Note: A wiring loop is the
+	loop taken by following wires of a given direction in a system (see Figure
+	\ref{fig:wiring-loop}). A packet loop
+	is the loop taken by following the path of a packet within the system (see Figure
+	\ref{fig:packet-loop}). All displayed values found by simulation in a model.}
+\end{table}
+
+
+\begin{landscape}
+	\begin{figure}
+		\center
+		\begin{tikzpicture}[scale=%(scale)f]
+			%(wiring_loop_diagram_tikz)s
+		\end{tikzpicture}
+		
+		\label{fig:wiring-loop}
+		\caption{Example wiring loops from (0,0). Solid lines are wires, dashed
+		lines are paths through a board. Colour key: %(colour_key)s.}
+	\end{figure}
+\end{landscape}
+
+\begin{landscape}
+	\begin{figure}
+		\center
+		\begin{tikzpicture}[scale=%(scale)f]
+			%(packet_loop_diagram_tikz)s
+		\end{tikzpicture}
+		
+		\label{fig:packet-loop}
+		\caption{Example packet loops from (0,2), (1,1) and (0,0) for
+		%(colour_key)s. Solid lines are wires, dashed lines are paths through a
+		board.}
+	\end{figure}
+\end{landscape}
+
+"""%{
+	"width":width,
+	"height":height,
+	"width_chips":width_chips,
+	"height_chips":height_chips,
+	"wiring_loop_north_length":wiring_loop_north_length,
+	"wiring_loop_east_length":wiring_loop_east_length,
+	"wiring_loop_south_west_length":wiring_loop_south_west_length,
+	"packet_loop_north_length":packet_loop_north_length,
+	"packet_loop_east_length":packet_loop_east_length,
+	"packet_loop_south_west_length":packet_loop_south_west_length,
+	"wiring_loop_diagram_tikz":wiring_loop_diagram_tikz,
+	"packet_loop_diagram_tikz":packet_loop_diagram_tikz,
+	"colour_key":colour_key,
+	"scale":diagram_scaling,
+}).strip()
+
+
+################################################################################
 # Development of Placement
 ################################################################################
 
@@ -750,136 +885,6 @@ scale-drawing of the system as assigned to cabinets is given in Figure
 	"num_racks_per_cabinet":num_racks_per_cabinet,
 	"num_cabinets_plural":"" if num_cabinets == 1 else "s",
 	"num_racks_per_cabinet_plural":"" if num_racks_per_cabinet == 1 else "s",
-}).strip()
-
-
-################################################################################
-# Wring Metrics
-################################################################################
-
-if show_wiring_metrics: print (r"""
-\newpage
-\section{Wiring Metrics}
-
-\begin{table}[h]
-	\center
-	\begin{tabular}{l r r r r}
-		\toprule
-			Axis & Total Wires & Staying In-Rack & Between Racks & Between Cabinets \\
-		\midrule
-			%(wire_cabinet_stats)s
-		\addlinespace
-			%(total_wire_cabinet_stats)s
-		\bottomrule
-	\end{tabular}
-	\label{tab:wire-cabinet-stats}
-	\caption{Wire counts within racks. Note: `Between Racks' counts wires which only
-	leave the rack but stay in the same cabinet.}
-\end{table}
-
-\begin{table}[h]
-	\center
-	\begin{tabular}{l r r r r}
-		\toprule
-			Axis & Length (%(cabinet_unit)s) & Number of Wires\\
-		\midrule
-			%(wire_length_stats)s
-		\bottomrule
-	\end{tabular}
-	\label{tab:wire-length-stats}
-	\caption{Lengths of wires in the system based on given cabinet measurements.
-	Note: no slack is given to any of the wires.}
-\end{table}
-
-"""%{
-	"wire_cabinet_stats":wire_cabinet_stats,
-	"total_wire_cabinet_stats":total_wire_cabinet_stats,
-	"wire_length_stats":wire_length_stats,
-	"cabinet_unit":cabinet_unit,
-}).strip()
-
-
-
-################################################################################
-# Topology Metrics
-################################################################################
-
-if show_topology_metrics: print (r"""
-\newpage
-\section{Topology Metrics}
-
-\begin{table}[h]
-	\center
-	\begin{tabular}{l r l}
-		\toprule
-			Property & Value & Unit \\
-		\midrule
-			Width  & %(width)d  & Threeboards \\
-			Height & %(height)d & Threeboards \\
-			\addlinespace
-			Width  & %(width_chips)d & Chips \\
-			Height & %(height_chips)d & Chips \\
-			\addlinespace
-			Wiring Loop North Length      & %(wiring_loop_north_length)d      & Wires \\
-			Wiring Loop East Length       & %(wiring_loop_east_length)d       & Wires \\
-			Wiring Loop South West Length & %(wiring_loop_south_west_length)d & Wires \\
-			\addlinespace
-			Packet Loop North Length      & %(packet_loop_north_length)d      & Chips \\
-			Packet Loop East Length       & %(packet_loop_east_length)d       & Chips \\
-			Packet Loop South West Length & %(packet_loop_south_west_length)d & Chips \\
-		\bottomrule
-	\end{tabular}
-	\label{tab:topology-overview}
-	\caption{Overview of properties of the system. Note: A wiring loop is the
-	loop taken by following wires of a given direction in a system (see Figure
-	\ref{fig:wiring-loop}). A packet loop
-	is the loop taken by following the path of a packet within the system (see Figure
-	\ref{fig:packet-loop}). All displayed values found by simulation in a model.}
-\end{table}
-
-
-\begin{landscape}
-	\begin{figure}
-		\center
-		\begin{tikzpicture}[scale=%(scale)f]
-			%(wiring_loop_diagram_tikz)s
-		\end{tikzpicture}
-		
-		\label{fig:wiring-loop}
-		\caption{Example wiring loops from (0,0). Solid lines are wires, dashed
-		lines are paths through a board. Colour key: %(colour_key)s.}
-	\end{figure}
-\end{landscape}
-
-\begin{landscape}
-	\begin{figure}
-		\center
-		\begin{tikzpicture}[scale=%(scale)f]
-			%(packet_loop_diagram_tikz)s
-		\end{tikzpicture}
-		
-		\label{fig:packet-loop}
-		\caption{Example packet loops from (0,2), (1,1) and (0,0) for
-		%(colour_key)s. Solid lines are wires, dashed lines are paths through a
-		board.}
-	\end{figure}
-\end{landscape}
-
-"""%{
-	"width":width,
-	"height":height,
-	"width_chips":width_chips,
-	"height_chips":height_chips,
-	"wiring_loop_north_length":wiring_loop_north_length,
-	"wiring_loop_east_length":wiring_loop_east_length,
-	"wiring_loop_south_west_length":wiring_loop_south_west_length,
-	"packet_loop_north_length":packet_loop_north_length,
-	"packet_loop_east_length":packet_loop_east_length,
-	"packet_loop_south_west_length":packet_loop_south_west_length,
-	"wiring_loop_diagram_tikz":wiring_loop_diagram_tikz,
-	"packet_loop_diagram_tikz":packet_loop_diagram_tikz,
-	"colour_key":colour_key,
-	"scale":diagram_scaling,
 }).strip()
 
 

@@ -2,41 +2,45 @@
 
 """
 Parameter file for wiring_guide.py
-"""
 
+A single threeboard.
+"""
 
 ################################################################################
 # Basic Parameters
 ################################################################################
 
 # The number of boards in the system (in threeboards)
-width  = 20
-height = 20
+width  = 1
+height = 1
 
 # The number of folds (actually the number of faces of a folded sheet)
-num_folds_x = 4
-num_folds_y = 2
+num_folds_x = 1
+num_folds_y = 1
 
 # How is the machine split up into physical units
-num_cabinets          = 10
-num_racks_per_cabinet = 5
-num_slots_per_rack    = 24
+num_cabinets          = 1
+num_racks_per_cabinet = 1
+num_slots_per_rack    = 4
 
 
 ################################################################################
 # Report Parameters
 ################################################################################
 
-title = "SpiNNaker $10^6$ Machine Wiring"
+title = "SpiNNaker $10^3$ Machine Wiring"
 
 # Scale all diagrams by this factor
-diagram_scaling = 0.5
+diagram_scaling = 1.0
 
 # Show metrics relating to the 
-show_wiring_metrics = True
+show_wiring_metrics = False
 
 # Show information relating to the topology
 show_topology_metrics = True
+
+# Include the development section in the report
+show_development = True
 
 # Show metrics relating to the 
 show_board_position_list = True
@@ -46,4 +50,3 @@ show_wiring_instructions = True
 
 # Number of bins on wire-length histograms
 wire_length_histogram_bins = 5
-
