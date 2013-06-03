@@ -26,10 +26,10 @@ import diagram
 
 from params_physical import *
 
-#from params_spin103 import *
+from params_spin103 import *
 #from params_spin104 import *
 #from params_spin105 import *
-from params_spin106 import *
+#from params_spin106 import *
 
 
 ################################################################################
@@ -70,7 +70,9 @@ rect_torus = transforms.rhombus_to_rect(cart_torus)
 
 # Compress the coordinates to eliminate the "wavy" pattern on the y-axis turning
 # the board coordinates into a continuous mesh.
-comp_torus = transforms.compress(rect_torus, 1, 2)
+comp_torus = transforms.compress(rect_torus, 1 if compress_rows else 2
+                                           , 2 if compress_rows else 1
+                                           )
 
 # Show where the folds will occur
 fold_spaced_torus = transforms.space_folds(comp_torus, (num_folds_x, num_folds_y))
@@ -230,8 +232,8 @@ cabinet_torus_diagram_tikz = generate_diagram( cabinet_torus
 # Topology Metrics
 ################################################################################
 
-width_chips  = max(x for (c,(x,y)) in comp_torus) + 1
-height_chips = max(y for (c,(x,y)) in comp_torus) + 1
+width_boards  = max(x for (c,(x,y)) in comp_torus) + 1
+height_boards = max(y for (c,(x,y)) in comp_torus) + 1
 
 
 def generate_wiring_loop(boards, direction, diagram, start = (0,0,0)):
@@ -586,11 +588,13 @@ document covers a system with the basic parameters listed in Table
 		\toprule
 			Parameter & Value & Unit \\
 		\midrule
-			Width  & %(width)d & (Threeboards) \\
-			Height & %(height)d & (Threeboards) \\
+			Width  & %(width)d & Threeboards \\
+			Height & %(height)d & Threeboards \\
 		\addlinespace
-			Number of Folds & %(num_folds_x)d & (X-Axis) \\
-			Number of Folds & %(num_folds_y)d & (Y-Axis) \\
+			Compress Direction & %(compress_rows)s & \\
+		\addlinespace
+			Number of Folds & %(num_folds_x)d & X-Axis \\
+			Number of Folds & %(num_folds_y)d & Y-Axis \\
 		\addlinespace
 			Cabinets          & %(num_cabinets)d & \\
 			Racks per Cabinet & %(num_racks_per_cabinet)d & \\
@@ -598,8 +602,8 @@ document covers a system with the basic parameters listed in Table
 		\bottomrule
 	\end{tabular}
 	
-	\label{tab:basic-params}
 	\caption{Basic Machine Parameters}
+	\label{tab:basic-params}
 \end{table}
 
 \subsection{About This Guide}
@@ -616,6 +620,7 @@ others, Simon and Steve Furber.
 	"num_cabinets":num_cabinets,
 	"num_racks_per_cabinet":num_racks_per_cabinet,
 	"num_slots_per_rack":num_slots_per_rack,
+	"compress_rows":"Rows" if compress_rows else "Columns",
 }).strip()
 
 
@@ -639,9 +644,9 @@ if show_wiring_metrics: print (r"""
 			%(total_wire_cabinet_stats)s
 		\bottomrule
 	\end{tabular}
-	\label{tab:wire-cabinet-stats}
 	\caption{Wire counts within racks. Note: `Between Racks' counts wires which only
 	leave the rack but stay in the same cabinet.}
+	\label{tab:wire-cabinet-stats}
 \end{table}
 
 \begin{table}[h]
@@ -653,9 +658,9 @@ if show_wiring_metrics: print (r"""
 			%(wire_length_stats)s
 		\bottomrule
 	\end{tabular}
-	\label{tab:wire-length-stats}
 	\caption{Lengths of wires in the system based on given cabinet measurements.
 	Note: no slack is given to any of the wires.}
+	\label{tab:wire-length-stats}
 \end{table}
 
 """%{
@@ -675,6 +680,11 @@ if show_topology_metrics: print (r"""
 \newpage
 \section{Topology Metrics}
 
+Note: A wiring loop is the loop taken by following wires of a given direction in
+a system (see Figure \ref{fig:wiring-loop}). A packet loop is the loop taken by
+following the path of a packet within the system (see Figure
+\ref{fig:packet-loop}). All displayed values found by simulation in a model.
+
 \begin{table}[h]
 	\center
 	\begin{tabular}{l r l}
@@ -684,8 +694,8 @@ if show_topology_metrics: print (r"""
 			Width  & %(width)d  & Threeboards \\
 			Height & %(height)d & Threeboards \\
 			\addlinespace
-			Width  & %(width_chips)d & Chips \\
-			Height & %(height_chips)d & Chips \\
+			Width  & %(width_boards)d & Boards \\
+			Height & %(height_boards)d & Boards \\
 			\addlinespace
 			Wiring Loop North Length      & %(wiring_loop_north_length)d      & Wires \\
 			Wiring Loop East Length       & %(wiring_loop_east_length)d       & Wires \\
@@ -696,12 +706,8 @@ if show_topology_metrics: print (r"""
 			Packet Loop South West Length & %(packet_loop_south_west_length)d & Chips \\
 		\bottomrule
 	\end{tabular}
+	\caption{Overview of properties of the system.}
 	\label{tab:topology-overview}
-	\caption{Overview of properties of the system. Note: A wiring loop is the
-	loop taken by following wires of a given direction in a system (see Figure
-	\ref{fig:wiring-loop}). A packet loop
-	is the loop taken by following the path of a packet within the system (see Figure
-	\ref{fig:packet-loop}). All displayed values found by simulation in a model.}
 \end{table}
 
 
@@ -712,9 +718,9 @@ if show_topology_metrics: print (r"""
 			%(wiring_loop_diagram_tikz)s
 		\end{tikzpicture}
 		
-		\label{fig:wiring-loop}
 		\caption{Example wiring loops from (0,0). Solid lines are wires, dashed
 		lines are paths through a board. Colour key: %(colour_key)s.}
+		\label{fig:wiring-loop}
 	\end{figure}
 \end{landscape}
 
@@ -725,18 +731,18 @@ if show_topology_metrics: print (r"""
 			%(packet_loop_diagram_tikz)s
 		\end{tikzpicture}
 		
-		\label{fig:packet-loop}
 		\caption{Example packet loops from (0,2), (1,1) and (0,0) for
 		%(colour_key)s. Solid lines are wires, dashed lines are paths through a
 		board.}
+		\label{fig:packet-loop}
 	\end{figure}
 \end{landscape}
 
 """%{
 	"width":width,
 	"height":height,
-	"width_chips":width_chips,
-	"height_chips":height_chips,
+	"width_boards":width_boards,
+	"height_boards":height_boards,
 	"wiring_loop_north_length":wiring_loop_north_length,
 	"wiring_loop_east_length":wiring_loop_east_length,
 	"wiring_loop_south_west_length":wiring_loop_south_west_length,
@@ -763,9 +769,7 @@ physical system.
 
 The system schematically looks like Figure \ref{fig:torus}. All touching boards
 have a link between them. Links to non-adjacent boards are shown using coloured
-lines\footnote{The nodes and wires between them shown here are constant
-throughout the rest of this guide. Only their locations are modified in the
-following steps.}.
+lines.
 
 All boards left of $(0,0)$ (shown by a dashed line) are shifted to the right
 yielding a rectangle as shown in Figure \ref{fig:rect-torus}.
@@ -793,10 +797,10 @@ scale-drawing of the system as assigned to cabinets is given in Figure
 			%(torus_diagram_tikz)s
 		\end{tikzpicture}
 		
-		\label{fig:torus}
 		\caption{Schematic representation of a torus of boards. Nodes to the left of
 		the dashed line will be shifted right in the next step. Wire colour key:
 		%(colour_key)s}
+		\label{fig:torus}
 	\end{figure}
 \end{landscape}
 
@@ -807,8 +811,8 @@ scale-drawing of the system as assigned to cabinets is given in Figure
 			%(rect_torus_diagram_tikz)s
 		\end{tikzpicture}
 		
-		\label{fig:rect-torus}
 		\caption{Rectangular arrangement of nodes. Colour key: %(colour_key)s}
+		\label{fig:rect-torus}
 	\end{figure}
 \end{landscape}
 
@@ -819,8 +823,8 @@ scale-drawing of the system as assigned to cabinets is given in Figure
 			%(comp_torus_diagram_tikz)s
 		\end{tikzpicture}
 		
-		\label{fig:comp-torus}
 		\caption{Nodes forced into a regular, rectangular grid. Colour key: %(colour_key)s}
+		\label{fig:comp-torus}
 	\end{figure}
 \end{landscape}
 
@@ -831,9 +835,9 @@ scale-drawing of the system as assigned to cabinets is given in Figure
 			%(fold_spaced_torus_diagram_tikz)s
 		\end{tikzpicture}
 		
-		\label{fig:fold-spaced-torus}
 		\caption{Lines along which the grid will be folded (wires removed for
 		clarity).}
+		\label{fig:fold-spaced-torus}
 	\end{figure}
 \end{landscape}
 
@@ -846,9 +850,9 @@ scale-drawing of the system as assigned to cabinets is given in Figure
 			%(folded_torus_diagram_tikz)s
 		\end{tikzpicture}
 		
-		\label{fig:folded-torus}
 		\caption{Arrangement after folding and interleaving shown divided into
 		cabinets/racks. Colour key: %(colour_key)s}
+		\label{fig:folded-torus}
 	\end{figure}
 \end{landscape}
 
@@ -860,9 +864,9 @@ scale-drawing of the system as assigned to cabinets is given in Figure
 			%(cabinet_torus_diagram_tikz)s
 		\end{tikzpicture}
 		
-		\label{fig:cabinet-torus}
 		\caption{Allocation of SpiNNaker boards to cabinets and racks and the wires
 		between them. Colour key: %(colour_key)s}
+		\label{fig:cabinet-torus}
 	\end{figure}
 \end{landscape}
 

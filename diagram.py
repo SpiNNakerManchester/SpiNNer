@@ -211,7 +211,8 @@ class Diagram(object):
 		for cabinet_num in range(system.num_cabinets):
 			cabinet_x = cabinet_num * (cabinet.width + system.cabinet_spacing)
 			cabinet_y = 0.0
-			if system.num_cabinets > 1:
+			# Only bother drawing the cabinet if we have more than one rack
+			if cabinet.num_racks > 1:
 				self.cabinet_definitions += r"\path [cabinet] (%f,%f) rectangle ++(%f,%f);"%(
 					cabinet_x, cabinet_y,
 					cabinet.width, cabinet.height

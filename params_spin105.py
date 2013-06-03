@@ -3,43 +3,43 @@
 """
 Parameter file for wiring_guide.py
 
-A single rack of machines.
+A single cabinet of machines.
 """
+
+
+from model.topology import NORTH, NORTH_EAST, EAST, SOUTH, SOUTH_WEST, WEST
 
 ################################################################################
 # Basic Parameters
 ################################################################################
 
 # The number of boards in the system (in threeboards)
-width  = 2
-height = 2
-
-# The number of folds (actually the number of faces of a folded sheet)
-num_folds_x = 2
-num_folds_y = 1
+width  = 8
+height = 5
 
 # When compressing a hexagonal grid into a regular rectangular gird, should
 # every-other column of hexagons be shifted down by one? If not, every other row
 # will be shifted left by one.
-compress_rows = True
+compress_rows = False
+
+# The number of folds (actually the number of faces of a folded sheet)
+num_folds_x = 2
+num_folds_y = 2
 
 # How is the machine split up into physical units
 num_cabinets          = 1
-num_racks_per_cabinet = 1
-num_slots_per_rack    = 12
+num_racks_per_cabinet = 5
+num_slots_per_rack    = 24
 
 
 ################################################################################
 # Report Parameters
 ################################################################################
 
-title = "SpiNNaker $10^4$ Machine Wiring"
+title = "SpiNNaker $10^5$ Machine Wiring"
 
 # Scale all diagrams by this factor
 diagram_scaling = 1.0
-
-# Scale the cabinet diagram by this factor
-cabinet_diagram_scaling_factor = 40
 
 # Show metrics relating to the 
 show_wiring_metrics = True
@@ -58,4 +58,3 @@ show_wiring_instructions = True
 
 # Number of bins on wire-length histograms
 wire_length_histogram_bins = 5
-

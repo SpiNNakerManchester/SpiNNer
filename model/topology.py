@@ -236,18 +236,20 @@ def fold_dimension(x, w, f):
 		            |
 		          fold
 	"""
-	# Must be evenly divisible
-	assert(w % f == 0)
-	
-	# Width of the folded sections
-	fold_width = w / f
+	# Width of the folded sections (round up so sections are bigger than
+	# neccessary if not evenly divisible)
+	fold_width = (w+(f-1)) / f
 	
 	new_x = x % fold_width
-	fold = (x / fold_width)
+	fold  = x / fold_width
 	
 	# If on a reverse-facing fold, flip the coordinate
 	if fold%2:
-		new_x = fold_width - new_x - 1
+		# If this is the last fold, it may be smaller if not evenly divisible
+		if fold == f - 1:
+			new_x = (fold_width - ((fold_width*f) - w)) - new_x - 1
+		else:
+			new_x = fold_width - new_x - 1
 	
 	return (new_x, fold)
 

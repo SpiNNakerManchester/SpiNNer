@@ -18,6 +18,11 @@ height = 1
 num_folds_x = 1
 num_folds_y = 1
 
+# When compressing a hexagonal grid into a regular rectangular gird, should
+# every-other column of hexagons be shifted down by one? If not, every other row
+# will be shifted left by one.
+compress_rows = True
+
 # How is the machine split up into physical units
 num_cabinets          = 1
 num_racks_per_cabinet = 1

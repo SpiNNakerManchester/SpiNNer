@@ -13,6 +13,11 @@ Parameter file for wiring_guide.py
 width  = 20
 height = 20
 
+# When compressing a hexagonal grid into a regular rectangular gird, should
+# every-other column of hexagons be shifted down by one? If not, every other row
+# will be shifted left by one.
+compress_rows = True
+
 # The number of folds (actually the number of faces of a folded sheet)
 num_folds_x = 4
 num_folds_y = 2
@@ -33,7 +38,7 @@ title = "SpiNNaker $10^6$ Machine Wiring"
 diagram_scaling = 0.5
 
 # The scaling factor applied to drawing of the racks/cabinets
-cabinet_diagram_scaling_factor = 7.0
+cabinet_diagram_scaling_factor = 3.5
 
 # Show metrics relating to the 
 show_wiring_metrics = True
