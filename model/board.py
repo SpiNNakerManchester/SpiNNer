@@ -16,6 +16,9 @@ class Board(object):
 	A board is an entity with links to its six neighbouring boards.
 	"""
 	
+	# Counter used to label boards
+	NEXT_BOARD_ID = 0
+	
 	def __init__(self):
 		
 		# References to other boards in the system which lie at the end of a wire
@@ -28,6 +31,10 @@ class Board(object):
 			topology.SOUTH_WEST : None,
 			topology.WEST       : None,
 		}
+		
+		# Set the board's ID
+		self.id = Board.NEXT_BOARD_ID
+		Board.NEXT_BOARD_ID += 1
 	
 	
 	def connect_wire(self, other, direction):

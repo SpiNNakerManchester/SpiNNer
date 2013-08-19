@@ -17,6 +17,7 @@ from model import cabinet
 from model import board
 from model import transforms
 from model import metrics
+from model import coordinates
 
 import diagram
 
@@ -26,10 +27,18 @@ import diagram
 
 from params_physical import *
 
-from params_spin103 import *
+#from params_spin103 import *
 #from params_spin104 import *
 #from params_spin105 import *
-#from params_spin106 import *
+from params_spin106 import *
+
+# XXX
+show_wiring_metrics = False
+show_topology_metrics = False
+show_development = False
+show_board_position_list = False
+show_wiring_instructions = False
+show_wiring_patterns = True
 
 
 ################################################################################
@@ -429,6 +438,146 @@ def calculate_wire_length_stats(boards, wire_offsets={}, num_bins = 5):
 wire_length_stats = calculate_wire_length_stats(phys_torus,
 	cabinet_system.cabinet.rack.slot.wire_position,
 	wire_length_histogram_bins)
+
+
+################################################################################
+# Wiring Pattern Finding
+################################################################################
+
+
+def get_relative_wires(boards, direction):
+	"""
+	Returns a list of (coord, wire_relative_target) tuples where coord is a
+	coordinate of a board and wire_relative_target is the coordinate relative to
+	coord of the wire going in direction from coord.
+	"""
+	
+	b2c = dict(boards)
+	
+	out = []
+	
+	for board, coord in boards:
+		out.append((coord, b2c[board.follow_wire(direction)] - coord))
+	
+	return out
+
+
+def group_relative_wires(rel_wires, group_key, elem_key):
+	"""
+	Group together relative wire descriptions. Returns a dict {key:
+	frozenset([(elem,wire_direction,wire_relative_target),...]), ...} where key is
+	a value returned by group_key(coord) and where the elem is returned by
+	elem_key(coord).
+	
+	For example, to group together all relative wires for each rack in the system,
+	group_key = (lambda (c,r,s): (c,r))
+	elem_key  = (lambda (c,r,s): s)
+	"""
+	
+	groups = defaultdict(set)
+	
+	for coord, wire_relative_target in rel_wires:
+		groups[group_key(coord)].add((elem_key(coord), wire_relative_target))
+	
+	return dict((g, frozenset(s)) for (g,s) in groups.iteritems())
+
+
+def distinct_count(iterable):
+	"""
+	Returns a dict {item: count,...} which contains the number of times
+	each unique item has appeared in the iterable
+	"""
+	
+	counts = defaultdict(lambda:0)
+	
+	for item in iterable:
+		counts[item] += 1
+	
+	return counts
+
+
+def generate_cabinet_colouring_diagram(colouring, num_colours, cabinet_system, cabinet_scale):
+	"""
+	Takes a dict {cabinet_coord: colour_index} and the maximum color_index. Returns
+	a diagram for a coloured set of racks.
+	"""
+	d = diagram.Diagram()
+	d.set_cabinet_system(cabinet_system, cabinet_scale)
+	
+	
+	# Generate pallet
+	colours = []
+	spectrum = ["red","green","blue", "yellow"]
+	segment_size = (num_colours+len(spectrum)-2) / (len(spectrum)-1)
+	for i in range(num_colours):
+		start_colour, end_colour = spectrum[i / segment_size:][:2]
+		point = 100 - (((i % segment_size) * 100) / segment_size)
+		colours.append("%s!%d!%s"%(start_colour, point, end_colour))
+	
+	# Add the boards
+	for coord, colour_index in colouring.iteritems():
+		d.add_board_cabinet(coord, coord, ["fill=%s"%colours[colour_index]])
+	
+	return d
+
+
+# A dict {filter_name : {direction: tikz, ...}, ...}
+wiring_uniqueness_diagram_tikz = defaultdict(dict)
+
+#wc = 0
+for wire_filter, filter_name in [ ((lambda o: o[0]==0 and o[1]==0), "Change Slot")
+                                , ((lambda o: o[0]==0 and o[1]!=0), "Change Rack")
+                                , ((lambda o: o[0]!=0), "Change Cabinet")
+                                ]:
+	#print filter_name
+	for direction in [NORTH, EAST, SOUTH_WEST]:
+		#print DIRECTION_NAMES[direction]
+		# Get a list of wires going in this direction with their coordinates
+		# converteed to relative values. Filter out wires we're not interested in,
+		# e.g. ones which leave the rack
+		relative_wires = [ (c,o) for (c,o)
+		                   in get_relative_wires(cabinet_torus, direction)
+		                   if wire_filter(o)
+		                 ]
+		
+		# Collect together wires which have the same relative connection
+		grouped_relative_wires = group_relative_wires(relative_wires
+		                                             , (lambda (c,r,s): (c,r,s))
+		                                             , (lambda (c,r,s): None)
+		                                             )
+		
+		# Count the number of times each distinct pattern of wiring occurs
+		distinct_pattern_counts = distinct_count(grouped_relative_wires.itervalues())
+		
+		# Create a lookup from distinct pattern to a unique id
+		pattern2id = dict((p,i) for (i,p) in enumerate(distinct_pattern_counts.keys()))
+		
+		d = generate_cabinet_colouring_diagram(
+			dict( (coordinates.Cabinet(*coord), pattern2id[pattern])
+			      for (coord, pattern) in grouped_relative_wires.iteritems()
+			    ),
+			(max(pattern2id.itervalues()) + 1 if pattern2id else 1),
+			cabinet_system,
+			cabinet_diagram_scaling_factor,
+		)
+		wiring_uniqueness_diagram_tikz[filter_name][direction] = d.get_tikz()
+		
+		#out = ""
+		#for r in range(num_racks_per_cabinet):
+		#	for c in range(num_cabinets):
+		#		for s in range(num_slots_per_rack):
+		#			try:
+		#				out += "%X"%(distinct_relative_wire_indexes.index(grouped_relative_wires[(c,r,s)]))
+		#				wc += 1
+		#			except KeyError:
+		#				# No local wires in this area
+		#				out += "-"
+		#		out += "  "
+		#	out += "\n"
+		#
+		#print out
+#print wc
+
 
 ################################################################################
 # Board Position List Generation
@@ -887,6 +1036,61 @@ scale-drawing of the system as assigned to cabinets is given in Figure
 	"num_racks_per_cabinet":num_racks_per_cabinet,
 	"num_cabinets_plural":"" if num_cabinets == 1 else "s",
 	"num_racks_per_cabinet_plural":"" if num_racks_per_cabinet == 1 else "s",
+}).strip()
+
+
+################################################################################
+# Wiring Patterns
+################################################################################
+
+
+#\wud{%(wiring_uniqeness_slot_north)s}{wires within a rack going North}{wud-slot-north}
+#\wud{%(wiring_uniqeness_slot_east)s}{wires within a rack going East}{wud-slot-east}
+#\wud{%(wiring_uniqeness_slot_south_west)s}{wires within a rack going South-West}{wud-slot-south-west}
+
+#\wud{%(wiring_uniqeness_rack_north)s}{wires between racks going North}{wud-rack-north}
+#\wud{%(wiring_uniqeness_rack_east)s}{wires between racks going East}{wud-rack-east}
+#\wud{%(wiring_uniqeness_rack_south_west)s}{wires between racks going South-West}{wud-rack-south-west}
+
+#\wud{%(wiring_uniqeness_cabinet_north)s}{wires between cabinets going North}{wud-cabinet-north}
+#\wud{%(wiring_uniqeness_cabinet_east)s}{wires between cabinets going East}{wud-cabinet-east}
+#\wud{%(wiring_uniqeness_cabinet_south_west)s}{wires between cabinets going South-West}{wud-cabinet-south-west}
+
+
+if show_wiring_patterns: print (r"""
+\section{Wiring Patterns}
+
+\newcommand{\wud}[3]{
+\begin{landscape}
+	\begin{figure}
+		\center
+		%% Scaled already.
+		\begin{tikzpicture}
+			#1
+		\end{tikzpicture}
+		
+		\caption{Wiring pattern diagram for #2. Slots which have the same colour
+		have a wire going to the same relative location.}
+		\label{fig:#3}
+	\end{figure}
+\end{landscape}
+}
+
+
+\wud{%(wiring_uniqeness_cabinet_south_west)s}{wires between cabinets going South-West}{wud-cabinet-south-west}
+
+"""%{
+	"wiring_uniqeness_slot_north":wiring_uniqueness_diagram_tikz["Change Slot"][NORTH],
+	"wiring_uniqeness_slot_east":wiring_uniqueness_diagram_tikz["Change Slot"][EAST],
+	"wiring_uniqeness_slot_south_west":wiring_uniqueness_diagram_tikz["Change Slot"][SOUTH_WEST],
+	
+	"wiring_uniqeness_rack_north":wiring_uniqueness_diagram_tikz["Change Rack"][NORTH],
+	"wiring_uniqeness_rack_east":wiring_uniqueness_diagram_tikz["Change Rack"][EAST],
+	"wiring_uniqeness_rack_south_west":wiring_uniqueness_diagram_tikz["Change Rack"][SOUTH_WEST],
+	
+	"wiring_uniqeness_cabinet_north":wiring_uniqueness_diagram_tikz["Change Cabinet"][NORTH],
+	"wiring_uniqeness_cabinet_east":wiring_uniqueness_diagram_tikz["Change Cabinet"][EAST],
+	"wiring_uniqeness_cabinet_south_west":wiring_uniqueness_diagram_tikz["Change Cabinet"][SOUTH_WEST],
 }).strip()
 
 

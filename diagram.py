@@ -98,7 +98,7 @@ class Diagram(object):
 %  #3 Style
 %
 % Also defines #1 north, #1 north east etc.
-\newcommand{\square}[3]{
+\newcommand{\squarenode}[3]{
 	\begin{scope}[#3]
 		\coordinate (#1) at (#2);
 	\end{scope}
@@ -125,7 +125,7 @@ class Diagram(object):
 		% Redefine as center
 		\coordinate (#1) at ([shift={(0.5*\slotwidth,0.5*\slotheight)}]#2);
 		
-		\path [occupied slot] (#2) rectangle ++(\slotwidth, \slotheight);
+		\path [occupied slot,#3] (#2) rectangle ++(\slotwidth, \slotheight);
 		
 		\coordinate (#1 north) at ([shift=(\cabnorth)]#2);
 		\coordinate (#1 north east) at ([shift=(\cabnortheast)]#2);
@@ -245,7 +245,7 @@ class Diagram(object):
 		"""
 		self.board_definitions += r"\%s{board %d}{%s}{%s};"%(
 			macro,
-			id(board),
+			board.id,
 			position_str,
 			",".join(styles),
 		) + "\n"
@@ -323,7 +323,7 @@ class Diagram(object):
 		styles = styles or []
 		
 		self._add_board(board, "%f,%f"%position,
-			"square", styles)
+			"squarenode", styles)
 	
 	
 	def add_board_cabinet(self, board, position, styles = None):
@@ -355,7 +355,7 @@ class Diagram(object):
 		
 		self.label_definitions += r"\node [%s] at (board %d) {%s};"%(
 			",".join(styles),
-			id(board),
+			board.id,
 			latex
 		) + "\n"
 	
@@ -366,7 +366,7 @@ class Diagram(object):
 		reference to the center of the board is given.
 		"""
 		return (r"board %d %s"%(
-			id(board),
+			board.id,
 			Diagram.DIRECTION_POSTFIX[direction] if direction is not None else ""
 		)).strip()
 	
@@ -392,8 +392,8 @@ class Diagram(object):
 	
 	def add_wire(self, board, direction, styles = None):
 		self._add_path(
-			[ "board %d %s"%(id(board), Diagram.DIRECTION_POSTFIX[direction])
-			, "board %d %s"%( id(board.follow_wire(direction))
+			[ "board %d %s"%(board.id, Diagram.DIRECTION_POSTFIX[direction])
+			, "board %d %s"%(board.follow_wire(direction).id
 			                , Diagram.DIRECTION_POSTFIX[topology.opposite(direction)]
 			                )
 			],
@@ -401,10 +401,37 @@ class Diagram(object):
 		)
 	
 	
+	def add_curved_wire(self, board, direction, styles = None):
+		offset = {
+			topology.NORTH      : ( 0,  1,  0),
+			topology.SOUTH      : ( 0, -1,  0),
+			topology.NORTH_EAST : ( 0,  0, -1),
+			topology.SOUTH_WEST : ( 0,  0,  1),
+			topology.EAST       : ( 1,  0,  0),
+			topology.WEST       : (-1,  0,  0),
+		}[direction]
+		self.path_definitions += r"""
+			\draw [%s] [hexagon coords]
+				(%s) ..
+				  controls +(%d,%d,%d)
+				       and +(%d,%d,%d)
+				.. (%s)
+				;
+		"""%(
+			",".join(styles),
+			"board %d %s"%(board.id, Diagram.DIRECTION_POSTFIX[direction]),
+			offset[0], offset[1], offset[2],
+			-offset[0], -offset[1], -offset[2],
+			"board %d %s"%(board.follow_wire(direction).id
+			              , Diagram.DIRECTION_POSTFIX[topology.opposite(direction)]
+			              )
+		) + "\n"
+	
+	
 	def add_packet_path(self, board, in_direction, out_direction, styles = None):
 		self._add_path(
-			[ "board %d %s"%(id(board), Diagram.DIRECTION_POSTFIX[in_direction])
-			, "board %d %s"%(id(board), Diagram.DIRECTION_POSTFIX[out_direction])
+			[ "board %d %s"%(board.id, Diagram.DIRECTION_POSTFIX[in_direction])
+			, "board %d %s"%(board.id, Diagram.DIRECTION_POSTFIX[out_direction])
 			],
 			styles
 		)
