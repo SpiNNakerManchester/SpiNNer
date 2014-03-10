@@ -1,0 +1,51 @@
+[metadata]
+title: SpiNNaker $10^6$ Machine (One Milion Cores) Wiring
+
+
+[system]
+# Actual size of the machine in terms of cabinets/racks/slots
+num_slots_per_rack: 24
+num_racks_per_cabinet: 5
+num_cabinets: 10
+
+
+[network]
+# Size of the network (threeboards)
+width:  20
+height: 20
+
+# The number of folds (actually the number of faces of a folded sheet)
+num_folds_x: 4
+num_folds_y: 2
+
+# When compressing a hexagonal grid into a regular rectangular gird, should
+# every-other column of hexagons be shifted down by one? If not, every other row
+# will be shifted left by one.
+compress_rows: True
+
+
+[report]
+# Scale all diagrams by this factor
+diagram_scaling: 0.5
+
+# Scale the cabinet diagram by this factor (from m to cm)
+cabinet_diagram_scaling_factor: 3.5
+
+# Show metrics relating to the wiring
+show_wiring_metrics: True
+
+# Show information relating to the topology
+show_topology_metrics: True
+
+# Include the development section in the report
+show_development: True
+
+# Show the mapping from logical to physical board position
+show_board_position_list: True
+
+# Show instructions for wiring the machine
+show_wiring_instructions: True
+
+# Number of bins on wire-length histograms
+wire_length_histogram_bins: 5
+

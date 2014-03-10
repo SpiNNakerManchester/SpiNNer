@@ -3,21 +3,25 @@
 """
 A tool which generates LaTeX/TikZ wiring guides.
 
+Takes a single argument: the parameter file to use to generate the guide.
+
 This almighty python script, approximately speaking first generates data
 structures containing the information to be presented and then proceeds to
 generate an absolutely massive LaTeX file.
 """
+
+import sys
 
 from collections import defaultdict
 
 from model.topology import NORTH, NORTH_EAST, EAST, SOUTH, SOUTH_WEST, WEST
 
 from model import topology
-from model import cabinet
 from model import board
-from model import transforms
 from model import metrics
-from model import coordinates
+
+from model_builder import build_model
+from param_parser import parse_params
 
 import diagram
 
@@ -25,79 +29,77 @@ import diagram
 # Load Parameters
 ################################################################################
 
-from params_physical import *
 
-#from params_spin103 import *
-#from params_spin1037 import *
-#from params_spin104 import *
-from params_spin1043 import *
-#from params_spin105 import *
-#from params_spin106 import *
+params = parse_params(["machine_params/universal.param", sys.argv[1]])
+
+title                          = params["title"]
+
+diagram_scaling                = params["diagram_scaling"]
+cabinet_diagram_scaling_factor = params["cabinet_diagram_scaling_factor"]
+show_wiring_metrics            = params["show_wiring_metrics"]
+show_topology_metrics          = params["show_topology_metrics"]
+show_development               = params["show_development"]
+show_board_position_list       = params["show_board_position_list"]
+show_wiring_instructions       = params["show_wiring_instructions"]
+wire_length_histogram_bins     = params["wire_length_histogram_bins"]
+
+slot_width                     = params["slot_width"]
+slot_height                    = params["slot_height"]
+slot_depth                     = params["slot_depth"]
+
+rack_width                     = params["rack_width"]
+rack_height                    = params["rack_height"]
+rack_depth                     = params["rack_depth"]
+
+cabinet_width                  = params["cabinet_width"]
+cabinet_height                 = params["cabinet_height"]
+cabinet_depth                  = params["cabinet_depth"]
+
+wire_positions                 = params["wire_positions"]
+socket_names                   = params["socket_names"]
+
+slot_spacing                   = params["slot_spacing"]
+slot_offset                    = params["slot_offset"]
+num_slots_per_rack             = params["num_slots_per_rack"]
+rack_spacing                   = params["rack_spacing"]
+rack_offset                    = params["rack_offset"]
+
+num_racks_per_cabinet          = params["num_racks_per_cabinet"]
+cabinet_spacing                = params["cabinet_spacing"]
+num_cabinets                   = params["num_cabinets"]
+
+width                          = params["width"]
+height                         = params["height"]
+num_folds_x                    = params["num_folds_x"]
+num_folds_y                    = params["num_folds_y"]
+compress_rows                  = params["compress_rows"]
+
 
 
 ################################################################################
 # Generate models
 ################################################################################
 
-# Set up the cabinet data structure
-cabinet_system = cabinet.System(
-	cabinet = cabinet.Cabinet(
-		rack = cabinet.Rack(
-			slot = cabinet.Slot(
-				dimensions    = (slot_width, slot_height, slot_depth),
-				wire_position = wire_positions,
-			),
-			dimensions   = (rack_width, rack_height, rack_depth),
-			num_slots    = num_slots_per_rack,
-			slot_spacing = slot_spacing,
-			slot_offset  = slot_offset,
-		),
-		dimensions   = (cabinet_width, cabinet_height, cabinet_depth),
-		num_racks    = num_racks_per_cabinet,
-		rack_spacing = rack_spacing,
-		rack_offset  = rack_offset,
-	),
-	num_cabinets    = num_cabinets,
-	cabinet_spacing = cabinet_spacing,
-)
-
-# Create an inter-linked torus
-torus = board.create_torus(width, height)
-
-# Convert to Cartesian coordinates as the coming manipulations use/abuse this
-cart_torus = transforms.hex_to_cartesian(torus)
-
-# Cut the left-hand side of the torus off and move it to the right to form a
-# rectangle
-rect_torus = transforms.rhombus_to_rect(cart_torus)
-
-# Compress the coordinates to eliminate the "wavy" pattern on the y-axis turning
-# the board coordinates into a continuous mesh.
-comp_torus = transforms.compress(rect_torus, 1 if compress_rows else 2
-                                           , 2 if compress_rows else 1
-                                           )
-
-# Show where the folds will occur
-fold_spaced_torus = transforms.space_folds(comp_torus, (num_folds_x, num_folds_y))
-
-# Actually do the folds
-folded_torus = transforms.fold(comp_torus, (num_folds_x, num_folds_y))
-
-# Place spaces in the folded version to see how it folded
-folded_spaced_torus = transforms.space_folds(folded_torus, (num_folds_x, num_folds_y))
-
-# Place spaces where the design is split into racks & cabinets
-folded_cabinet_spaced_torus = transforms.space_folds(folded_torus, (num_cabinets, num_racks_per_cabinet))
-
-# Map to cabinets
-cabinet_torus = transforms.cabinetise( folded_torus
-                                     , num_cabinets
-                                     , num_racks_per_cabinet
-                                     , num_slots_per_rack
-                                     )
-
-# Map to physical space for the cabinets described
-phys_torus = transforms.cabinet_to_physical(cabinet_torus, cabinet_system)
+( torus
+, cart_torus
+, rect_torus
+, comp_torus
+, fold_spaced_torus
+, folded_cabinet_spaced_torus
+, cabinet_torus
+, phys_torus
+, cabinet_system
+) = build_model( slot_width,    slot_height,    slot_depth
+               , rack_width,    rack_height,    rack_depth
+               , cabinet_width, cabinet_height, cabinet_depth
+               , wire_positions
+               , slot_spacing, slot_offset, num_slots_per_rack
+               , rack_spacing, rack_offset, num_racks_per_cabinet
+               , cabinet_spacing, num_cabinets
+               , width, height
+               , num_folds_x, num_folds_y
+               , compress_rows
+               )
 
 
  ##############################################################################
@@ -796,7 +798,7 @@ if show_wiring_metrics: print (r"""
 	\center
 	\begin{tabular}{l r r r r}
 		\toprule
-			Axis & Length (%(cabinet_unit)s) & Number of Wires\\
+			Axis & Length (m) & Number of Wires\\
 		\midrule
 			%(wire_length_stats)s
 		\bottomrule
@@ -810,7 +812,6 @@ if show_wiring_metrics: print (r"""
 	"wire_cabinet_stats":wire_cabinet_stats,
 	"total_wire_cabinet_stats":total_wire_cabinet_stats,
 	"wire_length_stats":wire_length_stats,
-	"cabinet_unit":cabinet_unit,
 }).strip()
 
 

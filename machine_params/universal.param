@@ -1,0 +1,55 @@
+[board]
+# Positions of the sockets on SpiNN-5 boards using front and back sockets
+wire_south_west: (0.005, 0.22, 0.0)
+wire_north_east: (0.005, 0.20, 0.0)
+wire_east:       (0.005, 0.18, 0.0)
+wire_west:       (0.005, 0.16, 0.0)
+wire_north:      (0.005, 0.22, 0.24)
+wire_south:      (0.005, 0.20, 0.24)
+
+# Names of the sockets in use, as above
+socket_name_south_west: SW (J2)
+socket_name_north_east: NE (J4)
+socket_name_east:       E (J5)
+socket_name_west:       W (J7)
+socket_name_north:      N (J6)
+socket_name_south:      S (J8)
+
+
+[slot]
+# Size of a slot (m)
+width:  0.015
+height: 0.240
+depth:  0.240
+
+# Spacing between each slot (m)
+spacing: 0.001
+
+
+[rack]
+# Size of a 6U rack (m)
+width:  0.480
+height: 0.266
+depth:  0.250
+
+# A 2U space between each rack (m)
+spacing: 0.089
+
+# The position of the bottom-left corner of the bottom-left-most slot in the
+# rack or omit to automaticaly center.
+#slot_offset: (0.0, 0.0, 0.0)
+
+
+[cabinet]
+# Size of a 19", 42U cabinet (m)
+width  : 0.680
+height : 1.867
+depth  : 0.250
+
+# Spacing between cabinets (m)
+spacing: 0.1
+
+# The position of the bottom-left corner of the bottom-left-most rack in the
+# cabinet or omit to automaticaly center.
+#rack_offset: (0.0, 0.0, 0.0)
+
