@@ -4,3 +4,8 @@
 *.log
 *.aux
 .swn
+*.tex
+*.toc
+*.pdf
+*.bbl
+*.blg
