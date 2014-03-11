@@ -137,7 +137,7 @@ cart_coord2board = dict((c,b) for (b,c) in cart_torus)
 
 
 def generate_diagram(boards, b2l, add_board_func,
-                    show_wires = True,
+                    show_wires = None,
                     cabinet_system = None, cabinet_scale = 1.0):
 	"""
 	Generates a diagram using the board positions shown and the mapping from board
@@ -157,8 +157,8 @@ def generate_diagram(boards, b2l, add_board_func,
 			d.add_label(board, r"\tiny %d,%d"%(b2l[board]))
 		
 		# Add wires
-		if show_wires:
-			for direction, colour in DIRECTION_COLOURS:
+		for direction, colour in DIRECTION_COLOURS:
+			if show_wires is None or direction in show_wires:
 				d.add_wire(board, direction, ["thick",colour])
 	
 	return d
@@ -211,7 +211,7 @@ comp_torus_diagram_tikz = generate_diagram( comp_torus
 fold_spaced_torus_diagram_tikz = generate_diagram( fold_spaced_torus
                                                  , board2coord
                                                  , diagram.Diagram.add_board_square
-                                                 , show_wires = False
+                                                 , show_wires = []
                                                  ).get_tikz()
 
 # Show folded diagram
@@ -225,12 +225,37 @@ folded_torus_diagram_tikz = generate_diagram( folded_cabinet_spaced_torus
 # Cabinetised Torus Diagram
 ################################################################################
 
-cabinet_torus_diagram_tikz = generate_diagram( cabinet_torus
-                                             , board2coord
-                                             , diagram.Diagram.add_board_cabinet
-                                             , cabinet_system = cabinet_system
-                                             , cabinet_scale = cabinet_diagram_scaling_factor,
-                                             ).get_tikz()
+# Work out which wires are on the back
+front_wires = []
+back_wires = []
+for direction in [NORTH, NORTH_EAST, EAST, SOUTH, SOUTH_WEST, WEST]:
+	if cabinet_system.cabinet.rack.slot.wire_position[direction][2] == 0:
+		front_wires.append(direction)
+	else:
+		back_wires.append(direction)
+
+cabinet_torus_diagram_front_tikz = generate_diagram( cabinet_torus
+                                                   , board2coord
+                                                   , diagram.Diagram.add_board_cabinet
+                                                   , show_wires = front_wires
+                                                   , cabinet_system = cabinet_system
+                                                   , cabinet_scale = cabinet_diagram_scaling_factor,
+                                                   ).get_tikz()
+
+
+cabinet_torus_diagram_back_tikz = generate_diagram( cabinet_torus
+                                                  , board2coord
+                                                  , diagram.Diagram.add_board_cabinet
+                                                  , show_wires = back_wires
+                                                  , cabinet_system = cabinet_system
+                                                  , cabinet_scale = cabinet_diagram_scaling_factor,
+                                                  ).get_tikz()
+# Flip the rear-view
+cabinet_torus_diagram_back_tikz = r"""
+\begin{scope}[xscale=-1]
+%s
+\end{scope}
+"""%cabinet_torus_diagram_back_tikz
 
 
 ################################################################################
@@ -290,7 +315,7 @@ def generate_packet_loop(boards, direction, diagram, start = (0,0,0)):
 d = generate_diagram( torus
                     , board2coord
                     , diagram.Diagram.add_board_hexagon
-                    , show_wires = False
+                    , show_wires = []
                     )
 
 wiring_loop_north_length      = generate_wiring_loop(torus, NORTH, d)
@@ -302,7 +327,7 @@ wiring_loop_diagram_tikz = d.get_tikz()
 d = generate_diagram( torus
                     , board2coord
                     , diagram.Diagram.add_board_hexagon
-                    , show_wires = False
+                    , show_wires = []
                     )
 
 packet_loop_north_length      = generate_packet_loop(torus, NORTH,      d, (0,1,0))
@@ -434,145 +459,6 @@ def calculate_wire_length_stats(boards, wire_offsets={}, num_bins = 5):
 wire_length_stats = calculate_wire_length_stats(phys_torus,
 	cabinet_system.cabinet.rack.slot.wire_position,
 	wire_length_histogram_bins)
-
-
-#################################################################################
-## Wiring Pattern Finding
-#################################################################################
-#
-#
-#def get_relative_wires(boards, direction):
-#	"""
-#	Returns a list of (coord, wire_relative_target) tuples where coord is a
-#	coordinate of a board and wire_relative_target is the coordinate relative to
-#	coord of the wire going in direction from coord.
-#	"""
-#	
-#	b2c = dict(boards)
-#	
-#	out = []
-#	
-#	for board, coord in boards:
-#		out.append((coord, b2c[board.follow_wire(direction)] - coord))
-#	
-#	return out
-#
-#
-#def group_relative_wires(rel_wires, group_key, elem_key):
-#	"""
-#	Group together relative wire descriptions. Returns a dict {key:
-#	frozenset([(elem,wire_direction,wire_relative_target),...]), ...} where key is
-#	a value returned by group_key(coord) and where the elem is returned by
-#	elem_key(coord).
-#	
-#	For example, to group together all relative wires for each rack in the system,
-#	group_key = (lambda (c,r,s): (c,r))
-#	elem_key  = (lambda (c,r,s): s)
-#	"""
-#	
-#	groups = defaultdict(set)
-#	
-#	for coord, wire_relative_target in rel_wires:
-#		groups[group_key(coord)].add((elem_key(coord), wire_relative_target))
-#	
-#	return dict((g, frozenset(s)) for (g,s) in groups.iteritems())
-#
-#
-#def distinct_count(iterable):
-#	"""
-#	Returns a dict {item: count,...} which contains the number of times
-#	each unique item has appeared in the iterable
-#	"""
-#	
-#	counts = defaultdict(lambda:0)
-#	
-#	for item in iterable:
-#		counts[item] += 1
-#	
-#	return counts
-#
-#
-#def generate_cabinet_colouring_diagram(colouring, num_colours, cabinet_system, cabinet_scale):
-#	"""
-#	Takes a dict {cabinet_coord: colour_index} and the maximum color_index. Returns
-#	a diagram for a coloured set of racks.
-#	"""
-#	d = diagram.Diagram()
-#	d.set_cabinet_system(cabinet_system, cabinet_scale)
-#	
-#	
-#	# Generate pallet
-#	colours = []
-#	spectrum = ["red","green","blue", "yellow"]
-#	segment_size = (num_colours+len(spectrum)-2) / (len(spectrum)-1)
-#	for i in range(num_colours):
-#		start_colour, end_colour = spectrum[i / segment_size:][:2]
-#		point = 100 - (((i % segment_size) * 100) / segment_size)
-#		colours.append("%s!%d!%s"%(start_colour, point, end_colour))
-#	
-#	# Add the boards
-#	for coord, colour_index in colouring.iteritems():
-#		d.add_board_cabinet(coord, coord, ["fill=%s"%colours[colour_index]])
-#	
-#	return d
-#
-#
-## A dict {filter_name : {direction: tikz, ...}, ...}
-#wiring_uniqueness_diagram_tikz = defaultdict(dict)
-#
-##wc = 0
-#for wire_filter, filter_name in [ ((lambda o: o[0]==0 and o[1]==0), "Change Slot")
-#                                , ((lambda o: o[0]==0 and o[1]!=0), "Change Rack")
-#                                , ((lambda o: o[0]!=0), "Change Cabinet")
-#                                ]:
-#	#print filter_name
-#	for direction in [NORTH, EAST, SOUTH_WEST]:
-#		#print DIRECTION_NAMES[direction]
-#		# Get a list of wires going in this direction with their coordinates
-#		# converteed to relative values. Filter out wires we're not interested in,
-#		# e.g. ones which leave the rack
-#		relative_wires = [ (c,o) for (c,o)
-#		                   in get_relative_wires(cabinet_torus, direction)
-#		                   if wire_filter(o)
-#		                 ]
-#		
-#		# Collect together wires which have the same relative connection
-#		grouped_relative_wires = group_relative_wires(relative_wires
-#		                                             , (lambda (c,r,s): (c,r,s))
-#		                                             , (lambda (c,r,s): None)
-#		                                             )
-#		
-#		# Count the number of times each distinct pattern of wiring occurs
-#		distinct_pattern_counts = distinct_count(grouped_relative_wires.itervalues())
-#		
-#		# Create a lookup from distinct pattern to a unique id
-#		pattern2id = dict((p,i) for (i,p) in enumerate(distinct_pattern_counts.keys()))
-#		
-#		d = generate_cabinet_colouring_diagram(
-#			dict( (coordinates.Cabinet(*coord), pattern2id[pattern])
-#			      for (coord, pattern) in grouped_relative_wires.iteritems()
-#			    ),
-#			(max(pattern2id.itervalues()) + 1 if pattern2id else 1),
-#			cabinet_system,
-#			cabinet_diagram_scaling_factor,
-#		)
-#		wiring_uniqueness_diagram_tikz[filter_name][direction] = d.get_tikz()
-#		
-#		#out = ""
-#		#for r in range(num_racks_per_cabinet):
-#		#	for c in range(num_cabinets):
-#		#		for s in range(num_slots_per_rack):
-#		#			try:
-#		#				out += "%X"%(distinct_relative_wire_indexes.index(grouped_relative_wires[(c,r,s)]))
-#		#				wc += 1
-#		#			except KeyError:
-#		#				# No local wires in this area
-#		#				out += "-"
-#		#		out += "  "
-#		#	out += "\n"
-#		#
-#		#print out
-##print wc
 
 
 ################################################################################
@@ -1005,12 +891,26 @@ scale-drawing of the system as assigned to cabinets is given in Figure
 		\center
 		%% Scaled already.
 		\begin{tikzpicture}
-			%(cabinet_torus_diagram_tikz)s
+			%(cabinet_torus_diagram_front_tikz)s
 		\end{tikzpicture}
 		
 		\caption{Allocation of SpiNNaker boards to cabinets and racks and the wires
-		between them. Colour key: %(colour_key)s}
+		between them (front view). Colour key: %(colour_key)s}
 		\label{fig:cabinet-torus}
+	\end{figure}
+\end{landscape}
+
+\begin{landscape}
+	\begin{figure}
+		\center
+		%% Scaled already.
+		\begin{tikzpicture}
+			%(cabinet_torus_diagram_back_tikz)s
+		\end{tikzpicture}
+		
+		\caption{Allocation of SpiNNaker boards to cabinets and racks and the
+		wires between them (rear view). Colour key: %(colour_key)s}
+		\label{fig:cabinet-torus-back}
 	\end{figure}
 \end{landscape}
 
@@ -1020,7 +920,8 @@ scale-drawing of the system as assigned to cabinets is given in Figure
 	"comp_torus_diagram_tikz":comp_torus_diagram_tikz,
 	"fold_spaced_torus_diagram_tikz":fold_spaced_torus_diagram_tikz,
 	"folded_torus_diagram_tikz":folded_torus_diagram_tikz,
-	"cabinet_torus_diagram_tikz":cabinet_torus_diagram_tikz,
+	"cabinet_torus_diagram_front_tikz":cabinet_torus_diagram_front_tikz,
+	"cabinet_torus_diagram_back_tikz":cabinet_torus_diagram_back_tikz,
 	"scale":diagram_scaling,
 	"colour_key":colour_key,
 	"num_folds_x":num_folds_x,
