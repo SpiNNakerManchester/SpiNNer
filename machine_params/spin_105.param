@@ -15,7 +15,7 @@ width:  8
 height: 5
 
 # The number of folds (actually the number of faces of a folded sheet)
-num_folds_x: 2
+num_folds_x: 1
 num_folds_y: 2
 
 # When compressing a hexagonal grid into a regular rectangular gird, should
@@ -29,7 +29,7 @@ compress_rows: False
 diagram_scaling: 1.0
 
 # Scale the cabinet diagram by this factor (from m to cm)
-cabinet_diagram_scaling_factor: 10.0
+cabinet_diagram_scaling_factor: 7.0
 
 # Show metrics relating to the wiring
 show_wiring_metrics: True

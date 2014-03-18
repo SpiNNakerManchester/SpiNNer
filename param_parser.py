@@ -83,6 +83,14 @@ def parse_params(filenames):
 	output["num_racks_per_cabinet"] = cp.getint("system", "num_racks_per_cabinet")
 	output["num_cabinets"]          = cp.getint("system", "num_cabinets")
 	
+	# Wiring properties
+	output["minimum_arc_height"] = cp.getfloat("wiring", "minimum_arc_height")
+	
+	# Available wire lengths {wire_length: wire_name,...}
+	output["available_wires"] = dict( (cp.getfloat("available wires", o), o)
+	                                  for o in cp.options("available wires")
+	                                )
+	
 	# Network properties
 	output["width"]         = cp.getint("network", "width")
 	output["height"]        = cp.getint("network", "height")

@@ -53,3 +53,13 @@ spacing: 0.1
 # cabinet or omit to automaticaly center.
 #rack_offset: (0.0, 0.0, 0.0)
 
+
+[wiring]
+# The minimum height of an arc of a wire between any two points to allow (m)
+minimum_arc_height: 0.05
+
+[available wires]
+# List the lengths (m) of wires availble, with a sensible name
+short:  0.20
+medium: 0.50
+long:   1.00
