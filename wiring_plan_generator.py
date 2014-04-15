@@ -2,6 +2,9 @@
 
 """
 Utility functions for producing practical wiring plans.
+
+If executed as a script, currently reports what wire lengths are used for what
+connections.
 """
 
 import sys
@@ -179,3 +182,145 @@ def generate_wiring_plan(cabinet_torus, phys_torus, wire_positions, available_wi
 			            )
 	
 	return (plan_between_slots, plan_between_racks, plan_between_cabinets)
+
+
+if __name__=="__main__":
+	import sys
+	
+	from model_builder import build_model
+	from param_parser import parse_params
+	
+	################################################################################
+	# Load Parameters
+	################################################################################
+	
+	params = parse_params(["machine_params/universal.param", sys.argv[1]])
+	
+	title                          = params["title"]
+	
+	diagram_scaling                = params["diagram_scaling"]
+	cabinet_diagram_scaling_factor = params["cabinet_diagram_scaling_factor"]
+	show_wiring_metrics            = params["show_wiring_metrics"]
+	show_topology_metrics          = params["show_topology_metrics"]
+	show_development               = params["show_development"]
+	show_board_position_list       = params["show_board_position_list"]
+	show_wiring_instructions       = params["show_wiring_instructions"]
+	wire_length_histogram_bins     = params["wire_length_histogram_bins"]
+	
+	slot_width                     = params["slot_width"]
+	slot_height                    = params["slot_height"]
+	slot_depth                     = params["slot_depth"]
+	
+	rack_width                     = params["rack_width"]
+	rack_height                    = params["rack_height"]
+	rack_depth                     = params["rack_depth"]
+	
+	cabinet_width                  = params["cabinet_width"]
+	cabinet_height                 = params["cabinet_height"]
+	cabinet_depth                  = params["cabinet_depth"]
+	
+	wire_positions                 = params["wire_positions"]
+	socket_names                   = params["socket_names"]
+	
+	slot_spacing                   = params["slot_spacing"]
+	slot_offset                    = params["slot_offset"]
+	num_slots_per_rack             = params["num_slots_per_rack"]
+	rack_spacing                   = params["rack_spacing"]
+	rack_offset                    = params["rack_offset"]
+	
+	num_racks_per_cabinet          = params["num_racks_per_cabinet"]
+	cabinet_spacing                = params["cabinet_spacing"]
+	num_cabinets                   = params["num_cabinets"]
+	
+	width                          = params["width"]
+	height                         = params["height"]
+	num_folds_x                    = params["num_folds_x"]
+	num_folds_y                    = params["num_folds_y"]
+	compress_rows                  = params["compress_rows"]
+	
+	minimum_arc_height             = params["minimum_arc_height"]
+	available_wires                = params["available_wires"]
+	
+	
+	################################################################################
+	# Generate models
+	################################################################################
+	
+	( torus
+	, cart_torus
+	, rect_torus
+	, comp_torus
+	, fold_spaced_torus
+	, folded_cabinet_spaced_torus
+	, cabinet_torus
+	, phys_torus
+	, cabinet_system
+	) = build_model( slot_width,    slot_height,    slot_depth
+	               , rack_width,    rack_height,    rack_depth
+	               , cabinet_width, cabinet_height, cabinet_depth
+	               , wire_positions
+	               , slot_spacing, slot_offset, num_slots_per_rack
+	               , rack_spacing, rack_offset, num_racks_per_cabinet
+	               , cabinet_spacing, num_cabinets
+	               , width, height
+	               , num_folds_x, num_folds_y
+	               , compress_rows
+	               )
+	
+	
+	################################################################################
+	# List wires
+	################################################################################
+	
+	b2p = dict(cabinet_torus)
+	
+	# Work out what wires should be used
+	wires = enumerate_wires(phys_torus)
+	wires_with_lenghts = assign_wires( wires
+	                                 , phys_torus
+	                                 , wire_positions
+	                                 , available_wires.keys()
+	                                 , minimum_arc_height
+	                                 )
+	
+	# Mapping from wire-length to a list of ((src_board, src_direction),
+	# (dst_board, dst_direction), absolute_distance) tuples.
+	wire_used_for = defaultdict(list)
+	for ((src_board, src_direction), (dst_board, dst_direction), wire_length) in wires_with_lenghts:
+		wire_used_for[wire_length].append( ( (src_board, src_direction)
+		                                   , (dst_board, dst_direction)
+		                                   , metrics.wire_length( phys_torus
+		                                                        , src_board
+		                                                        , src_direction
+		                                                        , wire_positions
+		                                                        )
+		                                   )
+		                                 )
+	
+	# For each wire-length, report the connections made with such a wire (and
+	# their length) in ascending order of length.
+	for wire_length in sorted(available_wires.keys()):
+		connections = sorted(wire_used_for[wire_length], key=(lambda (_1, _2, l): l), reverse=True)
+		
+		print "="*80
+		print "Connections Using '%s' (%f unit) Wires (%d Wires)"%( available_wires[wire_length]
+		                                                        , wire_length
+		                                                        , len(connections)
+		                                                        )
+		print "="*80
+		
+		def print_connection(connection):
+			((src_board, src_direction), (dst_board, dst_direction), absolute_distance) = connection
+			print "Distance = %f units: %s (%s) --> %s (%s)"%( absolute_distance
+			                                                 , b2p[src_board], socket_names[src_direction]
+			                                                 , b2p[dst_board], socket_names[dst_direction]
+			                                                 )
+		
+		for connection in connections[:10]:
+			print_connection(connection)
+		print "..."
+		for connection in connections[-10:]:
+			print_connection(connection)
+		
+		print
+
