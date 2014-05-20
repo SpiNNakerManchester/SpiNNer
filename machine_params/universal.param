@@ -1,11 +1,15 @@
+#
+# Revised with actual dimensions by Steve Temple on 19may14
+#
+
 [board]
 # Positions of the sockets on SpiNN-5 boards using front and back sockets
-wire_south_west: (0.005, 0.22, 0.0)
-wire_north_east: (0.005, 0.20, 0.0)
-wire_east:       (0.005, 0.18, 0.0)
-wire_west:       (0.005, 0.16, 0.0)
-wire_north:      (0.005, 0.22, 0.24)
-wire_south:      (0.005, 0.20, 0.24)
+wire_south_west: (0.005, 0.220, 0.0)
+wire_north_east: (0.005, 0.202, 0.0)
+wire_east:       (0.005, 0.184, 0.0)
+wire_west:       (0.005, 0.166, 0.0)
+wire_north:      (0.005, 0.185, 0.24)
+wire_south:      (0.005, 0.167, 0.24)
 
 # Names of the sockets in use, as above
 socket_name_south_west: SW (J2)
@@ -18,17 +22,17 @@ socket_name_south:      S (J8)
 
 [slot]
 # Size of a slot (m)
-width:  0.015
-height: 0.240
+width:  0.01524
+height: 0.233
 depth:  0.240
 
 # Spacing between each slot (m)
-spacing: 0.001
+spacing: 0.0
 
 
 [rack]
 # Size of a 6U rack (m)
-width:  0.480
+width:  0.430
 height: 0.266
 depth:  0.250
 
@@ -37,21 +41,21 @@ spacing: 0.089
 
 # The position of the bottom-left corner of the bottom-left-most slot in the
 # rack or omit to automaticaly center.
-#slot_offset: (0.0, 0.0, 0.0)
+slot_offset: (0.06, 0.016, 0.0)
 
 
 [cabinet]
-# Size of a 19", 42U cabinet (m)
-width  : 0.680
-height : 1.867
+# Size of a 19", 41U cabinet (m)
+width  : 0.600
+height : 1.822
 depth  : 0.250
 
 # Spacing between cabinets (m)
-spacing: 0.1
+spacing: 0.0
 
 # The position of the bottom-left corner of the bottom-left-most rack in the
 # cabinet or omit to automaticaly center.
-#rack_offset: (0.0, 0.0, 0.0)
+rack_offset: (0.085, 0.089, 0.0)
 
 
 [wiring]
@@ -60,7 +64,8 @@ minimum_arc_height: 0.05
 
 [available wires]
 # List the lengths (m) of wires availble, with a sensible name
-very_short: 0.15
-short:      0.30
-long:       0.50
-very_long:  0.90
+#very_short: 0.15
+#short:      0.30
+#long:       0.50
+#very_long:  0.90
+generic:     1.00
