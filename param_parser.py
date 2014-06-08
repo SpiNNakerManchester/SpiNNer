@@ -6,6 +6,7 @@ Provides a utility function for reading model specifications from files.
 
 from ConfigParser import ConfigParser
 
+from model import coordinates
 from model.topology import NORTH, NORTH_EAST, EAST, SOUTH, SOUTH_WEST, WEST
 
 def parse_params(filenames):
@@ -67,16 +68,18 @@ def parse_params(filenames):
 	output["rack_height"]  = cp.getfloat("rack", "height")
 	output["rack_depth"]   = cp.getfloat("rack", "depth")
 	output["rack_spacing"] = cp.getfloat("rack", "spacing")
-	output["slot_offset"]  = to_3D_tuple(cp.get("rack", "slot_offset")) \
-	                         if cp.has_option("rack","slot_offset") else None
+	output["slot_offset"]  = coordinates.Cartesian3D(*
+	                           to_3D_tuple(cp.get("rack", "slot_offset"))
+	                         ) if cp.has_option("rack","slot_offset") else None
 	
 	# Cabinet properties
 	output["cabinet_width"]   = cp.getfloat("cabinet", "width")
 	output["cabinet_height"]  = cp.getfloat("cabinet", "height")
 	output["cabinet_depth"]   = cp.getfloat("cabinet", "depth")
 	output["cabinet_spacing"] = cp.getfloat("cabinet", "spacing")
-	output["rack_offset"]     = to_3D_tuple(cp.get("cabinet", "slot_offset")) \
-	                            if cp.has_option("cabinet","slot_offset") else None
+	output["rack_offset"]     = coordinates.Cartesian3D(*
+	                              to_3D_tuple(cp.get("cabinet", "slot_offset"))
+	                            ) if cp.has_option("cabinet","slot_offset") else None
 	
 	# System properties
 	output["num_slots_per_rack"]    = cp.getint("system", "num_slots_per_rack")
