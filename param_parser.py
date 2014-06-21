@@ -78,8 +78,8 @@ def parse_params(filenames):
 	output["cabinet_depth"]   = cp.getfloat("cabinet", "depth")
 	output["cabinet_spacing"] = cp.getfloat("cabinet", "spacing")
 	output["rack_offset"]     = coordinates.Cartesian3D(*
-	                              to_3D_tuple(cp.get("cabinet", "slot_offset"))
-	                            ) if cp.has_option("cabinet","slot_offset") else None
+	                              to_3D_tuple(cp.get("cabinet", "rack_offset"))
+	                            ) if cp.has_option("cabinet","rack_offset") else None
 	
 	# System properties
 	output["num_slots_per_rack"]    = cp.getint("system", "num_slots_per_rack")
