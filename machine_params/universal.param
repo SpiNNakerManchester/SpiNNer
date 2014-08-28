@@ -8,8 +8,8 @@ wire_south_west: (0.005, 0.220, 0.0)
 wire_north_east: (0.005, 0.202, 0.0)
 wire_east:       (0.005, 0.184, 0.0)
 wire_west:       (0.005, 0.166, 0.0)
-wire_north:      (0.005, 0.185, 0.24)
-wire_south:      (0.005, 0.167, 0.24)
+wire_north:      (0.005, 0.148, 0.0)
+wire_south:      (0.005, 0.130, 0.0)
 
 # Names of the sockets in use, as above
 socket_name_south_west: SW (J2)
