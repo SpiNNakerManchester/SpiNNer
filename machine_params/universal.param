@@ -64,8 +64,8 @@ minimum_arc_height: 0.05
 
 [available wires]
 # List the lengths (m) of wires availble, with a sensible name
-very_short: 0.15
+very short: 0.15
 short:      0.30
 long:       0.50
-#quite_long: 0.90
-very_long:  1.00
+#quite long: 0.90
+very long:  1.00
