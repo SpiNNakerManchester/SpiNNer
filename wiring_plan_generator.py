@@ -102,6 +102,7 @@ def assign_wires(wires, phys_torus, wire_positions, available_wire_lengths, mini
 		elif b2p[w1[0][0]].x > b2p[w2[0][0]].x: return +1
 		elif b2p[w1[0][0]].y < b2p[w2[0][0]].y: return -1 # Left-to-right
 		elif b2p[w1[0][0]].y > b2p[w2[0][0]].y: return +1
+		else: return 0 # Arbitrary
 	wires.sort(cmp = sort_wires)
 	
 	# Strip out the arc height and return
