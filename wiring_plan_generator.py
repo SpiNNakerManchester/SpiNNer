@@ -22,7 +22,8 @@ def enumerate_wires(boards):
 	"""
 	Takes a set of boards and enumerates the wires in the network. Returns a
 	list [((src_board, src_direction), (dst_board, dst_direction)),...] in no
-	particular order.
+	particular order. Directions NORTH, EAST and SOUTH_WEST are always "sources"
+	and SOUTH, WEST, and NORTH_EAST are always "destinations".
 	"""
 	
 	wires = []
@@ -270,58 +271,84 @@ if __name__=="__main__":
 	
 	
 	################################################################################
-	# List wires
+	# Enumerate wiring plan
 	################################################################################
 	
+	# Produce an optimised plan
+	( wires_between_slots
+	, wires_between_racks
+	, wires_between_cabinets
+	) = generate_wiring_plan( cabinet_torus
+	                        , phys_torus
+	                        , wire_positions
+	                        , available_wires
+	                        , minimum_arc_height
+	                        )
+	
+	# Create a mapping from board to cabinet/rack/slot position
 	b2p = dict(cabinet_torus)
 	
-	# Work out what wires should be used
-	wires = enumerate_wires(phys_torus)
-	wires_with_lenghts = assign_wires( wires
-	                                 , phys_torus
-	                                 , wire_positions
-	                                 , available_wires.keys()
-	                                 , minimum_arc_height
-	                                 )
+	print("Wires between slots in the same rack")
+	print("====================================")
 	
-	# Mapping from wire-length to a list of ((src_board, src_direction),
-	# (dst_board, dst_direction), absolute_distance) tuples.
-	wire_used_for = defaultdict(list)
-	for ((src_board, src_direction), (dst_board, dst_direction), wire_length) in wires_with_lenghts:
-		wire_used_for[wire_length].append( ( (src_board, src_direction)
-		                                   , (dst_board, dst_direction)
-		                                   , metrics.wire_length( phys_torus
-		                                                        , src_board
-		                                                        , src_direction
-		                                                        , wire_positions
-		                                                        )
-		                                   )
-		                                 )
+	cabinets = set(c for (c,r,d) in wires_between_slots.keys())
+	for cabinet in sorted(cabinets):
+		racks = set(r for (c,r,d) in wires_between_slots.keys()
+		              if c == cabinet
+		           )
+		for rack in sorted(racks):
+			print("  Wires within cabinet %2d, rack %2d"%(cabinet, rack))
+			print("  --------------------------------")
+			
+			directions = set(d for (c,r,d) in wires_between_slots.keys()
+			                   if c == cabinet and r == rack
+			                )
+			for direction in sorted(directions, key=(lambda d: -wire_positions[d][1])):
+				wires = wires_between_slots[(cabinet,rack,direction)]
+				print("    Wires %s -> %s"%( socket_names[wires[0][0][1]]
+				                           , socket_names[wires[0][1][1]]
+				                           ))
+				for ((src_board,src_direction), (dst_board,dst_direction), wire_length) in wires:
+					print("      Slot %2d -> %2d using %0.2fm (%s) wires."%(
+						b2p[src_board].slot,
+						b2p[dst_board].slot,
+						wire_length,
+						available_wires[wire_length],
+					))
+				
+				print("")
+			
+			print("")
+			
+		print("")
 	
-	# For each wire-length, report the connections made with such a wire (and
-	# their length) in ascending order of length.
-	for wire_length in sorted(available_wires.keys()):
-		connections = sorted(wire_used_for[wire_length], key=(lambda (_1, _2, l): l), reverse=True)
+	print("Wires between racks in the same cabinet")
+	print("=======================================")
+	
+	cabinets = set(c for (c,d) in wires_between_racks.keys())
+	for cabinet in sorted(cabinets):
+		print("  Wires within cabinet %2d"%(cabinet))
+		print("  -----------------------")
 		
-		print "="*80
-		print "Connections Using '%s' (%f unit) Wires (%d Wires)"%( available_wires[wire_length]
-		                                                        , wire_length
-		                                                        , len(connections)
-		                                                        )
-		print "="*80
-		
-		def print_connection(connection):
-			((src_board, src_direction), (dst_board, dst_direction), absolute_distance) = connection
-			print "Distance = %f units: %s (%s) --> %s (%s)"%( absolute_distance
-			                                                 , b2p[src_board], socket_names[src_direction]
-			                                                 , b2p[dst_board], socket_names[dst_direction]
-			                                                 )
-		
-		for connection in connections[:10]:
-			print_connection(connection)
-		print "..."
-		for connection in connections[-10:]:
-			print_connection(connection)
-		
-		print
+		directions = set(d for (c,d) in wires_between_racks.keys()
+		                   if c == cabinet
+		                )
+		for direction in sorted(directions, key=(lambda d: -wire_positions[d][1])):
+			wires = wires_between_racks[(cabinet,direction)]
+			print("    Wires %s -> %s"%( socket_names[wires[0][0][1]]
+			                           , socket_names[wires[0][1][1]]
+			                           ))
+			for ((src_board,src_direction), (dst_board,dst_direction), wire_length) in wires:
+				print("      Rack, Slot %2d, %2d -> %2d, %2d using %0.2fm (%s) wires."%(
+					b2p[src_board].rack,
+					b2p[src_board].slot,
+					b2p[dst_board].rack,
+					b2p[dst_board].slot,
+					wire_length,
+					available_wires[wire_length],
+				))
+			
+			print("")
+			
+		print("")
 
