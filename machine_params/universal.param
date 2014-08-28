@@ -16,8 +16,8 @@ socket_name_south_west: SW (J2)
 socket_name_north_east: NE (J4)
 socket_name_east:       E (J5)
 socket_name_west:       W (J7)
-socket_name_north:      N (J6)
-socket_name_south:      S (J8)
+socket_name_north:      N (J9)
+socket_name_south:      S (J11)
 
 
 [slot]
