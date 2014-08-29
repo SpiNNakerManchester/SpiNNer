@@ -3,8 +3,8 @@
 """
 Utility functions for producing practical wiring plans.
 
-If executed as a script, currently reports what wire lengths are used for what
-connections.
+If executed as a script, takes a parameter file for a machine and produces a set
+of sensibly ordered wiring instructions.
 """
 
 import sys
