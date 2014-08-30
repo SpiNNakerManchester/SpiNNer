@@ -270,14 +270,17 @@ class MachineDiagram(object):
 			ctx.stroke()
 	
 	
-	def draw(self, ctx, max_width, max_height):
+	def draw(self, ctx, max_width, max_height, cabinet = None, rack = None, slot = None):
 		"""
-		Draw the diagram onto the supplied context at the sizes defined.
+		Draw the diagram onto the supplied context at the sizes defined. Optionally
+		zoom the diagram to a specific cabinet, rack or slot.
 		
 		ctx is a Cairo drawing context onto which the diagram will be drawn
 		
 		max_width and max_height are the maximum dimensions of the context which
 		should be used.
+		
+		cabinet, rack and slot define a desired part of the system to focus on.
 		"""
 		cabinet_width   = self.cabinet_system.cabinet.dimensions[0]
 		cabinet_height  = self.cabinet_system.cabinet.dimensions[1]
@@ -289,12 +292,34 @@ class MachineDiagram(object):
 		
 		ctx.save()
 		
+		if cabinet is None:
+			focus_x = 0.0
+			focus_y = 0.0
+			focus_width  = system_width
+			focus_height = system_height
+		elif rack is None:
+			assert cabinet is not None
+			focus_x, focus_y = self.get_cabinet_position(cabinet)
+			focus_width, focus_height, _  = self.cabinet_system.cabinet.dimensions
+		elif slot is None:
+			assert cabinet is not None and rack is not None
+			focus_x, focus_y = self.get_rack_position(cabinet, rack)
+			focus_width, focus_height, _  = self.cabinet_system.cabinet.rack.dimensions
+		else:
+			assert cabinet is not None and rack is not None and slot is not None
+			focus_x, focus_y = self.get_slot_position(cabinet, rack, slot)
+			focus_width, focus_height, _  = self.cabinet_system.cabinet.rack.slot.dimensions
+		
 		# Rescale the drawing such that the system fits the space as well as
 		# possible
-		fit_to_width_scale  = max_width/system_width
-		fit_to_height_scale = max_height/system_height
+		fit_to_width_scale  = max_width/focus_width
+		fit_to_height_scale = max_height/focus_height
 		scale = min(fit_to_width_scale, fit_to_height_scale)
+		ctx.translate( (max_width  - (focus_width*scale)) / 2
+		             , (max_height - (focus_height*scale)) / 2
+		             )
 		ctx.scale(scale, scale)
+		ctx.translate(-focus_x, -focus_y)
 		
 		# Draw the cabinets and such
 		self._draw_cabinets(ctx)
