@@ -13,8 +13,6 @@ import cairo
 
 from model.topology import NORTH, NORTH_EAST, EAST, SOUTH, SOUTH_WEST, WEST
 
-from wiring_plan_generator import generate_wiring_plan
-
 
 class MachineDiagram(object):
 	"""
@@ -82,6 +80,7 @@ class MachineDiagram(object):
 		Get the offset in meters from the top-left of a cabinet to the top-left of
 		the given rack.
 		"""
+		num_racks    = self.cabinet_system.cabinet.num_racks
 		rack_height  = self.cabinet_system.cabinet.rack.dimensions[1]
 		rack_spacing = self.cabinet_system.cabinet.rack_spacing
 		rack_offset  = self.cabinet_system.cabinet.offset
@@ -89,7 +88,7 @@ class MachineDiagram(object):
 		x = rack_offset[0]
 		y = self.cabinet_system.cabinet.dimensions[1] - rack_offset[1] - rack_height
 		
-		y += -(rack_height+rack_spacing) * r
+		y += -(rack_height+rack_spacing) * (num_racks - r - 1)
 		
 		return (x,y)
 	
@@ -313,6 +312,9 @@ class MachineDiagram(object):
 
 if __name__=="__main__":
 	import sys
+	import colorsys
+	
+	from wiring_plan_generator import generate_wiring_plan, flatten_wiring_plan
 	
 	param_file    = sys.argv[1]
 	output_file   = sys.argv[2]
@@ -409,6 +411,12 @@ if __name__=="__main__":
 	                        , minimum_arc_height
 	                        )
 	
+	wires = flatten_wiring_plan( wires_between_slots
+	                           , wires_between_racks
+	                           , wires_between_cabinets
+	                           , wire_positions
+	                           )
+	
 	b2p = dict(cabinet_torus)
 	
 	surface = cairo.ImageSurface (cairo.FORMAT_ARGB32, output_width, output_height)
@@ -416,20 +424,13 @@ if __name__=="__main__":
 	
 	md = MachineDiagram(cabinet_system, cabinet_torus)
 	
-	for (src_board, src_direction), (dst_board, dst_direction), wire_length in sum(wires_between_slots.values(), []):
+	for num, ((src_board, src_direction), (dst_board, dst_direction), wire_length) in enumerate(wires):
 		src = list(b2p[src_board]) + [src_direction]
 		dst = list(b2p[dst_board]) + [dst_direction]
-		md.add_wire(src, dst, (1.0, 0.0, 0.0, 1.0))
-	
-	for (src_board, src_direction), (dst_board, dst_direction), wire_length in sum(wires_between_racks.values(), []):
-		src = list(b2p[src_board]) + [src_direction]
-		dst = list(b2p[dst_board]) + [dst_direction]
-		md.add_wire(src, dst, (0.0, 1.0, 0.0, 1.0))
-	
-	for (src_board, src_direction), (dst_board, dst_direction), wire_length in sum(wires_between_cabinets.values(), []):
-		src = list(b2p[src_board]) + [src_direction]
-		dst = list(b2p[dst_board]) + [dst_direction]
-		md.add_wire(src, dst, (0.0, 0.0, 1.0, 1.0))
+		
+		r,g,b = colorsys.hsv_to_rgb(num/float(len(wires)), 1.0, 1.0)
+		
+		md.add_wire(src, dst, (r,g,b, 1.0))
 	
 	md.draw(ctx, output_width, output_height)
 	surface.write_to_png(output_file)

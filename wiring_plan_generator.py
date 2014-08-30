@@ -186,6 +186,48 @@ def generate_wiring_plan(cabinet_torus, phys_torus, wire_positions, available_wi
 	return (plan_between_slots, plan_between_racks, plan_between_cabinets)
 
 
+def flatten_wiring_plan( wires_between_slots
+                       , wires_between_racks
+                       , wires_between_cabinets
+                       , wire_positions
+                       ):
+	"""
+	Takes the output of generate_wiring_plan and produces a flat list
+	[((src_board, src_direction), (dst_board, dst_direction), wire_length), ...]
+	in a sensible order.
+	"""
+	out = []
+	
+	# Wires between slots in the same rack
+	cabinets = set(c for (c,r,d) in wires_between_slots.keys())
+	for cabinet in sorted(cabinets):
+		racks = set(r for (c,r,d) in wires_between_slots.keys()
+		              if c == cabinet
+		           )
+		for rack in sorted(racks):
+			directions = set(d for (c,r,d) in wires_between_slots.keys()
+			                   if c == cabinet and r == rack
+			                )
+			for direction in sorted(directions, key=(lambda d: -wire_positions[d][1])):
+				out += wires_between_slots[(cabinet,rack,direction)]
+	
+	# Wires between racks in the same cabinet
+	cabinets = set(c for (c,d) in wires_between_racks.keys())
+	for cabinet in sorted(cabinets):
+		directions = set(d for (c,d) in wires_between_racks.keys()
+		                   if c == cabinet
+		                )
+		for direction in sorted(directions, key=(lambda d: -wire_positions[d][1])):
+			out += wires_between_racks[(cabinet,direction)]
+	
+	# Wires between cabinets
+	directions = set(wires_between_cabinets.keys())
+	for direction in sorted(directions, key=(lambda d: -wire_positions[d][1])):
+		out += wires_between_cabinets[direction]
+	
+	return out
+
+
 if __name__=="__main__":
 	import sys
 	
@@ -305,6 +347,9 @@ if __name__=="__main__":
 			                )
 			for direction in sorted(directions, key=(lambda d: -wire_positions[d][1])):
 				wires = wires_between_slots[(cabinet,rack,direction)]
+				if not wires:
+					break
+				
 				print("    Wires %s -> %s"%( socket_names[wires[0][0][1]]
 				                           , socket_names[wires[0][1][1]]
 				                           ))
@@ -335,6 +380,9 @@ if __name__=="__main__":
 		                )
 		for direction in sorted(directions, key=(lambda d: -wire_positions[d][1])):
 			wires = wires_between_racks[(cabinet,direction)]
+			if not wires:
+				break
+			
 			print("    Wires %s -> %s"%( socket_names[wires[0][0][1]]
 			                           , socket_names[wires[0][1][1]]
 			                           ))
@@ -350,5 +398,32 @@ if __name__=="__main__":
 			
 			print("")
 			
+		print("")
+	
+	
+	print("Wires between cabinets")
+	print("======================")
+	
+	directions = set(wires_between_cabinets.keys())
+	for direction in sorted(directions, key=(lambda d: -wire_positions[d][1])):
+		wires = wires_between_cabinets[direction]
+		if not wires:
+			break
+		
+		print("  Wires %s -> %s"%( socket_names[wires[0][0][1]]
+		                         , socket_names[wires[0][1][1]]
+		                         ))
+		for (src_board,src_direction), (dst_board,dst_direction), wire_length in wires_between_cabinets[direction]:
+			print("    Cabinet, Rack, Slot %2d, %2d, %2d -> %2d, %2d, %2d using %0.2fm (%s) wires."%(
+				b2p[src_board].cabinet,
+				b2p[src_board].rack,
+				b2p[src_board].slot,
+				b2p[dst_board].cabinet,
+				b2p[dst_board].rack,
+				b2p[dst_board].slot,
+				wire_length,
+				available_wires[wire_length],
+			))
+		
 		print("")
 
