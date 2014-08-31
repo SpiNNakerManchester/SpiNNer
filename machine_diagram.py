@@ -27,16 +27,12 @@ class MachineDiagram(object):
 	SLOT_COLOUR    = (0.7, 1.0, 0.7, 1.0)
 	SOCKET_COLOUR  = (0.5, 0.5, 0.5, 1.0)
 	
-	def __init__(self, cabinet_system, cabinet_torus):
+	def __init__(self, cabinet_system):
 		"""
 		cabinet_system is a model.cabinet.System describing the physical parameters
 		of the machine in question.
-		
-		cabinet_torus is a list [(board, (cabinet, rack, slot)), ...] enumerating
-		all boards (and their positions) within a set of cabinets.
 		"""
 		self.cabinet_system = cabinet_system
-		self.cabinet_torus  = cabinet_torus
 		
 		# Set of wires to draw as a list [ ((c,r,s,d) , (c,r,s,d) , rgba, width),
 		# ...] specifying source and destination cabinets, racks, slots and
