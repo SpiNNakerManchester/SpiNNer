@@ -109,6 +109,51 @@ class InteractiveWiringGuide(object):
 		self.show_future_wires    = show_future_wires
 	
 	
+	def go_to_wire(self, wire):
+		"""
+		Advance to a specific wire.
+		"""
+		last_wire = self.cur_wire
+		self.cur_wire = wire
+		
+		# Update LEDs
+		self.set_leds(last_wire, False)
+		self.set_leds(self.cur_wire, True)
+		
+		# Announce via TTS the distance relative to the last position
+		if self.use_tts:
+			self.tts_delta(last_wire, self.cur_wire)
+	
+	
+	def set_leds(self, wire, state):
+		"""
+		Set the LEDs for the given wire index to the given state.
+		"""
+		
+		# TODO
+		pass
+	
+	
+	def tts_delta(self, last_wire, wire):
+		"""
+		Announce via TTS a brief instruction indicating what the next wire should be
+		in terms of the difference to the previous wire.
+		"""
+		
+		# TODO
+		pass
+	
+	
+	def tts_describe(self, wire):
+		"""
+		Announce via TTS a full instruction indicating what the next wire should be
+		in terms of the difference to the previous wire.
+		"""
+		
+		# TODO
+		pass
+	
+	
 	def _get_bmp_ip(self, cabinet, rack, slot = None):
 		"""
 		Get the IP of the requested board (if known). Returns either the IP as a
@@ -293,7 +338,7 @@ class InteractiveWiringGuide(object):
 		self._draw_text( ctx
 		               , "%d of %d (%0.1f%%)"%( self.cur_wire + 1
 		                                      , len(self.wires)
-		                                      , (self.cur_wire+1)/float(len(self.wires))
+		                                      , 100.0*((self.cur_wire+1)/float(len(self.wires)))
 		                                      )
 		               , height*self.TEXT_ROW_HEIGHT
 		               )
@@ -342,6 +387,81 @@ class InteractiveWiringGuide(object):
 		del cairo_surface, ctx, img, data_string
 	
 	
+	def _on_key_press(self, event):
+		"""
+		Event-handler for key-presses. Returns a boolean stating whether a redraw is
+		required.
+		"""
+		
+		# Advance to the next wire
+		if event.key in (  32 # Space
+		                , 274 # Down
+		                , 275 # Right
+		                ,  13 # Return
+		                ,   9 # Tab
+		                ):
+			self.go_to_wire((self.cur_wire + 1) % len(self.wires))
+			return True
+		
+		# Go back to the previous wire
+		elif event.key in ( 273 # Down
+		                  , 276 # Left
+		                  ):
+			self.go_to_wire((self.cur_wire - 1) % len(self.wires))
+			return True
+		
+		# Go back to the first wire
+		elif event.key == 278: # Home
+			self.go_to_wire(0)
+			return True
+		
+		# Go to the last wire
+		elif event.key == 279: # End
+			self.go_to_wire(len(self.wires)-1)
+			return True
+		
+		# Advance rapidly through the wires
+		elif event.key == 281: # Page-down
+			self.go_to_wire((self.cur_wire + 25) % len(self.wires))
+			return True
+		
+		# Go back rapidly through the wires
+		elif event.key == 280: # Page-up
+			self.go_to_wire((self.cur_wire - 25) % len(self.wires))
+			return True
+		
+		# Do nothing by default
+		return False
+	
+	
+	def _on_mouse_click(self, event):
+		"""
+		Event-handler for mouse clicks. Returns a boolean stating whether a redraw
+		is required.
+		"""
+		# Advance
+		if event.button in ( 1 # Left
+		                   , 5 # Scroll-down
+		                   ):
+			self.go_to_wire((self.cur_wire + 1) % len(self.wires))
+			return True
+		
+		# Retreat
+		elif event.button in ( 3 # Right
+		                     , 4 # Scroll-up
+		                     ):
+			self.go_to_wire((self.cur_wire - 1) % len(self.wires))
+			return True
+		
+		# Read-out
+		elif event.button == 2: # Middle
+			self.tts_describe(self.cur_wire)
+			return False
+		
+		# Do nothing by default
+		return False
+	
+	
 	def main(self):
 		"""
 		Main loop.
@@ -352,13 +472,20 @@ class InteractiveWiringGuide(object):
 		pygame_flags = pygame.RESIZABLE | pygame.DOUBLEBUF | pygame.HWSURFACE
 		
 		pygame.display.init()
+		pygame.display.set_caption("SpiNNer Interactive Wiring Guide")
+		
 		screen = pygame.display.set_mode((width, height), pygame_flags, pygame_depth)
+		
+		pygame.key.set_repeat(250, 50)
 		
 		# Create raw buffer for surface data.
 		gui_buffer = numpy.empty(width * height * 4, dtype=numpy.int8)
 		
 		# Flag indicating that a redraw is required
 		redraw = True
+		
+		# Illuminate the current wire
+		self.set_leds(self.cur_wire, False)
 		
 		# Run until the window is closed
 		while True:
@@ -371,16 +498,24 @@ class InteractiveWiringGuide(object):
 				pygame.display.quit()
 				break
 			elif event.type == pygame.VIDEORESIZE:
+				# Re-initialise when window changes size
 				width, height = event.dict['size']
 				if width > 10 and height > 10:
 					screen = pygame.display.set_mode((width, height), pygame_flags, pygame_depth)
 					del gui_buffer
 					gui_buffer = numpy.empty(width * height * 4, dtype=numpy.int8)
 					redraw = True
+			elif event.type == pygame.KEYDOWN:
+				redraw |= self._on_key_press(event)
+			elif event.type == pygame.MOUSEBUTTONDOWN:
+				redraw |= self._on_mouse_click(event)
 			
 			if redraw:
 				self._draw_gui(screen, gui_buffer, width, height)
 				redraw = False
+		
+		# Turn off the LEDs before exit
+		self.set_leds(self.cur_wire, False)
 
 
 if __name__=="__main__":
