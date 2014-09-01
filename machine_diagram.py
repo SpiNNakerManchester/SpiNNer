@@ -38,6 +38,10 @@ class MachineDiagram(object):
 		# ...] specifying source and destination cabinets, racks, slots and
 		# directions.
 		self.wires = []
+		
+		# Set of highlight rectangles to draw into the image before wires are added.
+		# A list [(x,y, w,h, rgba, width), ...].
+		self.highlights = []
 	
 	
 	def add_wire( self
@@ -55,6 +59,50 @@ class MachineDiagram(object):
 		width is a tuple specifiying how thick the wire should be drawn (in meters).
 		"""
 		self.wires.append((src, dst, rgba, width))
+	
+	
+	def highlight_cabinet(self, c, rgba = (1.0,0.0,0.0,1.0), width = 0.010):
+		"""
+		Draw a box around the specified cabinet.
+		"""
+		
+		x,y   = self.get_cabinet_position(c)
+		w,h,_ = self.cabinet_system.cabinet.dimensions
+		
+		self.highlights.append((x,y, w,h, rgba, width))
+	
+	
+	def highlight_rack(self, c, r, rgba = (1.0,0.0,0.0,1.0), width = 0.010):
+		"""
+		Draw a box around the specified rack.
+		"""
+		
+		x,y   = self.get_rack_position(c, r)
+		w,h,_ = self.cabinet_system.cabinet.rack.dimensions
+		
+		self.highlights.append((x,y, w,h, rgba, width))
+	
+	
+	def highlight_slot(self, c, r, s, rgba = (1.0,0.0,0.0,1.0), width = 0.006):
+		"""
+		Draw a box around the specified slot.
+		"""
+		
+		x,y   = self.get_slot_position(c, r, s)
+		w,h,_ = self.cabinet_system.cabinet.rack.slot.dimensions
+		
+		self.highlights.append((x,y, w,h, rgba, width))
+	
+	
+	def highlight_socket(self, c, r, s, d, rgba = (1.0,0.0,0.0,1.0), width = 0.002):
+		"""
+		Draw a box around the specified slot's socket.
+		"""
+		
+		x,y   = self.get_socket_position(c, r, s, d)
+		w,h = self._get_socket_dimensions()
+		
+		self.highlights.append((x,y, w,h, rgba, width))
 	
 	
 	def get_cabinet_position(self, c):
@@ -254,11 +302,23 @@ class MachineDiagram(object):
 			ctx.restore()
 	
 	
+	def _draw_highlights(self, ctx):
+		"""
+		Draw any highlight rectangles specified using the highlight_* methods.
+		"""
+		for x,y, w,h, rgba, width in self.highlights:
+			ctx.rectangle(x,y, w,h)
+			ctx.set_source_rgba(*rgba)
+			ctx.set_line_width(width)
+			ctx.stroke()
+	
+	
 	def _draw_wires(self, ctx):
 		"""
 		Draw all wires in the system specified by add_wire.
 		"""
 		for src, dst, rgba, width in self.wires:
+			ctx.set_line_cap(cairo.LINE_CAP_ROUND)
 			ctx.move_to(*self.get_socket_center_position(*src))
 			ctx.line_to(*self.get_socket_center_position(*dst))
 			ctx.set_source_rgba(*rgba)
@@ -322,6 +382,9 @@ class MachineDiagram(object):
 		
 		# Draw the wires
 		self._draw_wires(ctx)
+		
+		# Draw borders around highlighted areas
+		self._draw_highlights(ctx)
 		
 		ctx.restore()
 
@@ -443,7 +506,7 @@ if __name__=="__main__":
 	surface = cairo.ImageSurface (cairo.FORMAT_ARGB32, output_width, output_height)
 	ctx = cairo.Context (surface)
 	
-	md = MachineDiagram(cabinet_system, cabinet_torus)
+	md = MachineDiagram(cabinet_system)
 	
 	for num, ((src_board, src_direction), (dst_board, dst_direction), wire_length) in enumerate(wires):
 		src = list(b2p[src_board]) + [src_direction]
@@ -452,6 +515,11 @@ if __name__=="__main__":
 		r,g,b = colorsys.hsv_to_rgb(num/float(len(wires)), 1.0, 1.0)
 		
 		md.add_wire(src, dst, (r,g,b, 1.0))
+	
+	md.highlight_cabinet(0)
+	md.highlight_rack(0, 0)
+	md.highlight_slot(0, 0, 0)
+	md.highlight_socket(0, 0, 0, NORTH)
 	
 	md.draw(ctx, output_width, output_height)
 	surface.write_to_png(output_file)
