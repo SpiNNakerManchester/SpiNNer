@@ -5,7 +5,9 @@ An object which can provide visual and auditory instructions for wiring
 SpiNNaker machines. If called as a program, acts as an interactive wiring guide.
 """
 
+import sys
 import colorsys
+import subprocess
 
 import pygame
 import cairo
@@ -14,6 +16,12 @@ from PIL import Image
 
 from wiring_plan_generator import generate_wiring_plan, flatten_wiring_plan
 from machine_diagram import MachineDiagram
+
+try:
+	from spinnman.transceiver import create_transceiver_from_hostname
+except ImportError:
+	sys.stderr.write("Warning: SpiNNMan not found, LEDs will not be illuminated.")
+	create_transceiver_from_hostname = None
 
 
 class InteractiveWiringGuide(object):
@@ -59,6 +67,7 @@ class InteractiveWiringGuide(object):
 	            , bmp_ips = {}
 	            , bmp_led = 7
 	            , use_tts = True
+	            , tts_describe_relative_position = False
 	            , show_installed_wires = True
 	            , show_future_wires    = False
 	            ):
@@ -86,6 +95,10 @@ class InteractiveWiringGuide(object):
 		use_tts specifies whether text-to-spech will be used to announce
 		instructions.
 		
+		tts_describe_relative_position specifies if the TTS should describe the
+		relative position of the connection. Otherwise, only the start and end
+		sockets are stated along with the length of cable (if it changes).
+		
 		show_installed_wires selects whether already-installed wires should be shown
 		(feintly) at all times.
 		
@@ -105,8 +118,13 @@ class InteractiveWiringGuide(object):
 		
 		self.use_tts = use_tts
 		
+		self.tts_describe_relative_position = tts_describe_relative_position
+		
 		self.show_installed_wires = show_installed_wires
 		self.show_future_wires    = show_future_wires
+		
+		# A reference to any running TTS job
+		self.tts_process = None
 	
 	
 	def go_to_wire(self, wire):
@@ -129,19 +147,106 @@ class InteractiveWiringGuide(object):
 		"""
 		Set the LEDs for the given wire index to the given state.
 		"""
-		
-		# TODO
-		pass
+		for c,r,s,p in self.wires[wire][:2]:
+			transceiver = create_transceiver_from_hostname(self._get_bmp_ip(c,r,s), discover = False)
+			transceiver.set_leds(0,0, s, {self.bmp_led: state})
+			transceiver.close()
+			del transceiver
 	
 	
-	def tts_delta(self, last_wire, wire):
+	def _describe_cabinet_change(self, src_cabinet, dst_cabinet):
+		"""
+		Describe the position of another cabinet with respect to the current
+		cabinet. Returns an empty string if the soruce and destination are the same.
+		"""
+		if src_cabinet == dst_cabinet:
+			return ""
+		elif 1 <= abs(src_cabinet - dst_cabinet) <= 3:
+			# Near-by cabinet
+			return "%d cabinet%s to the %s. "%(
+				abs(src_cabinet - dst_cabinet),
+				"s" if abs(src_cabinet - dst_cabinet) != 1 else "",
+				"right" if src_cabinet < dst_cabinet else "left",
+			)
+		else:
+			# Distant cabinet
+			return "Cabinet %d. "%(dst_cabinet)
+	
+	
+	def _describe_rack_change(self, src_rack, dst_rack):
+		"""
+		Describe the position of another rack with respect to the current
+		rack. Returns an empty string if the soruce and destination are the same.
+		"""
+		if src_rack == dst_rack:
+			return ""
+		elif abs(src_rack - dst_rack) <= 3:
+			# Near-by rack
+			return "%d rack%s %s. "%(
+				abs(src_rack - dst_rack),
+				"s" if abs(src_rack - dst_rack) != 1 else "",
+				"up" if dst_rack < src_rack else "down",
+			)
+		else:
+			# Distant rack
+			return "Rack %d. "%(dst_rack)
+	
+	
+	def _describe_slot_change(self, src_slot, dst_slot):
+		"""
+		Describe the position of another slot with respect to the current slot.
+		Returns an empty string if the soruce and destination are the same.
+		"""
+		if src_slot == dst_slot:
+			return ""
+		else:
+			# Near-by slot
+			return "%d slot%s %s %s. "%(
+				abs(src_slot - dst_slot),
+				"s" if abs(src_slot - dst_slot) != 1 else "",
+				"right" if dst_slot < src_slot else "left",
+				"(slot %d)"%dst_slot if abs(src_slot - dst_slot) > 10 else "",
+			)
+	
+	
+	def tts_delta(self, last_wire, this_wire):
 		"""
 		Announce via TTS a brief instruction indicating what the next wire should be
 		in terms of the difference to the previous wire.
+		
+		Changes are announced relative to the destination of the last wire.
 		"""
 		
-		# TODO
-		pass
+		last_length = self.wires[last_wire][2]
+		last_tl = self._top_left_socket(last_wire)
+		last_br = self._bottom_right_socket(last_wire)
+		
+		this_length = self.wires[this_wire][2]
+		this_tl = self._top_left_socket(this_wire)
+		this_br = self._bottom_right_socket(this_wire)
+		
+		message = ""
+		
+		# Announce wire-length changes
+		if last_length != this_length:
+			message += "%s cable. "%(self.wire_lengths[this_length])
+		
+		# Announce connection
+		message += self.socket_names[this_tl[3]]
+		if self.tts_describe_relative_position:
+			message += self._describe_cabinet_change(last_br[0], this_tl[0])
+			message += self._describe_rack_change(last_br[1], this_tl[1])
+			message += self._describe_slot_change(last_br[2], this_tl[2])
+		
+		message += "going "
+		
+		message += self.socket_names[this_br[3]]
+		if self.tts_describe_relative_position:
+			message += self._describe_cabinet_change(this_tl[0], this_br[0])
+			message += self._describe_rack_change(this_tl[1], this_br[1])
+			message += self._describe_slot_change(this_tl[2], this_br[2])
+		
+		self._tts_speak(message)
 	
 	
 	def tts_describe(self, wire):
@@ -152,6 +257,22 @@ class InteractiveWiringGuide(object):
 		
 		# TODO
 		pass
+	
+	
+	def _tts_speak(self, text, wpm = 250):
+		"""
+		Speak the supplied string, interrupting whatever was already being said.
+		Non-blocking.
+		"""
+		# Kill previous instances
+		if self.tts_process is not None and self.tts_process.poll() is None:
+			self.tts_process.terminate()
+		
+		# Speak the required text.
+		self.tts_process = subprocess.Popen( ["espeak", "-s", str(wpm), text]
+		                                   , stdout = subprocess.PIPE
+		                                   , stderr = subprocess.PIPE
+		                                   )
 	
 	
 	def _get_bmp_ip(self, cabinet, rack, slot = None):
@@ -178,12 +299,12 @@ class InteractiveWiringGuide(object):
 		return colorsys.hsv_to_rgb(hue, 1.0, 0.5)
 	
 	
-	def _top_left_socket(self):
+	def _top_left_socket(self, wire):
 		"""
 		Return the (c,r,s,d) for the top-left socket for the current wire.
 		"""
 		
-		src, dst, length = self.wires[self.cur_wire]
+		src, dst, length = self.wires[wire]
 		
 		if src[0] == dst[0] and src[1] == dst[1]:
 			return dst if src[2] < dst[2] else src
@@ -193,12 +314,12 @@ class InteractiveWiringGuide(object):
 			return dst if src[0] < dst[0] else src
 	
 	
-	def _bottom_right_socket(self):
+	def _bottom_right_socket(self, wire):
 		"""
 		Return the (c,r,s,d) for the bottom-right socket for the current wire.
 		"""
 		
-		src, dst, length = self.wires[self.cur_wire]
+		src, dst, length = self.wires[wire]
 		
 		if src[0] == dst[0] and src[1] == dst[1]:
 			return src if src[2] < dst[2] else dst
@@ -233,10 +354,10 @@ class InteractiveWiringGuide(object):
 		md.add_wire(src, dst, rgba = (r,g,b,1.0),       width = 0.010)
 		
 		# Highlight source and destination
-		c,r,s,d = self._top_left_socket()
+		c,r,s,d = self._top_left_socket(self.cur_wire)
 		md.highlight_socket(c,r,s,d, rgba = self.TOP_LEFT_COLOUR)
 		md.highlight_slot(  c,r,s,   rgba = self.TOP_LEFT_COLOUR)
-		c,r,s,d = self._bottom_right_socket()
+		c,r,s,d = self._bottom_right_socket(self.cur_wire)
 		md.highlight_socket(c,r,s,d, rgba = self.BOTTOM_RIGHT_COLOUR)
 		md.highlight_slot(  c,r,s,   rgba = self.BOTTOM_RIGHT_COLOUR)
 		
@@ -303,7 +424,7 @@ class InteractiveWiringGuide(object):
 		md.draw( ctx
 		       , width*self.ZOOMED_VIEW_WIDTH
 		       , height*(1 - (2*self.TEXT_ROW_HEIGHT))
-		       , *self._top_left_socket()[:3]
+		       , *self._top_left_socket(self.cur_wire)[:3]
 		       )
 		ctx.restore()
 		
@@ -319,7 +440,7 @@ class InteractiveWiringGuide(object):
 		md.draw( ctx
 		       , width*self.ZOOMED_VIEW_WIDTH
 		       , height*(1 - (2*self.TEXT_ROW_HEIGHT))
-		       , *self._bottom_right_socket()[:3]
+		       , *self._bottom_right_socket(self.cur_wire)[:3]
 		       )
 		ctx.restore()
 		
@@ -345,8 +466,8 @@ class InteractiveWiringGuide(object):
 		ctx.restore()
 		
 		# Draw the endpoint specifications
-		for x_offset, (c,r,s,d) in [ (width * (self.ZOOMED_VIEW_WIDTH/2),     self._top_left_socket())
-		                           , (width * (1-(self.ZOOMED_VIEW_WIDTH/2)), self._bottom_right_socket())
+		for x_offset, (c,r,s,d) in [ (width * (self.ZOOMED_VIEW_WIDTH/2),     self._top_left_socket(self.cur_wire))
+		                           , (width * (1-(self.ZOOMED_VIEW_WIDTH/2)), self._bottom_right_socket(self.cur_wire))
 		                           ]:
 			ctx.save()
 			ctx.translate(x_offset, 0.0)
@@ -430,6 +551,15 @@ class InteractiveWiringGuide(object):
 			self.go_to_wire((self.cur_wire - 25) % len(self.wires))
 			return True
 		
+		# Toggle text-to-speech
+		elif event.key == 115: # s
+			self.use_tts = not self.use_tts
+			if self.use_tts:
+				self._tts_speak("Text to speech enabled.")
+			else:
+				self._tts_speak("Text to speech disabled.")
+			return True
+		
 		# Do nothing by default
 		return False
 	
@@ -485,7 +615,7 @@ class InteractiveWiringGuide(object):
 		redraw = True
 		
 		# Illuminate the current wire
-		self.set_leds(self.cur_wire, False)
+		self.set_leds(self.cur_wire, True)
 		
 		# Run until the window is closed
 		while True:
@@ -643,9 +773,10 @@ if __name__=="__main__":
 	                            , wire_lengths         = available_wires
 	                            , wires                = wires
 	                            , starting_wire        = 0
-	                            , bmp_ips              = {}
+	                            , bmp_ips              = {(0,0):"192.168.3.0"}
 	                            , bmp_led              = 7
 	                            , use_tts              = True
+	                            , tts_describe_relative_position = False
 	                            , show_installed_wires = True
 	                            , show_future_wires    = False
 	                            )
