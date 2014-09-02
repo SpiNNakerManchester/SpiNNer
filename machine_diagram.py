@@ -6,7 +6,10 @@ A module which generates diagrams (using Cairo) of cabinetised systems.
 If called on its own this file produces an image of a specified system as a
 PNG, e.g.::
 
-  python2 machine_diagram.py my_machine.param output.png 800 600
+  python2 machine_diagram.py my_machine.param output_xxxx.png 800 600
+
+Where there is a sequence of exactly four 'x's which will be replaced by a step
+number.
 """
 
 import cairo
@@ -503,23 +506,30 @@ if __name__=="__main__":
 	
 	b2p = dict(cabinet_torus)
 	
-	surface = cairo.ImageSurface (cairo.FORMAT_ARGB32, output_width, output_height)
-	ctx = cairo.Context (surface)
-	
-	md = MachineDiagram(cabinet_system)
-	
-	for num, ((src_board, src_direction), (dst_board, dst_direction), wire_length) in enumerate(wires):
+	for step in range(len(wires)):
+		surface = cairo.ImageSurface (cairo.FORMAT_ARGB32, output_width, output_height)
+		ctx = cairo.Context (surface)
+		
+		md = MachineDiagram(cabinet_system)
+		
+		# Draw already placed wires
+		for num, ((src_board, src_direction), (dst_board, dst_direction), wire_length) in enumerate(wires[:step]):
+			src = list(b2p[src_board]) + [src_direction]
+			dst = list(b2p[dst_board]) + [dst_direction]
+			
+			r,g,b = colorsys.hsv_to_rgb(num/float(len(wires)), 1.0, 1.0)
+			
+			md.add_wire(src, dst, (r,g,b, 0.5), 0.005)
+		
+		# Draw currently being placed wire
+		(src_board, src_direction), (dst_board, dst_direction), wire_length = wires[step]
 		src = list(b2p[src_board]) + [src_direction]
 		dst = list(b2p[dst_board]) + [dst_direction]
 		
-		r,g,b = colorsys.hsv_to_rgb(num/float(len(wires)), 1.0, 1.0)
+		r,g,b = colorsys.hsv_to_rgb(step/float(len(wires)), 1.0, 0.6)
 		
-		md.add_wire(src, dst, (r,g,b, 1.0))
-	
-	md.highlight_cabinet(0)
-	md.highlight_rack(0, 0)
-	md.highlight_slot(0, 0, 0)
-	md.highlight_socket(0, 0, 0, NORTH)
-	
-	md.draw(ctx, output_width, output_height)
-	surface.write_to_png(output_file)
+		md.add_wire(src, dst, (r,g,b, 1.0), 0.01)
+		
+		# Output PNG
+		md.draw(ctx, output_width, output_height)
+		surface.write_to_png(output_file.replace("xxxx", "%04d"%(step+1)))
