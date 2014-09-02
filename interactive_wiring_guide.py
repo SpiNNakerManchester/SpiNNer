@@ -112,6 +112,7 @@ class InteractiveWiringGuide(object):
 		self.wires          = wires
 		
 		self.cur_wire  = starting_wire
+		assert 0 <= self.cur_wire < len(self.wires), "Starting wire out of range."
 		
 		self.bmp_ips = bmp_ips
 		self.bmp_led = bmp_led
@@ -145,13 +146,16 @@ class InteractiveWiringGuide(object):
 	
 	def set_leds(self, wire, state):
 		"""
-		Set the LEDs for the given wire index to the given state.
+		Set the LEDs for the given wire index to the given state (assuming the
+		board's IP is known).
 		"""
 		for c,r,s,p in self.wires[wire][:2]:
-			transceiver = create_transceiver_from_hostname(self._get_bmp_ip(c,r,s), discover = False)
-			transceiver.set_leds(0,0, s, {self.bmp_led: state})
-			transceiver.close()
-			del transceiver
+			ip = self._get_bmp_ip(c,r,s)
+			if ip is not None:
+				transceiver = create_transceiver_from_hostname(ip, discover = False)
+				transceiver.set_leds(0,0, s, {self.bmp_led: state})
+				transceiver.close()
+				del transceiver
 	
 	
 	def _describe_cabinet_change(self, src_cabinet, dst_cabinet):
@@ -652,18 +656,74 @@ if __name__=="__main__":
 	import sys
 	
 	from model_builder import build_model
-	from param_parser import parse_params
+	from param_parser import parse_params, parse_bmp_ips
 	
 	################################################################################
 	# Parse command-line arguments
 	################################################################################
 	
-	param_file = sys.argv[1]
+	import argparse
+	
+	parser = argparse.ArgumentParser(description = "Interactive Wiring Guide For SpiNNaker Machines")
+	
+	parser.add_argument( "param_files", type=str, nargs="+"
+	                   , help="parameter files describing machine parameters"
+	                   )
+	
+	parser.add_argument( "-s", "--start", type=int, nargs="?", default=1
+	                   , help="index of first wire to be placed"
+	                   )
+	
+	parser.add_argument( "-l", "--bmp-led", type=int, nargs="?", default=7
+	                   , help="BMP LED number to illuminate"
+	                   )
+	
+	parser.add_argument( "-b", "--bmp-ips", type=str, nargs="?"
+	                   , help="Config file defining BMP IP addresses"
+	                   )
+	
+	parser.add_argument( "-t", "--use-tts", action="store_true", default=True
+	                   , dest="use_tts"
+	                   , help="enable text-to-speech instructions (default)"
+	                   )
+	parser.add_argument( "-T", "--no-tts", action="store_false"
+	                   , dest="use_tts"
+	                   , help="disable text-to-speech"
+	                   )
+	
+	parser.add_argument( "-r", "--describe-relative-positions", action="store_true", default=False
+	                   , dest="describe_relative_position"
+	                   , help="announce every wire's relative position via text-to-speech"
+	                   )
+	parser.add_argument( "-R", "--no-relative-positions", action="store_false"
+	                   , dest="describe_relative_position"
+	                   , help="only announce wire lengths and directions via text-to-speech (default)"
+	                   )
+	
+	parser.add_argument( "-i", "--show-installed-wires", action="store_true", default=True
+	                   , dest="show_installed_wires"
+	                   , help="feintly show wires already installed (default)"
+	                   )
+	parser.add_argument( "-I", "--hide-installed-wires", action="store_false"
+	                   , dest="show_installed_wires"
+	                   , help="hide wires already installed"
+	                   )
+	
+	parser.add_argument( "-f", "--show-future-wires", action="store_true", default=False
+	                   , dest="show_future_wires"
+	                   , help="feintly show wires not-yet installed"
+	                   )
+	parser.add_argument( "-F", "--hide-future-wires", action="store_false"
+	                   , dest="show_future_wires"
+	                   , help="hide wires not-yet installed (default)"
+	                   )
+	
+	args = parser.parse_args()
 	
 	################################################################################
 	# Load Parameters
 	################################################################################
-	params = parse_params(["machine_params/universal.param", param_file])
+	params = parse_params(["machine_params/universal.param"] + args.param_files)
 	
 	title                          = params["title"]
 	
@@ -772,12 +832,14 @@ if __name__=="__main__":
 	                            , socket_names         = socket_names
 	                            , wire_lengths         = available_wires
 	                            , wires                = wires
-	                            , starting_wire        = 0
-	                            , bmp_ips              = {(0,0):"192.168.3.0"}
-	                            , bmp_led              = 7
-	                            , use_tts              = True
-	                            , tts_describe_relative_position = False
-	                            , show_installed_wires = True
-	                            , show_future_wires    = False
+	                            , starting_wire        = args.start - 1
+	                            , bmp_ips              = parse_bmp_ips([args.bmp_ips])
+	                                                     if args.bmp_ips is not None
+	                                                     else {}
+	                            , bmp_led              = args.bmp_led
+	                            , use_tts              = args.use_tts
+	                            , tts_describe_relative_position = args.describe_relative_position
+	                            , show_installed_wires = args.show_installed_wires
+	                            , show_future_wires    = args.show_future_wires
 	                            )
 	iwg.main()

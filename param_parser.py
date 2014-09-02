@@ -118,3 +118,27 @@ def parse_params(filenames):
 	
 	return output
 
+
+def parse_bmp_ips(filenames):
+	"""
+	Takes a set of filenames to read as config files listing BMP IP addresses.
+	
+	Returns a dictionary {board_position: ip} where board_position is either
+	a tuple (cabinet, rack, slot) or (cabinet, rack) where the former should be
+	used if both are available. The IP/hostname is given as a string.
+	"""
+	cp = ConfigParser()
+	assert set(cp.read(filenames)) == set(filenames) \
+	     , "%s could not be read."%(", ".join(set(filenames) - set(cp.read(filenames))))
+	
+	out = {}
+	
+	for board_position, ip in cp.items("bmpip"):
+		board_position = tuple(map(int, map(str.strip, board_position.split(","))))
+		
+		assert board_position not in out \
+		     , "%s is defined multiple times"%(board_position)
+		
+		out[board_position] = ip
+	
+	return out
