@@ -87,8 +87,8 @@ def assign_wires(wires, phys_torus, wire_positions, available_wire_lengths, mini
 	
 	# Augment each wire with the length and arc
 	wires = [ (wire[0], wire[1], metrics.physical_wire_length(
-	              phys_torus, wire[0][0], wire[0][1],
-	              wire_positions, available_wire_lengths, minimum_arc_height
+	              metrics.wire_length(phys_torus, wire[0][0], wire[0][1], wire_positions),
+	              available_wire_lengths, minimum_arc_height
 	            )
 	          )
 	          for wire in wires

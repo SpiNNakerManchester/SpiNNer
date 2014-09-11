@@ -80,7 +80,7 @@ class InteractiveWiringGuide(object):
 		
 		wires is a list [(src, dst, length), ...] where src and dst are tuples
 		(cabinet, rack, slot, socket) and length is a length included in
-		wire_lengths.
+		wire_lengths or is None indicating that the wire should be disconnected.
 		
 		starting_wire is the index of the first wire to be inserted. This could be
 		used, e.g. to resume installation at a specified point.
@@ -233,7 +233,10 @@ class InteractiveWiringGuide(object):
 		
 		# Announce wire-length changes
 		if last_length != this_length:
-			message += "%s cable. "%(self.wire_lengths[this_length])
+			if this_length is None:
+				message += "Disconnect cable. "
+			else:
+				message += "%s cable. "%(self.wire_lengths[this_length])
 		
 		# Announce connection
 		message += self.socket_names[this_tl[3]]
@@ -251,16 +254,6 @@ class InteractiveWiringGuide(object):
 			message += self._describe_slot_change(this_tl[2], this_br[2])
 		
 		self._tts_speak(message)
-	
-	
-	def tts_describe(self, wire):
-		"""
-		Announce via TTS a full instruction indicating what the next wire should be
-		in terms of the difference to the previous wire.
-		"""
-		
-		# TODO
-		pass
 	
 	
 	def _tts_speak(self, text, wpm = 250):
@@ -294,8 +287,12 @@ class InteractiveWiringGuide(object):
 		"""
 		Get the RGB colour (as a tuple) for wires of the specified length.
 		
-		Colours are allocated evenly across the spectrum.
+		Colours are allocated evenly across the spectrum. Wires to be removed are
+		shown in black.
 		"""
+		if length is None:
+			return (0.0, 0.0, 0.0)
+		
 		index = sorted(self.wire_lengths.keys()).index(length)
 		
 		hue = index / float(len(self.wire_lengths))
@@ -454,6 +451,8 @@ class InteractiveWiringGuide(object):
 		length = self.wires[self.cur_wire][2]
 		self._draw_text( ctx
 		               , "%s (%0.2fm)"%(self.wire_lengths[length], length)
+		                 if length is not None
+		                 else "Disconnect Wire"
 		               , height*self.TEXT_ROW_HEIGHT
 		               , rgba = self._get_wire_colour(length)
 		               )
@@ -586,11 +585,6 @@ class InteractiveWiringGuide(object):
 		                     ):
 			self.go_to_wire((self.cur_wire - 1) % len(self.wires))
 			return True
-		
-		# Read-out
-		elif event.button == 2: # Middle
-			self.tts_describe(self.cur_wire)
-			return False
 		
 		# Do nothing by default
 		return False

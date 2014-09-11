@@ -39,10 +39,10 @@ def wire_length(boards, board, direction, wire_offsets={}):
 
 
 
-def physical_wire_length(boards, board, direction, wire_offsets, available_wire_lengths, minimum_arc_height):
+def physical_wire_length(distance, available_wire_lengths, minimum_arc_height):
 	"""
-	Returns (wire_length, arc_height) for a wire leaving the specified board in a
-	given direction. The wire length is the length of wire chosen from
+	Returns (wire_length, arc_height) for a wire required to span a given
+	distance. The wire length is the length of wire chosen from
 	available_wire_lengths. The arc-height is the height of the arc of cable
 	between the sockets.
 		
@@ -62,30 +62,12 @@ def physical_wire_length(boards, board, direction, wire_offsets, available_wire_
 		distance**2 / (2*wire_length**2) == (1 - cos(alpha)) / alpha**2
 	
 	
-	boards is a list [(board, coord),...)] where all coords are physical
-	coordinates.
-	
-	board is a board in that list from which the wire starts.
-	
-	direction is a wire direction to measure 
-	
-	wire_offsets is a dict {direction:offset,...} where the physical offset of the
-	socket for each direction is given.
+	distance is a crow-flies distance between the sockets to be connected.
 	
 	available_wire_lengths is a list of available wire lengths
 	
 	minimum_arc_height is the minimum height of the arc to be allowed.
 	"""
-	b2c = dict(boards)
-	source = b2c[board]
-	target = b2c[board.connection[direction]]
-	
-	source += wire_offsets[direction]
-	target += wire_offsets[topology.opposite(direction)]
-	
-	# The straight-line distance between the two points
-	distance = (source - target).magnitude()
-	
 	# Select the shortest wire possible for the job
 	for wire_length in sorted(available_wire_lengths):
 		# Skip wire lengths which are obviously too short
