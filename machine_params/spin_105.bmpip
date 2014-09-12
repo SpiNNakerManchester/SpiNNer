@@ -1,0 +1,10 @@
+# IP addresses for BMPs in the SpiNNaker 105 machine (single cabinet).
+
+[bmpip]
+# List of cabinet,rack,slot tuples and their associated IPs/hostnames. Note that
+# the slot field may be ommitted.
+0, 0: 10.2.225.0
+0, 1: 10.2.226.0
+0, 2: 10.2.227.0
+0, 3: 10.2.228.0
+0, 4: 10.2.229.0
