@@ -20,7 +20,9 @@ from machine_diagram import MachineDiagram
 try:
 	from spinnman.transceiver import create_transceiver_from_hostname
 except ImportError:
-	sys.stderr.write("Warning: SpiNNMan not found, LEDs will not be illuminated.")
+	sys.stderr.write( "WARNING: SpiNNMan not found, LEDs will not be illuminated"
+	                + " and wire validation will not be possible."
+	                )
 	create_transceiver_from_hostname = None
 
 
@@ -664,6 +666,11 @@ if __name__=="__main__":
 	                   , help="parameter files describing machine parameters"
 	                   )
 	
+	parser.add_argument( "-c", "--check", action="store_true", default=False
+	                   , dest="check"
+	                   , help="probe the machine's wiring and only report corrections (requires -b/--bmp-ips)"
+	                   )
+	
 	parser.add_argument( "-s", "--start", type=int, nargs="?", default=1
 	                   , help="index of first wire to be placed"
 	                   )
@@ -713,6 +720,10 @@ if __name__=="__main__":
 	                   )
 	
 	args = parser.parse_args()
+	
+	if args.check and not args.bmp_ips:
+		sys.stderr.write("ERROR: If -c/--check is used, -b/--bmp-ips must be provided.\n")
+		sys.exit(-1)
 	
 	################################################################################
 	# Load Parameters
@@ -814,9 +825,36 @@ if __name__=="__main__":
 	b2p = dict(cabinet_torus)
 	wires = []
 	for (src_board, src_direction), (dst_board, dst_direction), wire_length in wires_:
-		src = list(b2p[src_board]) + [src_direction]
-		dst = list(b2p[dst_board]) + [dst_direction]
+		src = tuple(list(b2p[src_board]) + [src_direction])
+		dst = tuple(list(b2p[dst_board]) + [dst_direction])
 		wires.append((src, dst, wire_length))
+	
+	################################################################################
+	# Check wiring
+	################################################################################
+	
+	if args.check:
+		from wiring_validator import WiringProbe, wiring_diff, generate_correction_plan
+		
+		plan_wires = [(s,d) for (s,d,l) in wires]
+		
+		# Probe the actual wiring
+		p = WiringProbe(cabinet_system, parse_bmp_ips([args.bmp_ips]))
+		actual_wires = p.discover_wires()
+		p.close()
+		
+		# Create a plan for the corrections
+		remove, add = wiring_diff(actual_wires, plan_wires)
+		wires = generate_correction_plan( remove, add
+		                                , cabinet_system
+		                                , available_wires
+		                                , minimum_arc_height
+		                                )
+		
+		# Just quit with a message if the wires are already correct
+		if not wires:
+			print("All %d expected wires present and operational."%(len(plan_wires)))
+			sys.exit(0)
 	
 	################################################################################
 	# Initialise and start UI

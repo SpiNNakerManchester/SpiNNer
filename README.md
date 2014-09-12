@@ -18,8 +18,8 @@ Further details are available at http://jhnet.co.uk/projects/spinner.
 Interactive Wiring Guide
 ------------------------
 
-An interactive, graphical tool which can guide a user through a predefined
-list of wiring instructions.
+An interactive, graphical tool which can guide a user through a list of wiring
+instructions or corrections.
 
 Features:
 * Cycle through a list of wiring instructions
@@ -28,6 +28,7 @@ Features:
 * Illuminate an LED on boards to be connected
 * Read instructions using text-to-speech
 * Colour code diagrams by wire-length
+* Check the wiring of a running system
 
 Requires:
 * pygame
@@ -35,7 +36,7 @@ Requires:
 * numpy
 * PIL (Python Imaging Library)
 * espeak (optional: for text-to-speech)
-* SpiNNMan (optional: for board LED control)
+* SpiNNMan (optional: for board LED control and wiring checking)
 
 See help for full usage:
 
@@ -43,12 +44,50 @@ See help for full usage:
 
 Example usage:
 
+	# Generates (and then interactively guide through) a wiring plan to wire up a
+	# complete machine.
 	python interactive_wiring_guide.py params/[some .param file] \
 	  -b params/[some .bmpip file]
+	
+	# Examine the wiring of a machine and produce (and interactively guide
+	# through) a correction plan. Note that the tool must be re-run to update the
+	# list of errors (at the time of writing it is also advisable to reset the
+	# system before doing so to ensure all newly connected links handshake
+	# correctly).
+	python interactive_wiring_guide.py params/[some .param file] \
+	  -b params/[some .bmpip file] -c
 
 Annotated screenshot:
 
 ![Interactive Wiring Guide](http://jhnet.co.uk/misc/interactive_wiring_guide_screenshot.png)
+
+
+Wiring Plan Generator
+---------------------
+
+Intended to be a module of functions for creating sensible wiring instructions
+for assembling large machine. If called on the command line, produces a textual
+wiring plan. Example incantation:
+
+	python wiring_plan_generator.py params/[some .param file]
+
+
+Wiring Validator
+----------------
+
+Intended to be a module of functions for discovering the connectivity of a large
+system (and producing plans for any required corrections). If called on the
+command line, produces a textual list of corrections to be made. Example
+incantation:
+
+	python wiring_validator.py params/[some .param file] \
+	  -b params/[some .bmpip file]
+
+If the wiring is correct, the program exits with exit code 0. If there are
+errors present, the program terminates with a non-zero exit code.
+
+Requires:
+* SpiNNMan
 
 
 Machine Diagram
@@ -65,14 +104,6 @@ An example output for a SpiNN-105 Machine:
 
 ![Animated Wiring Plan](http://jhnet.co.uk/misc/spin_105_wiring.gif)
 
-Wiring Plan Generator
----------------------
-
-Intended to be a module of functions for creating sensible wiring instructions
-for assembling large machine. If called on the command line, produces a textual
-wiring plan. Example incantation:
-
-	python wiring_plan_generator.py params/[some .param file]
 
 Model
 -----
