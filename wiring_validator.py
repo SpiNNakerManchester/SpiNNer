@@ -139,7 +139,9 @@ class WiringProbe(object):
 		                                                               , addr
 		                                                               , 4
 		                                                               ))[0]
-		value = struct.unpack("<L", value)[0]
+		# Conversion to bytes is required on older versions of Python's struct
+		# module which don't accept bytearrays.
+		value = struct.unpack("<L", bytes(value))[0]
 		return value
 	
 	def close(self):
