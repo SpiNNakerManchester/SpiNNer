@@ -300,7 +300,6 @@ if __name__=="__main__":
 	import sys
 	
 	from wiring_plan_generator import generate_wiring_plan, flatten_wiring_plan
-	from interactive_wiring_guide import InteractiveWiringGuide
 	from model_builder import build_model
 	from param_parser import parse_params, parse_bmp_ips
 	
