@@ -127,6 +127,17 @@ def hex_to_cartesian(coords):
 	return coordinates.Cartesian2D(new_x, new_y)
 
 
+def board_to_chip(coords, layers = 4):
+	"""
+	Convert a hexagonal board coordinate into a hexagonal chip coordinate for the
+	chip at the bottom-left of a board that size.
+	"""
+	x,y = hex_to_skewed_cartesian(coords)
+	x *= layers
+	y *= layers
+	return coordinates.Hexagonal(x,y,0)
+
+
 def hex_to_skewed_cartesian(coords):
 	"""
 	Convert a set of hexagonal coordinates into equivalent Cartesian values
@@ -376,6 +387,17 @@ def hexagon(layers = 4):
 			next_position[X] += 1
 
 
+def hexagon_zero(layers = 4):
+	"""
+	As with hexagon except coordinates are given relative to the bottom-left
+	coordinate of the hexagon.
+	"""
+	
+	return ( coordinates.Hexagonal2D(x+layers, y+layers-1)
+	         for (x,y) in hexagon(layers)
+	       )
+
+
 
 
 ################################################################################
@@ -441,3 +463,16 @@ def threeboards(width = 1, height = None):
 				x_coord = (x*2) + (-y) + (z >= 2)
 				y_coord = (x  ) + ( y) + (z >= 1)
 				yield coordinates.Hexagonal(x_coord,y_coord,0)
+
+
+################################################################################
+# Board to chip coordinate mapping
+################################################################################
+
+def board_xy_to_chip_xy(x,y, board_layers=4):
+	"""
+	Given the logical (x,y) coordinate of a board, return the (x,y) coordinate of
+	the chip at the bottom-left corner of that board. Optionally takes the number
+	of layers in the hexagonal arrangement of chips on a board.
+	"""
+	

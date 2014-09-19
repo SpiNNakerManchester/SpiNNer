@@ -90,6 +90,24 @@ Requires:
 * SpiNNMan
 
 
+Machine Map Generator
+---------------------
+
+This tool generates a map defining the relation between cabinet/rack/slot and
+chip x/y coordinates in a system booted up via the board in cabinet=rack=slot=0.
+
+A graphical map can be produced (in PDF) for a given page size (given in mm)
+using the command below. Note that the PDF is written to standard out.
+
+	python machine_map_generator.py params/[some .param file] -g [width] [height] > map.pdf
+
+A plain-text enumeration can be generated using the commandline below. This can
+be extended with the `-a` option which enumerates every chip, not just one per
+board.
+
+	python wiring_map_generator.py params/[some .param file]
+
+
 Machine Diagram
 ---------------
 
