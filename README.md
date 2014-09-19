@@ -101,6 +101,11 @@ using the command below. Note that the PDF is written to standard out.
 
 	python machine_map_generator.py params/[some .param file] -g [width] [height] > map.pdf
 
+Sample output can be seen below:
+
+![Machine Map](http://jhnet.co.uk/misc/spin_105_map.png)
+
+
 A plain-text enumeration can be generated using the commandline below. This can
 be extended with the `-a` option which enumerates every chip, not just one per
 board.
