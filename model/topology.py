@@ -315,10 +315,6 @@ def cabinetise(coord, bounds, num_cabinets, racks_per_cabinet, slots_per_rack = 
 	# Must be divisible into racks
 	assert(h % racks_per_cabinet == 0)
 	
-	# Must be able to fit in the given number of slots.
-	assert(slots_per_rack is None or
-	       ((w * h)) / num_cabinets / racks_per_cabinet <= slots_per_rack)
-	
 	cols_per_cabinet = w / num_cabinets
 	rows_per_rack    = h / racks_per_cabinet
 	
@@ -331,6 +327,11 @@ def cabinetise(coord, bounds, num_cabinets, racks_per_cabinet, slots_per_rack = 
 	
 	# Interleave into slot number
 	slot = y + (rows_per_rack * x)
+	
+	# Sanity check the position is actually within the system.
+	assert(slot < slots_per_rack)
+	assert(rack < racks_per_cabinet)
+	assert(cabinet < num_cabinets)
 	
 	return coordinates.Cabinet(cabinet, rack, slot)
 

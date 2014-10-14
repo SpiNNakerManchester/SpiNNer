@@ -4,7 +4,7 @@ title: SpiNNaker $10^3$ Machine (3 Boards) Wiring
 
 [system]
 # Actual size of the machine in terms of cabinets/racks/slots
-num_slots_per_rack: 4
+num_slots_per_rack: 3
 num_racks_per_cabinet: 1
 num_cabinets: 1
 
