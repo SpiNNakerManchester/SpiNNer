@@ -159,8 +159,11 @@ class WiringProbe(object):
 		"""
 		# Links are allocated sequential IDs and so values left by previous runs of
 		# the tool could be the same or similar. To make this less likely, a fixed
-		# random mask is XOR'd into every ID.
-		mask = random.getrandbits(WiringProbe.NUM_ID_BITS)
+		# random mask is XOR'd into every ID. Further, the top bit of the mask is
+		# always cleared, this means that within all planned systems (which require
+		# <= 13 bits of ID), no key will be generated which is 0xFFFF which is used
+		# to cause the field to be randomised to reduce interference.
+		mask = random.getrandbits(WiringProbe.NUM_ID_BITS - 1)
 		
 		link_index = 0
 		for c in range(self.cabinet_system.num_cabinets):
@@ -168,6 +171,7 @@ class WiringProbe(object):
 				for s in range(self.cabinet_system.cabinet.rack.num_slots):
 					for d in [EAST, NORTH_EAST, NORTH, WEST, SOUTH_WEST, SOUTH]:
 						id = link_index ^ mask
+						assert id != 0xFFFF, "ID with value 0xFFFF must not be used. This is a bug."
 						self.id_to_link[id] = ((c,r,s),d)
 						self.link_to_id[((c,r,s),d)] = id
 						
