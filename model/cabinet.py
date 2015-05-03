@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 
 """
-Utilities for working with the geometry of cabinets of racks of boards.
+Utilities for working with the geometry of cabinets of frames of boards.
 """
 
 import topology
 import coordinates
 
 
-class Slot(object):
+class Board(object):
 	"""
-	A slot in a rack.
+	A board in a frame.
 	"""
 	
 	def __init__( self
@@ -21,7 +21,7 @@ class Slot(object):
 		dimensions is a Cartesian3D(width, height, depth).
 		
 		wire_position is a mapping {direction:position, ...} which gives the physical
-		offset from the bottom, left front corner of the slot of the given wire.
+		offset from the bottom, left front corner of the board of the given wire.
 		Defaults to zero offsets for all dimensions.
 		"""
 		
@@ -47,7 +47,7 @@ class Slot(object):
 	
 	def get_position(self, direction):
 		"""
-		Get the position of the given wire relative to (0,0,0) in this slot. If the
+		Get the position of the given wire relative to (0,0,0) in this board. If the
 		direction given is None or was not defined, returns (0,0,0).
 		"""
 		
@@ -97,7 +97,7 @@ class _Container(object):
 		                     0,
 		                   )
 		
-		# Make sure the slots fit inside the cabinet...
+		# Make sure the boards fit inside the cabinet...
 		assert(self.bay_width  + self.offset[0] <= self.width)
 		assert(self.bay_height + self.offset[1] <= self.height)
 		assert(self.bay_depth                   <= self.depth)
@@ -143,116 +143,116 @@ class _Container(object):
 		)
 
 
-class Rack(_Container):
+class Frame(_Container):
 	"""
-	A rack which contains slots horizontally along the x-axis.
+	A frame which contains boards horizontally along the x-axis.
 	"""
 	
 	def __init__( self
-	            , slot = None
+	            , board = None
 	            , dimensions = coordinates.Cartesian3D(30.0,15.0,20.0)
-	            , num_slots = 24
-	            , slot_spacing = 0.1
-	            , slot_offset = None
+	            , num_boards = 24
+	            , board_spacing = 0.1
+	            , board_offset = None
 	            ):
 		"""
 		dimensions is a Cartesian3D(width, height, depth).
 		
-		num_slots is the number of slots the rack fits
+		num_boards is the number of boards the frame fits
 		
-		slot_spacing is the additional (horizontal) space between each slot
+		board_spacing is the additional (horizontal) space between each board
 		
-		slot_offset is the offset of the 0th slot from (0,0,0) of the rack. If
-		not specified, the slots are centered within the rack's vertical and
+		board_offset is the offset of the 0th board from (0,0,0) of the frame. If
+		not specified, the boards are centered within the frame's vertical and
 		horizontal axes and placed at depth 0.
 		
-		slot is a Slot definition.
+		board is a Board definition.
 		"""
-		slot = slot or Slot()
-		self.volume = slot
-		self.slot   = slot
+		board = board or Board()
+		self.volume = board
+		self.board  = board
 		
-		self.num_slots    = num_slots
-		self.slot_spacing = slot_spacing
+		self.num_boards    = num_boards
+		self.board_spacing = board_spacing
 		
 		_Container.__init__( self
 		                   , dimensions
-		                   , (num_slots, 1)
-		                   , coordinates.Cartesian2D(slot_spacing, 0.0)
-		                   , slot_offset
+		                   , (num_boards, 1)
+		                   , coordinates.Cartesian2D(board_spacing, 0.0)
+		                   , board_offset
 		                   )
 	
 	
-	def get_position(self, slot, direction = None):
+	def get_position(self, board, direction = None):
 		"""
-		Get the position of the given slot (and optionally wire) relative to (0,0,0)
-		in this rack.
+		Get the position of the given board (and optionally wire) relative to (0,0,0)
+		in this frame.
 		"""
 		
-		slot_position = self.get_volume_position((slot, 0))
+		board_position = self.get_volume_position((board, 0))
 		
-		wire_position = self.slot.get_position(direction)
+		wire_position = self.board.get_position(direction)
 		
-		return coordinates.Cartesian3D( slot_position.x + wire_position.x
-		                              , slot_position.y + wire_position.y
-		                              , slot_position.z + wire_position.z
+		return coordinates.Cartesian3D( board_position.x + wire_position.x
+		                              , board_position.y + wire_position.y
+		                              , board_position.z + wire_position.z
 		                              )
 
 
 
 class Cabinet(_Container):
 	"""
-	A cabinet which contains racks vertically along the y-axis.
+	A cabinet which contains frames vertically along the y-axis.
 	"""
 	
 	def __init__( self
-	            , rack = None
+	            , frame = None
 	            , dimensions = coordinates.Cartesian3D(40.0,180.0,25.0)
-	            , num_racks = 10
-	            , rack_spacing = 2
-	            , rack_offset = None
+	            , num_frames = 10
+	            , frame_spacing = 2
+	            , frame_offset = None
 	            ):
 		"""
 		dimensions is a Cartesian3D(width, height, depth).
 		
-		num_racks is the number of racks the cabinet fits
+		num_frames is the number of frames the cabinet fits
 		
-		rack_spacing is the additional (vertical) space between each rack
+		frame_spacing is the additional (vertical) space between each frame
 		
-		rack_offset is the offset of the 0th rack from (0,0,0) of the rack. If
-		not specified, the racks are centered within the rack's vertical and
+		frame_offset is the offset of the 0th frame from (0,0,0) of the frame. If
+		not specified, the frames are centered within the frame's vertical and
 		horizontal axes and placed at depth 0.
 		
-		rack is a Rack definition.
+		frame is a Frame definition.
 		"""
-		rack = rack or Rack()
-		self.volume = rack
-		self.rack   = rack
+		frame = frame or Frame()
+		self.volume = frame
+		self.frame  = frame
 		
-		self.num_racks    = num_racks
-		self.rack_spacing = rack_spacing
+		self.num_frames    = num_frames
+		self.frame_spacing = frame_spacing
 		
 		_Container.__init__( self
 		                   , dimensions
-		                   , (1, num_racks)
-		                   , coordinates.Cartesian2D(0.0, rack_spacing)
-		                   , rack_offset
+		                   , (1, num_frames)
+		                   , coordinates.Cartesian2D(0.0, frame_spacing)
+		                   , frame_offset
 		                   )
 	
 	
-	def get_position(self, rack, slot, direction = None):
+	def get_position(self, frame, board, direction = None):
 		"""
-		Get the position of the given slot within a rack (and optionally wire)
+		Get the position of the given board within a frame (and optionally wire)
 		relative to (0,0,0) in this cabinet.
 		"""
 		
-		rack_position = self.get_volume_position((0, rack))
+		frame_position = self.get_volume_position((0, frame))
 		
-		wire_position = self.rack.get_position(slot, direction)
+		wire_position = self.frame.get_position(board, direction)
 		
-		return coordinates.Cartesian3D( rack_position.x + wire_position.x
-		                              , rack_position.y + wire_position.y
-		                              , rack_position.z + wire_position.z
+		return coordinates.Cartesian3D( frame_position.x + wire_position.x
+		                              , frame_position.y + wire_position.y
+		                              , frame_position.z + wire_position.z
 		                              )
 
 
@@ -281,7 +281,7 @@ class System(object):
 	
 	def get_position(self, coord, direction = None):
 		"""
-		Get the position of the given slot in a rack in a cabinet (and optionally
+		Get the position of the given board in a frame in a cabinet (and optionally
 		wire) in the system.
 		"""
 		

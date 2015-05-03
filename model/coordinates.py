@@ -92,7 +92,7 @@ _Hexagonal2DTuple = namedtuple("_Hexagonal2DTuple", ["x","y"])
 _Cartesian2DTuple = namedtuple("_Cartesian2DTuple", ["x","y"])
 _Cartesian3DTuple = namedtuple("_Cartesian3DTuple", ["x","y","z"])
 
-_CabinetTuple = namedtuple("_CabinetTuple", ["cabinet","rack","slot"])
+_CabinetTuple = namedtuple("_CabinetTuple", ["cabinet","frame","board"])
 
 
 
@@ -134,38 +134,38 @@ class Cartesian3D(_CartesianCoordsMixin, _Cartesian3DTuple):
 		_CartesianCoordsMixin.__init__(self)
 
 """
-Logical coordinates for locations in a series of cabinets containing racks
-containing slots, like so::
+Logical coordinates for locations in a series of cabinets containing frames
+containing boards, like so::
 	
-	          0             1                2
+	          2             1                0
 	Cabinet --+-------------+----------------+
 	          |             |                |
-	+-------------+  +-------------+  +-------------+     Rack
+	+-------------+  +-------------+  +-------------+    Frame
 	|             |  |             |  |             |      |
 	| +---------+ |  | +---------+ |  | +---------+ |      |
-	| | : : : : | |  | | : : : : | |  | | : : : : |--------+ 3
+	| | : : : : | |  | | : : : : | |  | | : : : : |--------+ 0
 	| | : : : : | |  | | : : : : | |  | | : : : : | |      |
+	| +---------+ |  | +---------+ |  | +---------+ |      |
+	| | : : : :#| |  | | : : : : | |  | | : : : : |--------+ 1
+	| | : : : :#| |  | | : : : : | |  | | : : : : | |      |
 	| +---------+ |  | +---------+ |  | +---------+ |      |
 	| | : : : : | |  | | : : : : | |  | | : : : : |--------+ 2
 	| | : : : : | |  | | : : : : | |  | | : : : : | |      |
 	| +---------+ |  | +---------+ |  | +---------+ |      |
-	| | : : : : | |  | | : : : : | |  | |#: : : : |--------+ 1
-	| | : : : : | |  | | : : : : | |  | |#: : : : | |      |
-	| +---------+ |  | +---------+ |  | +---------+ |      |
-	| | : : : : | |  | | : : : : | |  | | : : : : |--------+ 0
+	| | : : : : | |  | | : : : : | |  | | : : : : |--------+ 3
 	| | : : : : | |  | | : : : : | |  | | : : : : | |
 	| +---------+ |  | +|-|-|-|-|+ |  | +---------+ |
 	|             |  |  | | | | |  |  |             |
 	+-------------+  +--|-|-|-|-|--+  +-------------+
 	                    | | | | |
-	          Slots ----+-+-+-+-+
-	                    0 1 2 3 4
+	         Board -----+-+-+-+-+
+	                    4 3 2 1 0
 
-In this example there are 3 cabinets each containing 4 racks which in turn
-contain 5 slots.
+In this example there are 3 cabinets each containing 4 frames which in turn
+contain 5 boards.
 
-Cabinets are numbered from 0 left-to-right. Racks are numbered from 0
-bottom-to-top. Slots are numbered from 0 left-to-right. Therefore, the slot
+Cabinets are numbered from 0 right-to-left. Frames are numbered from 0
+top-to-bottom. Boards are numbered from 0 right-to-left. Therefore, the board
 marked with "#" is at the coordinate (2,1,0).
 """
 class Cabinet(_ElementwiseCoordsMixin, _CabinetTuple):

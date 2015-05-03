@@ -5,6 +5,8 @@ A representation of Boards linked by wires in a SpiNNaker system along with
 utilities for creating systems of them and iterating over them.
 """
 
+from six import iteritems
+
 import topology
 import coordinates
 
@@ -79,7 +81,7 @@ class Board(object):
 			(topology.EAST,       topology.NORTH)      : topology.NORTH,
 		}
 		# Opposite cases are simply inverted versions of the above...
-		for (iws, pd), ows in out_sides.items():
+		for (iws, pd), ows in iteritems(out_sides.copy()):
 			out_sides[( topology.opposite(iws)
 			          , topology.opposite(pd)
 			          )] = topology.opposite(ows)
@@ -123,7 +125,7 @@ def create_torus(width = 1, height = None):
 			# Connect the boards together
 			boards[coord].connect_wire(boards[n_coord], direction)
 	
-	return [(b, c) for (c, b) in boards.iteritems()]
+	return [(b, c) for (c, b) in iteritems(boards)]
 
 
 

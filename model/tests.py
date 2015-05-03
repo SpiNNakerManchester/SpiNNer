@@ -8,6 +8,8 @@ python tests.py
 
 import unittest
 
+from six import next
+
 from itertools import product
 import fractions
 
@@ -100,23 +102,23 @@ class TopologyTests(unittest.TestCase):
 		it = topology.hexagon(2)
 		
 		# Inner layer
-		self.assertEqual(it.next(), ( 0, 0))
-		self.assertEqual(it.next(), (-1, 0))
-		self.assertEqual(it.next(), ( 0, 1))
+		self.assertEqual(next(it), ( 0, 0))
+		self.assertEqual(next(it), (-1, 0))
+		self.assertEqual(next(it), ( 0, 1))
 		
 		# Outer layer
-		self.assertEqual(it.next(), ( 1, 1))
-		self.assertEqual(it.next(), ( 1, 0))
-		self.assertEqual(it.next(), ( 0,-1))
-		self.assertEqual(it.next(), (-1,-1))
-		self.assertEqual(it.next(), (-2,-1))
-		self.assertEqual(it.next(), (-2, 0))
-		self.assertEqual(it.next(), (-1, 1))
-		self.assertEqual(it.next(), ( 0, 2))
-		self.assertEqual(it.next(), ( 1, 2))
+		self.assertEqual(next(it), ( 1, 1))
+		self.assertEqual(next(it), ( 1, 0))
+		self.assertEqual(next(it), ( 0,-1))
+		self.assertEqual(next(it), (-1,-1))
+		self.assertEqual(next(it), (-2,-1))
+		self.assertEqual(next(it), (-2, 0))
+		self.assertEqual(next(it), (-1, 1))
+		self.assertEqual(next(it), ( 0, 2))
+		self.assertEqual(next(it), ( 1, 2))
 		
 		# Stop now
-		self.assertRaises(StopIteration, it.next)
+		self.assertRaises(StopIteration, (lambda: next(it)))
 	
 	
 	def test_threeboards(self):
@@ -495,9 +497,9 @@ class CabinetTests(unittest.TestCase):
 	Tests for the cabinet dimension definitions
 	"""
 	
-	def test_slot(self):
-		# Test the slot model
-		s = cabinet.Slot((10,20,30), {
+	def test_board(self):
+		# Test the board model
+		s = cabinet.Board((10,20,30), {
 			topology.NORTH : (1,2,3),
 			topology.SOUTH : (-1,-2,-3),
 		})
@@ -515,45 +517,45 @@ class CabinetTests(unittest.TestCase):
 		self.assertEqual(s.get_position(topology.EAST), (0,0,0))
 	
 	
-	def test_rack(self):
-		# Test the rack model
-		# Slot with the north port slightly offset on the z axis
-		s = cabinet.Slot((1,10,10), {topology.NORTH : (0.0,0.0,1.0)})
-		# A rack with 10 slots. The bay should be centered with offset (2.75, 2.5, 0)
-		r = cabinet.Rack(s, (20,15,15), 10, 0.5)
+	def test_frame(self):
+		# Test the frame model
+		# Board with the north port slightly offset on the z axis
+		b = cabinet.Board((1,10,10), {topology.NORTH : (0.0,0.0,1.0)})
+		# A frame with 10 boards. The bay should be centered with offset (2.75, 2.5, 0)
+		f = cabinet.Frame(b, (20,15,15), 10, 0.5)
 		
 		# Check the various dimensions
-		self.assertEqual(r.width,  20)
-		self.assertEqual(r.height, 15)
-		self.assertEqual(r.depth,  15)
+		self.assertEqual(f.width,  20)
+		self.assertEqual(f.height, 15)
+		self.assertEqual(f.depth,  15)
 		
 		# Check accessing wires
-		self.assertEqual(r.get_position(0), (2.75,2.5,0.0))
-		self.assertEqual(r.get_position(1), (4.25,2.5,0.0))
+		self.assertEqual(f.get_position(0), (2.75,2.5,0.0))
+		self.assertEqual(f.get_position(1), (4.25,2.5,0.0))
 		
 		# Check accessing a particular link
-		self.assertEqual(r.get_position(2, topology.NORTH), (5.75,2.5,1.0))
+		self.assertEqual(f.get_position(2, topology.NORTH), (5.75,2.5,1.0))
 	
 	
 	def test_cabinet(self):
 		# Test the cabinet model
-		# Slot with the north port slightly offset on the z axis
-		s = cabinet.Slot((1,10,10), {topology.NORTH : (0.0,0.0,1.0)})
-		# A rack with 10 slots. The bay should be centered with offset (2.75, 2.5, 0)
-		r = cabinet.Rack(s, (20,15,15), 10, 0.5)
-		# A cabinet with 10 racks. The bay should have offset (1,1,1)
-		c = cabinet.Cabinet(r, (25, 120, 20), 5, 5.0, (1,1,1))
+		# Board with the north port slightly offset on the z axis
+		b = cabinet.Board((1,10,10), {topology.NORTH : (0.0,0.0,1.0)})
+		# A frame with 10 boards. The bay should be centered with offset (2.75, 2.5, 0)
+		f = cabinet.Frame(b, (20,15,15), 10, 0.5)
+		# A cabinet with 10 frames. The bay should have offset (1,1,1)
+		c = cabinet.Cabinet(f, (25, 120, 20), 5, 5.0, (1,1,1))
 		
 		# Check the various dimensions
 		self.assertEqual(c.width,  25)
 		self.assertEqual(c.height, 120)
 		self.assertEqual(c.depth,  20)
 		
-		# Check accessing racks via the cabinet...
+		# Check accessing frame via the cabinet...
 		self.assertEqual(c.get_position(0, 0), (3.75,3.5,1.0))
 		self.assertEqual(c.get_position(0, 1), (5.25,3.5,1.0))
 		
-		# Access a subsequent rack
+		# Access a subsequent frame
 		self.assertEqual(c.get_position(1, 0), (3.75,23.5,1.0))
 		
 		
@@ -563,20 +565,20 @@ class CabinetTests(unittest.TestCase):
 	
 	def test_system(self):
 		# Test the system of cabinets model
-		# Slot with the north port slightly offset on the z axis
-		s = cabinet.Slot((1,10,10), {topology.NORTH : (0.0,0.0,1.0)})
-		# A rack with 10 slots. The bay should be centered with offset (2.75, 2.5, 0)
-		r = cabinet.Rack(s, (20,15,15), 10, 0.5)
-		# A cabinet with 10 racks. The bay should have offset (1,1,1)
-		c = cabinet.Cabinet(r, (25, 120, 20), 5, 5.0, (1,1,1))
+		# Board with the north port slightly offset on the z axis
+		b = cabinet.Board((1,10,10), {topology.NORTH : (0.0,0.0,1.0)})
+		# A frame with 10 boards. The bay should be centered with offset (2.75, 2.5, 0)
+		f = cabinet.Frame(b, (20,15,15), 10, 0.5)
+		# A cabinet with 10 frames. The bay should have offset (1,1,1)
+		c = cabinet.Cabinet(f, (25, 120, 20), 5, 5.0, (1,1,1))
 		# A system of 10 cabinets.
 		sys = cabinet.System(c, 10, 100)
 		
-		# Check accessing racks via the cabinet via the system...
+		# Check accessing frames via the cabinet via the system...
 		self.assertEqual(sys.get_position((0,0,0)), (3.75,3.5,1.0))
 		self.assertEqual(sys.get_position((0,0,1)), (5.25,3.5,1.0))
 		
-		# Access a subsequent rack
+		# Access a subsequent frame
 		self.assertEqual(sys.get_position((0,1,0)), (3.75,23.5,1.0))
 		
 		# Access a subsequent cabinet

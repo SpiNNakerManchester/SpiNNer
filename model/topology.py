@@ -87,7 +87,7 @@ def median_element(values):
 	"""
 	Returns the value of the median element of the set.
 	"""
-	return sorted(values)[len(values)/2]
+	return sorted(values)[len(values)//2]
 
 
 def to_shortest_path(vector):
@@ -249,10 +249,10 @@ def fold_dimension(x, w, f):
 	"""
 	# Width of the folded sections (round up so sections are bigger than
 	# neccessary if not evenly divisible)
-	fold_width = (w+(f-1)) / f
+	fold_width = (w+(f-1)) // f
 	
 	new_x = x % fold_width
-	fold  = x / fold_width
+	fold  = x // fold_width
 	
 	# If on a reverse-facing fold, flip the coordinate
 	if fold%2:
@@ -289,21 +289,21 @@ def fold_interleave_dimension(x, w, f):
 ################################################################################
 
 
-def cabinetise(coord, bounds, num_cabinets, racks_per_cabinet, slots_per_rack = None):
+def cabinetise(coord, bounds, num_cabinets, frames_per_cabinet, boards_per_frame = None):
 	r"""
 	Takes a set of Cartesian coordinates and maps them into a series of cabinets.
 	Splits the system into columns, one per cabinet. Splits each column into rows,
-	one per rack. These rows likely consist of several columns and rows in
-	Cartesian space and so values are interleaved to yield a slot allocation.
+	one per frame. These rows likely consist of several columns and rows in
+	Cartesian space and so values are interleaved to yield a board allocation.
 	
 	coord is an (x,y) tuple containing the coordinate to map
 	
 	bounds is a (w,h) tuple containing the width and height of the Cartesian space
 	
-	If slots_per_rack is given then an assertion checks that the number of slots
+	If boards_per_frame is given then an assertion checks that the number of boards
 	is adequate.
 	
-	Returns a tuple (cabinet, rack, slot).
+	Returns a tuple (cabinet, frame, board).
 	"""
 	
 	x, y = coord
@@ -312,28 +312,28 @@ def cabinetise(coord, bounds, num_cabinets, racks_per_cabinet, slots_per_rack = 
 	# Must be divisible into cabinets
 	assert(w % num_cabinets == 0)
 	
-	# Must be divisible into racks
-	assert(h % racks_per_cabinet == 0)
+	# Must be divisible into frames
+	assert(h % frames_per_cabinet == 0)
 	
-	cols_per_cabinet = w / num_cabinets
-	rows_per_rack    = h / racks_per_cabinet
+	cols_per_cabinet = w // num_cabinets
+	rows_per_frame   = h // frames_per_cabinet
 	
-	cabinet = x / cols_per_cabinet
-	rack    = y / rows_per_rack
+	cabinet = x // cols_per_cabinet
+	frame   = y // rows_per_frame
 	
-	# Sub coordinate within the rack
+	# Sub coordinate within the frame
 	x %= cols_per_cabinet
-	y %= rows_per_rack
+	y %= rows_per_frame
 	
-	# Interleave into slot number
-	slot = y + (rows_per_rack * x)
+	# Interleave into board number
+	board = y + (rows_per_frame * x)
 	
 	# Sanity check the position is actually within the system.
-	assert(slot < slots_per_rack)
-	assert(rack < racks_per_cabinet)
+	assert(board < boards_per_frame)
+	assert(frame < frames_per_cabinet)
 	assert(cabinet < num_cabinets)
 	
-	return coordinates.Cabinet(cabinet, rack, slot)
+	return coordinates.Cabinet(cabinet, frame, board)
 
 
 

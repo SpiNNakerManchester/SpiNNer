@@ -173,14 +173,14 @@ def fold(boards, folds):
 	       ]
 
 
-def cabinetise(boards, num_cabinets, racks_per_cabinet, slots_per_rack = None):
+def cabinetise(boards, num_cabinets, frames_per_cabinet, boards_per_frame = None):
 	r"""
 	Takes a set of Cartesian coordinates and maps them into a series of cabinets.
 	Splits the system into columns, one per cabinet. Splits each column into rows,
-	one per rack. These rows likely consist of several columns and rows in
-	Cartesian space and so values are interleaved to yield a slot allocation.
+	one per frame. These rows likely consist of several columns and rows in
+	Cartesian space and so values are interleaved to yield a board allocation.
 	
-	If slots_per_rack is given then an assertion checks that the number of slots
+	If boards_per_frame is given then an assertion checks that the number of boards
 	is adequate.
 	"""
 	_assert_coord(boards, coordinates.Cartesian2D)
@@ -194,8 +194,8 @@ def cabinetise(boards, num_cabinets, racks_per_cabinet, slots_per_rack = None):
 	return [ (board, topology.cabinetise( (x,y)
 	                                    , (max_x+1, max_y+1)
 	                                    , num_cabinets
-	                                    , racks_per_cabinet
-	                                    , slots_per_rack
+	                                    , frames_per_cabinet
+	                                    , boards_per_frame
 	                                    ))
 	         for (board, (x,y)) in boards
 	       ]
