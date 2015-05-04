@@ -7,8 +7,8 @@ and their wiring.
 
 import math
 
-from spinner.model import topology
-from spinner.model import coordinates
+from spinner import topology
+from spinner import coordinates
 
 
 def wire_length(boards, board, direction, wire_offsets={}):

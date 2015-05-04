@@ -63,7 +63,7 @@ class _HexCoordsMixin(_ElementwiseCoordsMixin):
 		"""
 		# Pad to a 3-field value if 2D version.
 		v = (list(self) + [0])[:3]
-		from spinner.model import topology
+		from spinner import topology
 		return topology.manhattan(topology.to_shortest_path(v))
 
 
@@ -81,7 +81,7 @@ class _CartesianCoordsMixin(_ElementwiseCoordsMixin):
 		"""
 		Magnitude (Euclidean distance)
 		"""
-		from spinner.model import topology
+		from spinner import topology
 		return topology.euclidean(self)
 
 

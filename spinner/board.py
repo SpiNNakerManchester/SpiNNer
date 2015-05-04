@@ -7,8 +7,8 @@ utilities for creating systems of them and iterating over them.
 
 from six import iteritems
 
-from spinner.model import topology
-from spinner.model import coordinates
+from spinner import topology
+from spinner import coordinates
 
 
 class Board(object):

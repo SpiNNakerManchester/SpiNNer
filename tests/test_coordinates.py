@@ -1,6 +1,6 @@
 import pytest
 
-from spinner.model import coordinates
+from spinner import coordinates
 
 
 def test___repr__():

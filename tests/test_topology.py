@@ -2,7 +2,7 @@ import pytest
 
 from six import next
 
-from spinner.model import topology
+from spinner import topology
 
 
 def test_next():

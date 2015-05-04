@@ -2,8 +2,8 @@ import pytest
 
 import fractions
 
-from spinner.model import board
-from spinner.model import topology
+from spinner import board
+from spinner import topology
 
 
 def lcm(a, b):

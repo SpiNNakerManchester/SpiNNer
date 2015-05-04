@@ -1,7 +1,7 @@
 import pytest
 
-from spinner.model import transforms
-from spinner.model import coordinates
+from spinner import transforms
+from spinner import coordinates
 
 
 def test_hex_to_cartesian():

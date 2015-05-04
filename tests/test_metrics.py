@@ -1,9 +1,9 @@
 import pytest
 
-from spinner.model import metrics
-from spinner.model import topology
-from spinner.model import transforms
-from spinner.model import board
+from spinner import metrics
+from spinner import topology
+from spinner import transforms
+from spinner import board
 
 
 def test_wire_length():

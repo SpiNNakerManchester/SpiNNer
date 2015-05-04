@@ -21,7 +21,7 @@ This uses the hexagonal addressing scheme suggested in
 	Mobile Users and Connection Rerouting in Cellular Networks by Nocetti et. al.
 """
 
-from spinner.model import coordinates
+from spinner import coordinates
 
 ################################################################################
 # Directions
