@@ -67,8 +67,7 @@ def rhombus_to_rect(boards):
 	if len(boards) == 0:
 		return []
 	
-	maxes = map(max, *(c for (b,c) in boards))
-	
+	maxes = tuple(map(max, *(c for (b,c) in boards)))
 	return [ (board, type(boards[0][1])(*(v%(m+1) for (v,m) in zip(c, maxes))))
 	         for (board, c) in boards
 	       ]
@@ -94,47 +93,8 @@ def compress(boards, x_div = 1, y_div = 2):
 	"""
 	_assert_coord(boards, coordinates.Cartesian2D)
 	
-	return [ (board, coordinates.Cartesian2D(int(x)/int(x_div), int(y)/int(y_div)))
+	return [ (board, coordinates.Cartesian2D(int(x)//int(x_div), int(y)//int(y_div)))
 	         for (board, (x,y)) in boards
-	       ]
-
-
-def space_folds(boards, folds, gaps = None):
-	r"""
-	Takes a set of Cartesian coordinates and adds a gap where a fold would take
-	place. Below, space_folds(b, (2,1), (2,0)) is shown::
-		
-		+---+---+---+---+          +---+---+        +---+---+
-		| 8 | 9 |10 |11 |          | 8 | 9 |        |10 |11 |
-		+---+---+---+---+  -----\  +---+---+        +---+---+
-		| 4 | 5 | 6 | 7 |  -----/  | 4 | 5 |        | 6 | 7 |
-		+---+---+---+---+          +---+---+        +---+---+
-		| 0 | 1 | 2 | 3 |          | 0 | 1 |        | 2 | 3 |
-		+---+---+---+---+          +---+---+        +---+---+
-	"""
-	_assert_coord(boards, (coordinates.Cartesian2D, coordinates.Cartesian3D))
-	
-	# Can't do anything with an empty input
-	if len(boards) == 0:
-		return []
-	
-	# If gaps not given, make all gaps = 1
-	if gaps is None:
-		gaps = [1]*len(folds)
-	
-	# Must have a number of folds and gaps for each dimension
-	assert(len(boards[0][1]) == len(folds) == len(gaps))
-	
-	maxes = map(max, *(c for (b,c) in boards))
-	
-	# Use topology.fold_dimension() to get the fold number and multiply this by
-	# the gap size to get an offset for each value.
-	return [ ( board, type(boards[0][1])(*[v + (g*topology.fold_dimension(v,m+1,f)[1])
-	                                       for (v,m,f,g)
-	                                       in zip(c, maxes, folds, gaps)]
-	                                    )
-	         )
-	         for (board, c) in boards
 	       ]
 
 
@@ -161,7 +121,7 @@ def fold(boards, folds):
 	# Must have a number of folds and gaps for each dimension
 	assert(len(boards[0][1]) == len(folds))
 	
-	maxes = map(max, *(c for (b,c) in boards))
+	maxes = tuple(map(max, *(c for (b,c) in boards)))
 	
 	# Use topology.fold_dimension() to get the fold number and multiply this by
 	# the gap size to get an offset for each value.
@@ -199,30 +159,3 @@ def cabinetise(boards, num_cabinets, frames_per_cabinet, boards_per_frame = None
 	                                    ))
 	         for (board, (x,y)) in boards
 	       ]
-
-
-def cabinet_to_physical(boards, system):
-	"""
-	Takes Cabinet coordinates and converts them into Cartesian3D coordinates
-	representing the physical positions of cabinets based on a cabinet.System()
-	specification.
-	"""
-	_assert_coord(boards, coordinates.Cabinet)
-	
-	return [(board, system.get_position(coord)) for (board,coord) in boards]
-
-
-def scale(boards, factor):
-	"""
-	Scale all coordinates by the factor given
-	"""
-	_assert_coord(boards, (coordinates.Hexagonal, coordinates.Hexagonal2D,
-	                       coordinates.Cartesian2D, coordinates.Cartesian3D))
-	
-	if len(boards) == 0:
-		return []
-	
-	assert(len(factor) == len(boards[0][1]))
-	
-	return [(board, type(boards[0][1])(*map(mul, coord, factor)))
-	        for (board, coord) in boards]

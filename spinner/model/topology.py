@@ -464,16 +464,3 @@ def threeboards(width = 1, height = None):
 				x_coord = (x*2) + (-y) + (z >= 2)
 				y_coord = (x  ) + ( y) + (z >= 1)
 				yield coordinates.Hexagonal(x_coord,y_coord,0)
-
-
-################################################################################
-# Board to chip coordinate mapping
-################################################################################
-
-def board_xy_to_chip_xy(x,y, board_layers=4):
-	"""
-	Given the logical (x,y) coordinate of a board, return the (x,y) coordinate of
-	the chip at the bottom-left corner of that board. Optionally takes the number
-	of layers in the hexagonal arrangement of chips on a board.
-	"""
-	

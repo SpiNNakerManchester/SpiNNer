@@ -3,6 +3,13 @@ import pytest
 from spinner.model import coordinates
 
 
+def test___repr__():
+	# Make sure the generic repr implementation uses the correct name and lists
+	# all dimensions in the correct order.
+	assert repr(coordinates.Hexagonal(1, 2, 3)) == "Hexagonal(1, 2, 3)"
+	assert repr(coordinates.Cartesian2D(1, 2)) == "Cartesian2D(1, 2)"
+
+
 def test_hexagonal():
 	a = coordinates.Hexagonal(1,2,3)
 	b = coordinates.Hexagonal(-1,-1,-1)

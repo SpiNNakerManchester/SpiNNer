@@ -1,5 +1,7 @@
 import pytest
 
+from six import next
+
 from spinner.model import topology
 
 
@@ -100,6 +102,30 @@ def test_hexagon():
 		next(it)
 
 
+def test_hexagon_zero():
+	it = topology.hexagon_zero(2)
+	
+	# Inner layer
+	assert next(it) == (2,1)
+	assert next(it) == (1,1)
+	assert next(it) == (2,2)
+	
+	# Outer layer
+	assert next(it) == (3,2)
+	assert next(it) == (3,1)
+	assert next(it) == (2,0)
+	assert next(it) == (1,0)
+	assert next(it) == (0,0)
+	assert next(it) == (0,1)
+	assert next(it) == (1,2)
+	assert next(it) == (2,3)
+	assert next(it) == (3,3)
+	
+	# Stop now
+	with pytest.raises(StopIteration):
+		next(it)
+
+
 def test_threeboards():
 	# Creating no threeboards makes no boards...
 	assert list(topology.threeboards(0)) == []
@@ -181,11 +207,36 @@ def test_hex_to_cartesian():
 	assert topology.hex_to_cartesian((1,1,0)) == (1,1)
 
 
+def test_board_to_chip():
+	assert topology.board_to_chip((0,0,0), (0,0))
+	assert topology.board_to_chip((1,0,0), (8,4))
+	assert topology.board_to_chip((0,1,0), (4,8))
+	assert topology.board_to_chip((1,1,0), (12,12))
+
+
 def test_hex_to_skew_cartesian():
 	# Test single element cases
 	assert topology.hex_to_skewed_cartesian((0,0,0)) == (0,0)
 	assert topology.hex_to_skewed_cartesian((0,1,0)) == (1,2)
 	assert topology.hex_to_skewed_cartesian((1,1,0)) == (2,1)
+
+
+def test_euclidean():
+	assert topology.euclidean((0, 0)) == 0.0
+	assert topology.euclidean((1, 0)) == 1.0
+	assert topology.euclidean((0, 1)) == 1.0
+	assert topology.euclidean((1, 1)) == 2.0**0.5
+	assert topology.euclidean((-1, 1)) == 2.0**0.5
+	assert topology.euclidean((-1, -1)) == 2.0**0.5
+	
+	assert topology.euclidean((0, 0, 0)) == 0.0
+	assert topology.euclidean((1, 0, 0)) == 1.0
+	assert topology.euclidean((0, 1, 0)) == 1.0
+	assert topology.euclidean((0, 0, 1)) == 1.0
+	assert topology.euclidean((0, 1, 1)) == 2.0**0.5
+	assert topology.euclidean((1, 1, 0)) == 2.0**0.5
+	assert topology.euclidean((1, 0, 1)) == 2.0**0.5
+	assert topology.euclidean((1, 1, 1)) == 3.0**0.5
 
 
 def test_fold_dimension():
