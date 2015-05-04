@@ -7,9 +7,9 @@ and their wiring.
 
 import math
 
-import topology
-import coordinates
-import cabinet
+from spinner.model import topology
+from spinner.model import coordinates
+from spinner.model import cabinet
 
 
 def wire_length(boards, board, direction, wire_offsets={}):

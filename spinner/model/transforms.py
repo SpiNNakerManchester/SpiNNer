@@ -6,8 +6,8 @@ Transformations on the coordinates to be applied to [(board, coord),...] lists.
 
 from operator import mul
 
-import topology
-import coordinates
+from spinner.model import topology
+from spinner.model import coordinates
 
 
 def _assert_coord(boards, coordinate_types):

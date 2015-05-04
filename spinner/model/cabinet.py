@@ -4,8 +4,8 @@
 Utilities for working with the geometry of cabinets of frames of boards.
 """
 
-import topology
-import coordinates
+from spinner.model import topology
+from spinner.model import coordinates
 
 
 class Board(object):
