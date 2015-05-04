@@ -9,7 +9,6 @@ import math
 
 from spinner.model import topology
 from spinner.model import coordinates
-from spinner.model import cabinet
 
 
 def wire_length(boards, board, direction, wire_offsets={}):
