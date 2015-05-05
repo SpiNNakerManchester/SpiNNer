@@ -39,11 +39,37 @@ def mock_rhombus_to_rect(monkeypatch):
 	return m
 
 
-@pytest.mark.parametrize("w,h", [(1, 1), (4, 4), (5, 5),
-                                 (4, 2), (2, 4),
-                                 (6, 3), (3, 6)])
-def test_torus_without_long_wires(w, h, mock_rhombus_to_rect):
-	hex_boards, folded_boards = utils.torus_without_long_wires(w, h)
+@pytest.fixture
+def mock_fold(monkeypatch):
+	from spinner import transforms
+	
+	m = Mock()
+	m.side_effect = transforms.fold
+	
+	monkeypatch.setattr(transforms, "fold", m)
+	return m
+
+
+@pytest.fixture
+def mock_folded_torus(monkeypatch):
+	from spinner import utils
+	
+	m = Mock()
+	m.side_effect = utils.folded_torus
+	
+	monkeypatch.setattr(utils, "folded_torus", m)
+	return m
+
+
+@pytest.mark.parametrize("w,h,transformation,folds",
+                         [(1,1, "slice", (1,1)),
+                          (1,1, "shear", (1,1)),
+                          (5,10, "slice", (2,3)),
+                          (5,10, "shear", (2,3))])
+def test_folded_torus(w, h, transformation, folds,
+                      mock_rhombus_to_rect,
+                      mock_fold):
+	hex_boards, folded_boards = utils.folded_torus(w, h, transformation, folds)
 	
 	# Right number of boards produced
 	assert len(hex_boards) == len(folded_boards) == 3 * w * h
@@ -55,9 +81,8 @@ def test_torus_without_long_wires(w, h, mock_rhombus_to_rect):
 	assert len(set(c for (b, c) in hex_boards)) == len(hex_boards)
 	assert len(set(c for (b, c) in folded_boards)) == len(folded_boards)
 	
-	# Should only use rhombus-to-rect when a twice-as-tall-as-wide system is
-	# presented. (Tests that the right heuristic is used)
-	if h == 2*w:
+	# Should only use rhombus-to-rect when slicing
+	if transformation == "slice":
 		assert mock_rhombus_to_rect.called
 	else:
 		assert not mock_rhombus_to_rect.called
@@ -72,9 +97,12 @@ def test_torus_without_long_wires(w, h, mock_rhombus_to_rect):
 	max_x = max(c[0] for (b, c) in folded_boards)
 	max_y = max(c[1] for (b, c) in folded_boards)
 	
+	# Should be folded the required number of times
+	assert mock_fold.call_args[0][1] == folds
+	
 	# Folded boards should fit within expected bounds (note that the 'or's here
 	# are to allow for folding odd numbers of boards in each dimension).
-	if h == 2 * w:
+	if transformation == "slice":
 		assert max_x == 2*w or max_x + 1 == 2*w
 		assert max_y == int(1.5*h) or max_y + 1 == int(1.5 * h)
 	else:
@@ -82,29 +110,45 @@ def test_torus_without_long_wires(w, h, mock_rhombus_to_rect):
 		assert max_y == h or max_y + 1 == h
 
 
-def test_guess_num_cabinets():
+@pytest.mark.parametrize("w,h,transformation",
+                         [(1, 1, "shear"),
+                          (4, 4, "shear"),
+                          (5, 5, "shear"),
+                          (4, 2, "shear"),
+                          (2, 4, "slice"),
+                          (6, 3, "shear"),
+                          (3, 6, "slice")])
+def test_folded_torus_with_minimal_wire_length(w, h, transformation,
+                                               mock_folded_torus):
+	hex_boards, folded_boards = utils.folded_torus_with_minimal_wire_length(w, h)
+	
+	# Right folding decision taken
+	mock_folded_torus.called_once_with(w, h, transformation, (2, 2))
+
+
+def test_min_num_cabinets():
 	# Special case: 0 boards
-	assert utils.guess_num_cabinets(0, 1, 1) == (0, 0)
-	assert utils.guess_num_cabinets(0, 5, 10) == (0, 0)
+	assert utils.min_num_cabinets(0, 1, 1) == (0, 0)
+	assert utils.min_num_cabinets(0, 5, 10) == (0, 0)
 	
 	# Special case: 1 board
-	assert utils.guess_num_cabinets(1, 1, 1) == (1, 1)
-	assert utils.guess_num_cabinets(1, 5, 10) == (1, 1)
+	assert utils.min_num_cabinets(1, 1, 1) == (1, 1)
+	assert utils.min_num_cabinets(1, 5, 10) == (1, 1)
 	
 	# Up-to a frame worth
-	assert utils.guess_num_cabinets(5, 5, 10) == (1, 1)
-	assert utils.guess_num_cabinets(9, 5, 10) == (1, 1)
-	assert utils.guess_num_cabinets(10, 5, 10) == (1, 1)
+	assert utils.min_num_cabinets(5, 5, 10) == (1, 1)
+	assert utils.min_num_cabinets(9, 5, 10) == (1, 1)
+	assert utils.min_num_cabinets(10, 5, 10) == (1, 1)
 	
 	# Up-to a cabinet worth
-	assert utils.guess_num_cabinets(11, 5, 10) == (1, 2)
-	assert utils.guess_num_cabinets(20, 5, 10) == (1, 2)
-	assert utils.guess_num_cabinets(21, 5, 10) == (1, 3)
-	assert utils.guess_num_cabinets(49, 5, 10) == (1, 5)
-	assert utils.guess_num_cabinets(50, 5, 10) == (1, 5)
+	assert utils.min_num_cabinets(11, 5, 10) == (1, 2)
+	assert utils.min_num_cabinets(20, 5, 10) == (1, 2)
+	assert utils.min_num_cabinets(21, 5, 10) == (1, 3)
+	assert utils.min_num_cabinets(49, 5, 10) == (1, 5)
+	assert utils.min_num_cabinets(50, 5, 10) == (1, 5)
 	
 	# Multiple cabinets worth
-	assert utils.guess_num_cabinets(51, 5, 10) == (2, 5)
-	assert utils.guess_num_cabinets(99, 5, 10) == (2, 5)
-	assert utils.guess_num_cabinets(100, 5, 10) == (2, 5)
-	assert utils.guess_num_cabinets(101, 5, 10) == (3, 5)
+	assert utils.min_num_cabinets(51, 5, 10) == (2, 5)
+	assert utils.min_num_cabinets(99, 5, 10) == (2, 5)
+	assert utils.min_num_cabinets(100, 5, 10) == (2, 5)
+	assert utils.min_num_cabinets(101, 5, 10) == (3, 5)
