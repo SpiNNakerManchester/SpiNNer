@@ -1,5 +1,7 @@
 """Utility functions for generating wiring plans."""
 
+from math import ceil
+
 from spinner import board
 from spinner import topology
 from spinner import coordinates
@@ -57,4 +59,24 @@ def torus_without_long_wires(w, h):
 	return (hex_boards, folded_boards)
 
 
-
+def guess_num_cabinets(num_boards, frames_per_cabinet, boards_per_frame):
+	"""Calculate the minimum number of cabinets and frames required to house the
+	given set of boards.
+	
+	Just simple arithmetic!
+	
+	Returns
+	-------
+	(num_cabinets, num_frames)
+	"""
+	
+	num_cabinets = int(ceil(num_boards / float(frames_per_cabinet *
+	                                           boards_per_frame)))
+	# If more than one cabinet is required, we must be using all the frames in
+	# each cabinet
+	if num_cabinets > 1:
+		return (num_cabinets, frames_per_cabinet)
+	
+	num_frames = int(ceil(num_boards / float(boards_per_frame)))
+	
+	return (num_cabinets, num_frames)

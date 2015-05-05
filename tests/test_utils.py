@@ -58,3 +58,31 @@ def test_torus_without_long_wires(w, h, mock_rhombus_to_rect):
 	else:
 		assert max_x == 3*w or max_x + 1 == 3*w
 		assert max_y == h or max_y + 1 == h
+
+
+def test_guess_num_cabinets():
+	# Special case: 0 boards
+	assert utils.guess_num_cabinets(0, 1, 1) == (0, 0)
+	assert utils.guess_num_cabinets(0, 5, 10) == (0, 0)
+	
+	# Special case: 1 board
+	assert utils.guess_num_cabinets(1, 1, 1) == (1, 1)
+	assert utils.guess_num_cabinets(1, 5, 10) == (1, 1)
+	
+	# Up-to a frame worth
+	assert utils.guess_num_cabinets(5, 5, 10) == (1, 1)
+	assert utils.guess_num_cabinets(9, 5, 10) == (1, 1)
+	assert utils.guess_num_cabinets(10, 5, 10) == (1, 1)
+	
+	# Up-to a cabinet worth
+	assert utils.guess_num_cabinets(11, 5, 10) == (1, 2)
+	assert utils.guess_num_cabinets(20, 5, 10) == (1, 2)
+	assert utils.guess_num_cabinets(21, 5, 10) == (1, 3)
+	assert utils.guess_num_cabinets(49, 5, 10) == (1, 5)
+	assert utils.guess_num_cabinets(50, 5, 10) == (1, 5)
+	
+	# Multiple cabinets worth
+	assert utils.guess_num_cabinets(51, 5, 10) == (2, 5)
+	assert utils.guess_num_cabinets(99, 5, 10) == (2, 5)
+	assert utils.guess_num_cabinets(100, 5, 10) == (2, 5)
+	assert utils.guess_num_cabinets(101, 5, 10) == (3, 5)
