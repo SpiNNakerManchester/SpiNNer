@@ -6,6 +6,28 @@ from spinner import utils
 from spinner import topology
 
 
+def test_ideal_system_size():
+	# Special case: 0
+	assert utils.ideal_system_size(0) == (0, 0)
+	
+	# Should crash on non-multiples of 3
+	with pytest.raises(TypeError):
+		utils.ideal_system_size(1)
+	with pytest.raises(TypeError):
+		utils.ideal_system_size(5)
+	
+	# Square systems
+	assert utils.ideal_system_size(3 * 1 * 1) == (1, 1)
+	assert utils.ideal_system_size(3 * 2 * 2) == (2, 2)
+	assert utils.ideal_system_size(3 * 20 * 20) == (20, 20)
+	
+	# Rectangular systems (should always be tall
+	assert utils.ideal_system_size(3 * 1 * 2) == (1, 2)
+	assert utils.ideal_system_size(3 * 1 * 3) == (1, 3)
+	assert utils.ideal_system_size(3 * 2 * 4) == (2, 4)
+	assert utils.ideal_system_size(3 * 1 * 17) == (1, 17)
+
+
 @pytest.fixture
 def mock_rhombus_to_rect(monkeypatch):
 	from spinner import transforms

@@ -1,11 +1,46 @@
 """Utility functions for generating wiring plans."""
 
-from math import ceil
+from math import ceil, sqrt
 
 from spinner import board
 from spinner import topology
 from spinner import coordinates
 from spinner import transforms
+
+
+def ideal_system_size(num_boards):
+	"""Calculate the ideal system size for a system with the specified number of
+	boards.
+	
+	Returns
+	-------
+	(w, h)
+		Width and height in triads of the most square system possible with the given
+		number of boards. When a square system cannot be made, the function prefers
+		taller systems over wider systems. This enables advantageous folding in the
+		case where the system is twice as tall as it is wide.
+	
+	Raises
+	------
+	TypeError
+		If the number of boards is not a multiple of three. (Hexagonal toruses
+		require multiples of three boards to construct).
+	"""
+	if num_boards % 3 != 0:
+		raise TypeError("{} is not a multiple of 3".format(num_boards))
+	
+	# Special case to avoid division by 0
+	if num_boards == 0:
+		return (0, 0)
+	
+	# Find the largest pair of factors to discover the squarest system
+	for w in reversed(range(1, int(sqrt(num_boards//3)) + 1)):  # pragma: no branch
+		if (num_boards//3) % w == 0:
+			break
+	
+	h = (num_boards//3) // w
+	
+	return (w, h)
 
 
 def torus_without_long_wires(w, h):
@@ -80,3 +115,4 @@ def guess_num_cabinets(num_boards, frames_per_cabinet, boards_per_frame):
 	num_frames = int(ceil(num_boards / float(boards_per_frame)))
 	
 	return (num_cabinets, num_frames)
+
