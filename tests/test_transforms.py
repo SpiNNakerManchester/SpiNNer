@@ -106,3 +106,38 @@ def test_cabinetise():
 		[(o0, c(0,0)), (o1, c(1,0)), (o2, c(0,1)), (o3, c(1,1))],
 		num_cabinets=2, frames_per_cabinet=2, boards_per_frame=1) == \
 		[(o0, s(0,0,0)), (o1, s(1,0,0)), (o2, s(0,1,0)), (o3, s(1,1,0))]
+
+
+def test_remove_gaps():
+	c = coordinates.Cabinet
+	
+	o0 = "o0"
+	o1 = "o1"
+	o2 = "o2"
+	
+	# Empty case
+	assert transforms.remove_gaps([]) == []
+	
+	# Singletons (with and without need to move)
+	assert transforms.remove_gaps([(o0, c(0,0,0))]) == [(o0, c(0,0,0))]
+	assert transforms.remove_gaps([(o0, c(1,2,0))]) == [(o0, c(1,2,0))]
+	assert transforms.remove_gaps([(o0, c(1,2,3))]) == [(o0, c(1,2,0))]
+	
+	# With and without gaps
+	assert set(transforms.remove_gaps(
+		[(o0, c(0,0,0)), (o1, c(0,0,1))])) ==\
+		set([(o0, c(0,0,0)), (o1, c(0,0,1))])
+	assert set(transforms.remove_gaps(
+		[(o0, c(0,0,0)), (o1, c(0,0,2))])) ==\
+		set([(o0, c(0,0,0)), (o1, c(0,0,1))])
+	assert set(transforms.remove_gaps(
+		[(o0, c(0,0,5)), (o1, c(0,0,2))])) ==\
+		set([(o0, c(0,0,1)), (o1, c(0,0,0))])
+	
+	# Independent frames with restructuring needs
+	assert set(transforms.remove_gaps(
+		[(o0, c(1,0,5)), (o1, c(0,1,2))])) ==\
+		set([(o0, c(1,0,0)), (o1, c(0,1,0))])
+	assert set(transforms.remove_gaps(
+		[(o0, c(0,0,0)), (o1, c(0,0,3)), (o2, c(1,0,3))])) ==\
+		set([(o0, c(0,0,0)), (o1, c(0,0,1)), (o2, c(1,0,0))])

@@ -6,6 +6,10 @@ Transformations on the coordinates to be applied to [(board, coord),...] lists.
 
 from operator import mul
 
+from collections import defaultdict
+
+from six import iteritems
+
 from spinner import topology
 from spinner import coordinates
 
@@ -159,3 +163,30 @@ def cabinetise(boards, num_cabinets, frames_per_cabinet, boards_per_frame = None
 	                                    ))
 	         for (board, (x,y)) in boards
 	       ]
+
+
+def remove_gaps(boards):
+	"""
+	Take a cabinetised system and shift boards right in their frames to remove any
+	empty gaps between boards in frames.
+	"""
+	_assert_coord(boards, coordinates.Cabinet)
+	
+	# Initially collect together boards which share a frame
+	# {(c, f): {b: Board, ...}, ...}
+	frames = defaultdict(dict)
+	for board, (c, f, b) in boards:
+		frames[(c, f)][b] = board
+	
+	# Reconstruct the mapping one frame at a time, placing all baords into
+	# contiguous blocks.
+	boards = []
+	for (c, f), rack_boards in iteritems(frames):
+		# Renumber the boards in the frame
+		b = 0
+		for old_b, board in sorted(iteritems(rack_boards),
+			                         key=(lambda tup: tup[0])):
+			boards.append((board, coordinates.Cabinet(c, f, b)))
+			b += 1
+	return boards
+

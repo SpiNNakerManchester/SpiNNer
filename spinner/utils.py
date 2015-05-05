@@ -55,3 +55,6 @@ def torus_without_long_wires(w, h):
 	folded_boards = transforms.fold(cart_boards, (2, 2))
 	
 	return (hex_boards, folded_boards)
+
+
+
