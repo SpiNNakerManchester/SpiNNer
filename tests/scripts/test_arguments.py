@@ -17,12 +17,15 @@ from spinner import utils
                           "-t -1 1",  # "
                           "-t 1 -1",  # "
                           "-n 8",  # Num boards must be a multiple of 3
-                          "-n 3 --folds 2 2",  # Require both of transformation
-                                               # with folds
+                          "-n 3 --folds 2 2",  # Require transformation with folds
+                          # Require transformation with uncrinkle-direction
+                          "-n 3 --uncrinkle-direction rows",
                           "-n 3 --transformation foo",  # Only slice or shear
                           "-n 3 --transformation slice --folds 0 0",  # Invalid folds
                           "-n 3 --transformation slice --folds -1 1",  # "
                           "-n 3 --transformation slice --folds 1 -1",  # "
+                          # Invalid uncrinkle_direction
+                          "-n 3 --transformation slice --uncrinkle-direction foo",
                          ])
 def test_get_topology_from_args_bad(argstring):
 	parser = ArgumentParser()
@@ -33,22 +36,27 @@ def test_get_topology_from_args_bad(argstring):
 		arguments.get_topology_from_args(parser, args)
 
 
-@pytest.mark.parametrize("argstring,dimensions,auto,transformation,folds",
-                         [("-n 3", (1, 1), True, None, None),
-                          ("-n 6", (1, 2), True, None, None),
-                          ("-n 12", (2, 2), True, None, None),
-                          ("-t 3 3", (3, 3), True, None, None),
-                          ("-t 2 3", (2, 3), True, None, None),
+@pytest.mark.parametrize("argstring,dimensions,auto,transformation,"
+                         "uncrinkle_direction,folds",
+                         [("-n 3", (1, 1), True, None, None, None),
+                          ("-n 6", (1, 2), True, None, None, None),
+                          ("-n 12", (2, 2), True, None, None, None),
+                          ("-t 3 3", (3, 3), True, None, None, None),
+                          ("-t 2 3", (2, 3), True, None, None, None),
                           ("-t 2 3 --transformation slice", (2, 3),
-                           False, "slice", (2, 2)),
+                           False, "slice", None, (2, 2)),
                           ("-t 2 3 --transformation shear", (2, 3),
-                           False, "shear", (2, 2)),
+                           False, "shear", None, (2, 2)),
                           ("-t 2 3 --transformation slice --folds 4 4", (2, 3),
-                           False, "slice", (4, 4)),
+                           False, "slice", None, (4, 4)),
+                          ("-t 2 3 --transformation slice --uncrinkle-direction rows",
+                           (2, 3), False, "slice", "rows", None),
+                          ("-t 2 3 --transformation slice --uncrinkle-direction columns",
+                           (2, 3), False, "slice", "columns", None),
                          ])
 def test_get_topology_from_args_dimensions(argstring, dimensions, auto,
-                                           transformation, folds,
-                                           monkeypatch):
+                                           transformation, uncrinkle_direction,
+                                           folds, monkeypatch):
 	parser = ArgumentParser()
 	arguments.add_topology_args(parser)
 	
@@ -79,7 +87,9 @@ def test_get_topology_from_args_dimensions(argstring, dimensions, auto,
 			*dimensions)
 	else:
 		assert mock_folded_torus.called_once_with(dimensions[0], dimensions[1],
-		                                          transformation, folds)
+		                                          transformation,
+		                                          uncrinkle_direction,
+		                                          folds)
 
 
 def test_get_cabinets_from_args():

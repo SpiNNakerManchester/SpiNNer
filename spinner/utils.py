@@ -43,7 +43,7 @@ def ideal_system_size(num_boards):
 	return (w, h)
 
 
-def folded_torus(w, h, transformation, folds):
+def folded_torus(w, h, transformation, uncrinkle_direction, folds):
 	"""Generate a 2D arrangement of boards in a (w, h) triad torus folded in the
 	specified fashion.
 	
@@ -56,6 +56,9 @@ def folded_torus(w, h, transformation, folds):
 	transformation : "slice" or "shear"
 		The transformation to use to map from hexagonal coordinates to a rectangular
 		2D grid.
+	uncrinkle_direction : "rows" or "columns"
+		When uncrinckling the hexagonal mesh into a 2D grid, should groups rows be
+		flattened or groups of columns. Typically, rows will be chosen.
 	folds : (x, y)
 		Number of peieces to fold each dimension into.
 	
@@ -71,17 +74,22 @@ def folded_torus(w, h, transformation, folds):
 	# Boards in their Hexagonal coordinate system
 	hex_boards = board.create_torus(w, h)
 	
+	if uncrinkle_direction not in ("rows", "columns"):
+		raise TypeError("Uncrinkle direction must be 'rows' or 'columns'")
+	rows = uncrinkle_direction == "rows"
+	cols = uncrinkle_direction == "columns"
+	
 	if transformation == "slice":
 		cart_boards = transforms.rhombus_to_rect(
 			transforms.compress(
 				transforms.hex_to_cartesian(
 					hex_boards),
-				x_div=1, y_div=2))
+				x_div=2 if cols else 1, y_div=2 if rows else 1))
 	elif transformation == "shear":
 		cart_boards = transforms.compress(
 				transforms.hex_to_skewed_cartesian(
 					hex_boards),
-				x_div=1, y_div=3)
+				x_div=3 if cols else 1, y_div=3 if rows else 1)
 	else:
 		raise TypeError("Unsupported transformation {}".format(transformation))
 	
@@ -123,7 +131,7 @@ def folded_torus_with_minimal_wire_length(w, h):
 	else:
 		transformation = "shear"
 	
-	return folded_torus(w, h, transformation, (2, 2))
+	return folded_torus(w, h, transformation, "rows", (2, 2))
 
 
 def min_num_cabinets(num_boards, frames_per_cabinet, boards_per_frame):

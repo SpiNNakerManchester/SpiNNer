@@ -35,6 +35,9 @@ def add_topology_args(parser):
 	                           help="the transformation function to use from "
 	                                "hexagonal torus to rectangular Cartesian "
 	                                "grid (selected automatically if omitted)")
+	folding_group.add_argument("--uncrinkle-direction", choices=["columns", "rows"],
+	                           help="direction in which to uncrinkle the hexagonal "
+	                                "mesh to form a regular grid (default: rows)")
 	folding_group.add_argument("--folds", "-F", type=int, nargs=2,
 	                           default=None, metavar=("X", "Y"),
 	                           help="the number of pieces to fold into in each "
@@ -72,18 +75,22 @@ def get_topology_from_args(parser, args):
 	
 	# Fold accordingly
 	if args.transformation is None:
+		if args.uncrinkle_direction is not None:
+			parser.error("--uncrinkle-direction cannot be used without --transformation")
 		if args.folds is not None:
 			parser.error("--folds cannot be used without --transformation")
 		hex_boards, folded_boards = folded_torus_with_minimal_wire_length(w, h)
 	else:
 		if args.folds is None:
 			args.folds = (2, 2)
+		if args.uncrinkle_direction is None:
+			args.uncrinkle_direction = "rows"
 		
 		if args.folds[0] <= 0 or args.folds[1] <= 0:
 			parser.error("number of pieces to fold into must be at least 1")
 		
 		hex_boards, folded_boards = folded_torus(
-			w, h, args.transformation, args.folds)
+			w, h, args.transformation, args.uncrinkle_direction, args.folds)
 	
 	return ((w, h), hex_boards, folded_boards)
 

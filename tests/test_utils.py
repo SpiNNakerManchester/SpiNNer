@@ -61,15 +61,15 @@ def mock_folded_torus(monkeypatch):
 	return m
 
 
-@pytest.mark.parametrize("w,h,transformation,folds",
-                         [(1,1, "slice", (1,1)),
-                          (1,1, "shear", (1,1)),
-                          (5,10, "slice", (2,3)),
-                          (5,10, "shear", (2,3))])
-def test_folded_torus(w, h, transformation, folds,
+@pytest.mark.parametrize("w,h", [(1,1), (7,5), (5,7), (4,8), (8, 4)])
+@pytest.mark.parametrize("transformation", ["slice", "shear"])
+@pytest.mark.parametrize("uncrinkle_direction", ["rows", "columns"])
+@pytest.mark.parametrize("folds", [(1,1), (2,3)])
+def test_folded_torus(w, h, transformation, uncrinkle_direction, folds,
                       mock_rhombus_to_rect,
                       mock_fold):
-	hex_boards, folded_boards = utils.folded_torus(w, h, transformation, folds)
+	hex_boards, folded_boards = utils.folded_torus(w, h, transformation,
+	                                               uncrinkle_direction, folds)
 	
 	# Right number of boards produced
 	assert len(hex_boards) == len(folded_boards) == 3 * w * h
@@ -103,11 +103,19 @@ def test_folded_torus(w, h, transformation, folds,
 	# Folded boards should fit within expected bounds (note that the 'or's here
 	# are to allow for folding odd numbers of boards in each dimension).
 	if transformation == "slice":
-		assert max_x == 2*w or max_x + 1 == 2*w
-		assert max_y == int(1.5*h) or max_y + 1 == int(1.5 * h)
-	else:
-		assert max_x == 3*w or max_x + 1 == 3*w
-		assert max_y == h or max_y + 1 == h
+		if uncrinkle_direction == "rows":
+			assert max_x == 2*w or max_x + 1 == 2*w
+			assert max_y == int(1.5*h) or max_y + 1 == int(1.5 * h)
+		else:  # if uncrinkle_direction == "columns":
+			assert max_x == w or max_x + 1 == w
+			assert max_y == 3 * h or max_y + 1 == 3 * h
+	else:  # if transformation == "shear"
+		if uncrinkle_direction == "rows":
+			assert max_x == 3*w or max_x + 1 == 3*w
+			assert max_y == h or max_y + 1 == h
+		else:  # if uncrinkle_direction == "columns":
+			assert max_x == w or max_x + 1 == w
+			assert max_y == 3*h or max_y + 1 == 3*h
 
 
 def test_folded_torus_bad_transformation():
