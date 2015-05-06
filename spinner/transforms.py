@@ -158,6 +158,11 @@ def cabinetise(boards, num_cabinets, frames_per_cabinet, boards_per_frame = None
 	one per frame. These rows likely consist of several columns and rows in
 	Cartesian space and so values are interleaved to yield a board allocation.
 	
+	If the width of the set of boards doesn't divide into the num_cabinets
+	or the height doesn't divide into the number of frames_per_cabinet, the axes
+	are flipped and tried again. If this doesn't solve the problem, a ValueError
+	is raised.
+	
 	If boards_per_frame is given then an assertion checks that the number of boards
 	is adequate.
 	"""

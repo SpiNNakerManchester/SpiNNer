@@ -354,3 +354,14 @@ def test_cabinetise():
 	assert topology.cabinetise((2,3), (4,4), 2, 2, 4) == (1,1,1)
 	assert topology.cabinetise((3,2), (4,4), 2, 2, 4) == (1,1,2)
 	assert topology.cabinetise((3,3), (4,4), 2, 2, 4) == (1,1,3)
+	
+	# Supply a system where we must flip the axes for it to work
+	assert topology.cabinetise((0,0), (1,2), 2, 1, 2) == (0,0,0)
+	assert topology.cabinetise((0,1), (1,2), 2, 1, 1) == (1,0,0)
+	
+	# Fail if width not divisible by num_cabinets
+	with pytest.raises(ValueError):
+		topology.cabinetise((0,0), (4,4), 3, 2, 4) == (1,1,3)
+	# Fail if height not divisible by frames_per_cabinet
+	with pytest.raises(ValueError):
+		topology.cabinetise((0,0), (4,4), 2, 3, 4) == (1,1,3)

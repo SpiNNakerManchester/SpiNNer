@@ -306,6 +306,11 @@ def cabinetise(coord, bounds, num_cabinets, frames_per_cabinet, boards_per_frame
 	one per frame. These rows likely consist of several columns and rows in
 	Cartesian space and so values are interleaved to yield a board allocation.
 	
+	If the width of the set of boards doesn't divide into the num_cabinets
+	or the height doesn't divide into the number of frames_per_cabinet, the axes
+	are flipped and tried again. If this doesn't solve the problem, a ValueError
+	is raised.
+	
 	coord is an (x,y) tuple containing the coordinate to map
 	
 	bounds is a (w,h) tuple containing the width and height of the Cartesian space
@@ -319,11 +324,14 @@ def cabinetise(coord, bounds, num_cabinets, frames_per_cabinet, boards_per_frame
 	x, y = coord
 	w, h = bounds
 	
-	# Must be divisible into cabinets
-	assert(w % num_cabinets == 0)
+	# If not divisible, try flipping the axes
+	if w % num_cabinets != 0 or h % frames_per_cabinet != 0:
+		y, x = x, y
+		h, w = w, h
 	
-	# Must be divisible into frames
-	assert(h % frames_per_cabinet == 0)
+	# If still not divisible into cabinets and frames, fail.
+	if w % num_cabinets != 0 or h % frames_per_cabinet != 0:
+		raise ValueError("Cannot directly map boards into cabinets.")
 	
 	cols_per_cabinet = w // num_cabinets
 	rows_per_frame   = h // frames_per_cabinet
