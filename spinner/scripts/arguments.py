@@ -193,14 +193,74 @@ def get_cabinets_from_args(parser, args):
 		parser.error(e.args[0])
 
 
+def add_space_args(parser):
+	"""Add arguments for specifying the physical space (i.e. cabinets/frames)
+	available for a given system. Should always be used along-side
+	add_topology_args and add_cabinet_args."""
+	space_group = parser.add_argument_group("physical space availability")
+	space_mut_group = space_group.add_mutually_exclusive_group()
+	space_mut_group.add_argument("--num-cabinets", "-c", type=int, metavar="N",
+	                             help="spread across N cabinets (default: "
+	                                  "automatically work out minimum needed)")
+	space_mut_group.add_argument("--num-frames", "-f", type=int, metavar="N",
+                               help="spread across N frames in one cabinet "
+                                    "(default: automatically work out "
+                                    "minimum needed)")
+
+
+def get_space_from_args(parser, args):
+	"""To be used with add_space_args (and add_topology_args and add_cabinet_args).
+	
+	Check that the supplied arguments are valid and get the number of cabinets and
+	frames the user wishes to spread their system across.
+	
+	Returns
+	-------
+	(num_cabinets, num_frames)
+		num_cabinets is the number of cabinets to use, num_frames is the number of
+		frames to use which will be equal to frames_per_cabinet unless num_cabinets
+		is 1 in which case it may be less.
+	"""
+	# Work out number of boards present
+	if args.num_boards is not None:
+		num_boards = args.num_boards
+	else:  # if args.triads is not None:
+		num_boards = 3 * args.triads[0] * args.triads[1]
+	
+	# Work out size based on arguments
+	if args.num_cabinets is None and args.num_frames is None:
+		num_cabinets, num_frames = min_num_cabinets(num_boards,
+		                                            args.frames_per_cabinet,
+		                                            args.boards_per_frame)
+	elif args.num_cabinets is not None:
+		num_cabinets = args.num_cabinets
+		num_frames = args.frames_per_cabinet
+	else:  # if args.num_frames is not None:
+		num_cabinets = 1
+		num_frames = args.num_frames
+		
+		if num_frames > args.frames_per_cabinet:
+			parser.error("more frames specified than fit in a cabinet")
+	
+	# Check that the number of cabinets is definately sufficient
+	if num_cabinets * num_frames * args.boards_per_frame < num_boards:
+		parser.error("not enough cabinets/frames available for {} "
+		             "boards".format(num_boards))
+	
+	return (num_cabinets, num_frames)
+
+
+
 if __name__=="__main__":  # pragma: no cover
 	# This file when run as a script acts as a quick proof-of-concept of all
 	# argument parsing capabilities
 	import argparse
 	parser = argparse.ArgumentParser()
 	add_topology_args(parser)
+	add_space_args(parser)
 	add_cabinet_args(parser)
 	
 	args = parser.parse_args()
 	print(get_topology_from_args(parser, args))
+	print(get_space_from_args(parser, args))
 	print(get_cabinets_from_args(parser, args))

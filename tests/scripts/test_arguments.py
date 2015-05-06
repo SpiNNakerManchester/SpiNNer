@@ -135,4 +135,63 @@ def test_get_cabinets_from_args_bad():
 	with pytest.raises(SystemExit):
 		args = parser.parse_args(argstring.split())
 		cabinet = arguments.get_cabinets_from_args(parser, args)
+
+
+@pytest.mark.parametrize("argstring,cabinets_frames",
+                         [# Automatic sizing should work as usual
+                          ("-n 3", (1, 1)),
+                          ("-n 24", (1, 1)),
+                          ("-n 48", (1, 2)),
+                          ("-n 120", (1, 5)),
+                          ("-n 1200", (10, 5)),
+                          ("-t 1 1", (1, 1)),
+                          ("-t 4 2", (1, 1)),
+                          ("-t 4 4", (1, 2)),
+                          ("-t 5 8", (1, 5)),
+                          ("-t 20 20", (10, 5)),
+                          # Manual sizing should work
+                          ("-n 120 -c 1", (1, 5)),
+                          ("-n 120 -c 2", (2, 5)),
+                          ("-n 12 -c 1", (1, 5)),
+                          ("-n 12 -c 2", (2, 5)),
+                          ("-n 12 -f 1", (1, 1)),
+                          ("-n 12 -f 2", (1, 2)),
+                         ])
+def test_get_space_from_args(argstring, cabinets_frames):
+	# Make sure the expected number of cabinets and frames are allocated
+	parser = ArgumentParser()
+	arguments.add_topology_args(parser)
+	arguments.add_cabinet_args(parser)
+	arguments.add_space_args(parser)
 	
+	args = parser.parse_args(argstring.split())
+	assert arguments.get_space_from_args(parser, args) == cabinets_frames
+
+
+@pytest.mark.parametrize("argstring",
+                         [# Specifying both cabinets and frames should fail,
+                          # even if the numbers are vaild.
+                          "-n 9 -c 10 -f 1",
+                          "-n 9 -c 10 -f 5",
+                          # Suggesting less cabinets or frames than needed
+                          # should fail.
+                          "-n 3 -f 0",
+                          "-n 3 -c 0",
+                          "-n 48 -f 1",
+                          "-n 240 -f 5",
+                          "-n 240 -c 1",
+                          # Suggesting more frames than fit in a rack should
+                          # fail.
+                          "-n 240 -f 10",
+                         ])
+def test_get_space_from_args_bad(argstring):
+	# Make sure bad arguments fail to validate
+	parser = ArgumentParser()
+	arguments.add_topology_args(parser)
+	arguments.add_cabinet_args(parser)
+	arguments.add_space_args(parser)
+	
+	with pytest.raises(SystemExit):
+		args = parser.parse_args(argstring.split())
+		arguments.get_space_from_args(parser, args)
+
