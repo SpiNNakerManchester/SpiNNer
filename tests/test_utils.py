@@ -110,6 +110,11 @@ def test_folded_torus(w, h, transformation, folds,
 		assert max_y == h or max_y + 1 == h
 
 
+def test_folded_torus_bad_transformation():
+	with pytest.raises(TypeError):
+		utils.folded_torus(1, 1, "foo", (1, 1))
+
+
 @pytest.mark.parametrize("w,h,transformation",
                          [(1, 1, "shear"),
                           (4, 4, "shear"),
