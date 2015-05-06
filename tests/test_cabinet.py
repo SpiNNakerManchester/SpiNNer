@@ -2,8 +2,21 @@ import pytest
 
 from six import iteritems
 
+from spinner.topology import Direction
+
 from spinner.cabinet import Cabinet
 
+
+# Map from board wire offset parameter names to their corresponding direction
+# enum value to enable easy lookup
+board_wire_offset_fields = {
+	"board_wire_offset_south_west": Direction.south_west,
+	"board_wire_offset_north_east": Direction.north_east,
+	"board_wire_offset_east": Direction.east,
+	"board_wire_offset_west": Direction.west,
+	"board_wire_offset_north": Direction.north,
+	"board_wire_offset_south": Direction.south,
+}
 
 
 # A set of values of which all are unique
@@ -68,8 +81,11 @@ def test_possible(values):
 	# supplied situations do not get rejected as impossible.
 	c = Cabinet(**values)
 	for name, value in iteritems(values):
-		assert hasattr(c, name)
-		assert getattr(c, name) == value
+		if name in board_wire_offset_fields:
+			assert c.board_wire_offset[board_wire_offset_fields[name]] == value
+		else:
+			assert hasattr(c, name)
+			assert getattr(c, name) == value
 
 
 @pytest.mark.parametrize("changes",

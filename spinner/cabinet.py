@@ -1,5 +1,9 @@
 """Data structure which defines the physical dimensions of a set of cabinets."""
 
+from spinner.topology import Direction
+
+from spinner.coordinates import Cartesian3D
+
 class Cabinet(object):
 	"""Data structure which defines the physical dimensions of a set of
 	cabinets."""
@@ -45,35 +49,33 @@ class Cabinet(object):
 		inter_cabinet_spacing : float
 			Physical spacing between each cabinet in meters.
 		"""
-		self.board_dimensions             = board_dimensions
+		c = Cartesian3D
 		
-		self.board_wire_offset_south_west = board_wire_offset_south_west
-		self.board_wire_offset_north_east = board_wire_offset_north_east
-		self.board_wire_offset_east       = board_wire_offset_east
-		self.board_wire_offset_west       = board_wire_offset_west
-		self.board_wire_offset_north      = board_wire_offset_north
-		self.board_wire_offset_south      = board_wire_offset_south
+		self.board_dimensions = c(*board_dimensions)
 		
-		self.inter_board_spacing          = inter_board_spacing
+		# Combine wire offsets into a dictionary
+		self.board_wire_offset = {}
+		self.board_wire_offset[Direction.south_west] = c(*board_wire_offset_south_west)
+		self.board_wire_offset[Direction.north_east] = c(*board_wire_offset_north_east)
+		self.board_wire_offset[Direction.east]       = c(*board_wire_offset_east)
+		self.board_wire_offset[Direction.west]       = c(*board_wire_offset_west)
+		self.board_wire_offset[Direction.north]      = c(*board_wire_offset_north)
+		self.board_wire_offset[Direction.south]      = c(*board_wire_offset_south)
 		
-		self.boards_per_frame             = boards_per_frame
-		self.frame_dimensions             = frame_dimensions
-		self.frame_board_offset           = frame_board_offset
-		self.inter_frame_spacing          = inter_frame_spacing
+		self.inter_board_spacing = inter_board_spacing
 		
-		self.frames_per_cabinet           = frames_per_cabinet
-		self.cabinet_dimensions           = cabinet_dimensions
-		self.cabinet_frame_offset         = cabinet_frame_offset
-		self.inter_cabinet_spacing        = inter_cabinet_spacing
+		self.boards_per_frame    = boards_per_frame
+		self.frame_dimensions    = c(*frame_dimensions)
+		self.frame_board_offset  = c(*frame_board_offset)
+		self.inter_frame_spacing = inter_frame_spacing
+		
+		self.frames_per_cabinet    = frames_per_cabinet
+		self.cabinet_dimensions    = c(*cabinet_dimensions)
+		self.cabinet_frame_offset  = c(*cabinet_frame_offset)
+		self.inter_cabinet_spacing = inter_cabinet_spacing
 		
 		# Check that all values are positive that are meant to be...
 		for field in ["board_dimensions",
-		              "board_wire_offset_south_west",
-		              "board_wire_offset_north_east",
-		              "board_wire_offset_east",
-		              "board_wire_offset_west",
-		              "board_wire_offset_north",
-		              "board_wire_offset_south",
 		              "inter_board_spacing",
 		              "boards_per_frame",
 		              "frame_dimensions",
@@ -84,22 +86,23 @@ class Cabinet(object):
 		              "cabinet_frame_offset",
 		              "inter_cabinet_spacing"]:
 			value = getattr(self, field)
-			if type(value) is tuple:
-				if not all(v >= 0.0 for v in value):
+			if isinstance(value, tuple):
+				if any(v < 0.0 for v in value):
 					raise ValueError("{} must be positive".format(field))
 			elif value < 0.0:
 				raise ValueError("{} must be positive".format(field))
 		
 		# Check all board wires are within the bounds of the board
-		for wire in ["board_wire_offset_south_west",
-		             "board_wire_offset_north_east",
-		             "board_wire_offset_east",
-		             "board_wire_offset_west",
-		             "board_wire_offset_north",
-		             "board_wire_offset_south"]:
-			if any(v > m for (v, m)
-			       in zip(getattr(self, wire), self.board_dimensions)):
-				raise ValueError("{} must be within bounds of board".format(wire))
+		for direction in [Direction.south_west,
+		                  Direction.north_east,
+		                  Direction.east,
+		                  Direction.west,
+		                  Direction.north,
+		                  Direction.south]:
+			if any(v < 0.0 or v > m for (v, m)
+			       in zip(self.board_wire_offset[direction], self.board_dimensions)):
+				raise ValueError("{} wire must be within bounds of board".format(
+					direction.name))
 		
 		# Check boards fit in the frame
 		if any(v > m for (v, m)

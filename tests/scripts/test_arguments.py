@@ -4,7 +4,10 @@ from mock import Mock
 
 from argparse import ArgumentParser
 
+from spinner.topology import Direction
+
 from spinner.scripts import arguments
+
 from spinner import utils
 
 
@@ -80,6 +83,17 @@ def test_get_cabinets_from_args():
 	parser = ArgumentParser()
 	arguments.add_cabinet_args(parser)
 	
+	# Map from board wire offset parameter names to their corresponding direction
+	# enum value to enable easy lookup
+	board_wire_offset_fields = {
+		"board_wire_offset_south_west": Direction.south_west,
+		"board_wire_offset_north_east": Direction.north_east,
+		"board_wire_offset_east": Direction.east,
+		"board_wire_offset_west": Direction.west,
+		"board_wire_offset_north": Direction.north,
+		"board_wire_offset_south": Direction.south,
+	}
+	
 	# Tuples of value name to value pairs (chosen such that all values are unique
 	# but are not impossible
 	value_names = [("board_dimensions", (0.1, 0.2, 0.3)),
@@ -109,12 +123,14 @@ def test_get_cabinets_from_args():
 	
 	# Check all arguments propagated through to the cabinet
 	for name, value in value_names:
-		print(name, value)
-		assert hasattr(cabinet, name)
-		if len(value) == 1:
-			assert getattr(cabinet, name) == value[0]
+		if name in board_wire_offset_fields:
+			cabinet.board_wire_offset[board_wire_offset_fields[name]] == value
 		else:
-			assert getattr(cabinet, name) == value
+			assert hasattr(cabinet, name)
+			if len(value) == 1:
+				assert getattr(cabinet, name) == value[0]
+			else:
+				assert getattr(cabinet, name) == value
 
 
 def test_get_cabinets_from_args_bad():
