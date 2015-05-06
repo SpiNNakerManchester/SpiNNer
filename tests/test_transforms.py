@@ -68,6 +68,16 @@ def test_compress():
 		 (o3, c(0,1)), (o4, c(1,1)), (o5, c(2,1))]
 
 
+def test_flip_axes():
+	c = coordinates.Cartesian2D
+	
+	o0 = "o0"
+	o1 = "o1"
+	
+	assert transforms.flip_axes([(o0, c(1,2)), (o1, c(3,4))]) == \
+		[(o0, c(2,1)), (o1, c(4,3))]
+
+
 def test_folds():
 	c = coordinates.Cartesian2D
 	

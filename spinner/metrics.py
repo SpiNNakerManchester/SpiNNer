@@ -61,8 +61,8 @@ def dimensions(boards):
 	if len(boards) == 0:
 		raise ValueError("Expected at least one board")
 	
-	return type(boards[0][1])(max(x for b, (x, y) in boards) + 1,
-	                          max(y for b, (x, y) in boards) + 1)
+	return type(boards[0][1])(*(max(c[i] for b, c in boards) + 1
+	                            for i in range(len(boards[0][1]))))
 
 
 def count_wires(boards, direction):

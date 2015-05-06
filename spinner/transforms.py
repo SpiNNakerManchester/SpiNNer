@@ -102,6 +102,20 @@ def compress(boards, x_div = 1, y_div = 2):
 	       ]
 
 
+def flip_axes(boards):
+	"""
+	Invert the axes of the array of boards.
+	
+	Useful when attempting to cabinetise a grid which doesn't divide unless the
+	axes are flipped.
+	"""
+	_assert_coord(boards, coordinates.Cartesian2D)
+	
+	return [ (board, coordinates.Cartesian2D(y, x))
+	         for (board, (x, y)) in boards
+	       ]
+
+
 def fold(boards, folds):
 	r"""
 	Takes a set of Cartesian coordinates and folds into the number of segments
