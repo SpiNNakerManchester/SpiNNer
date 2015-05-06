@@ -7,7 +7,9 @@ utilities for creating systems of them and iterating over them.
 
 from six import iteritems
 
-from spinner import topology
+from spinner.topology import Direction, \
+	threeboards, wrap_around, add_direction
+
 from spinner import coordinates
 
 
@@ -26,12 +28,12 @@ class Board(object):
 		# References to other boards in the system which lie at the end of a wire
 		# connected to a particular port.
 		self.connection = {
-			topology.NORTH      : None,
-			topology.NORTH_EAST : None,
-			topology.EAST       : None,
-			topology.SOUTH      : None,
-			topology.SOUTH_WEST : None,
-			topology.WEST       : None,
+			Direction.north      : None,
+			Direction.north_east : None,
+			Direction.east       : None,
+			Direction.south      : None,
+			Direction.south_west : None,
+			Direction.west       : None,
 		}
 		
 		# Set the board's ID
@@ -45,10 +47,10 @@ class Board(object):
 		"""
 		# Ensure it isn't already connected
 		assert(self.follow_wire(direction) is None)
-		assert(other.follow_wire(topology.opposite(direction)) is None)
+		assert(other.follow_wire(direction.opposite) is None)
 		
 		self.connection[direction] = other
-		other.connection[topology.opposite(direction)] = self
+		other.connection[direction.opposite] = self
 	
 	
 	def follow_wire(self, direction):
@@ -71,24 +73,24 @@ class Board(object):
 		
 		# Mapping of {(in_wire_side, packet_direction) : out_wire_side,...}
 		out_sides = {
-			(topology.SOUTH_WEST, topology.EAST)       : topology.EAST,
-			(topology.WEST,       topology.EAST)       : topology.NORTH_EAST,
+			(Direction.south_west, Direction.east)       : Direction.east,
+			(Direction.west,       Direction.east)       : Direction.north_east,
 			
-			(topology.SOUTH_WEST, topology.NORTH_EAST) : topology.NORTH,
-			(topology.SOUTH,      topology.NORTH_EAST) : topology.NORTH_EAST,
+			(Direction.south_west, Direction.north_east) : Direction.north,
+			(Direction.south,      Direction.north_east) : Direction.north_east,
 			
-			(topology.SOUTH,      topology.NORTH)      : topology.WEST,
-			(topology.EAST,       topology.NORTH)      : topology.NORTH,
+			(Direction.south,      Direction.north)      : Direction.west,
+			(Direction.east,       Direction.north)      : Direction.north,
 		}
 		# Opposite cases are simply inverted versions of the above...
 		for (iws, pd), ows in iteritems(out_sides.copy()):
-			out_sides[( topology.opposite(iws)
-			          , topology.opposite(pd)
-			          )] = topology.opposite(ows)
+			out_sides[( iws.opposite
+			          , pd.opposite
+			          )] = ows.opposite
 		
 		out_wire_side = out_sides[(in_wire_side, packet_direction)]
 		
-		return (topology.opposite(out_wire_side), self.follow_wire(out_wire_side))
+		return (out_wire_side.opposite, self.follow_wire(out_wire_side))
 		
 	
 	def __repr__(self):
@@ -108,18 +110,18 @@ def create_torus(width = 1, height = None):
 	boards = {}
 	
 	# Create the boards
-	for coord in topology.threeboards(width, height):
+	for coord in threeboards(width, height):
 		boards[coordinates.Hexagonal(*coord)] = Board()
 	
 	# Link the boards together
 	for coord in boards:
-		for direction in [ topology.EAST
-		                 , topology.NORTH_EAST
-		                 , topology.NORTH
+		for direction in [ Direction.east
+		                 , Direction.north_east
+		                 , Direction.north
 		                 ]:
 			# Get the coordinate of the neighbour in each direction
-			n_coord = topology.wrap_around(
-			            topology.add_direction(list(coord)+[0], direction), (width, height))
+			n_coord = wrap_around(
+			            add_direction(list(coord)+[0], direction), (width, height))
 			
 			# Connect the boards together
 			boards[coord].connect_wire(boards[n_coord], direction)

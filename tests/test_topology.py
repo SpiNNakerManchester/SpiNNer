@@ -6,44 +6,39 @@ from spinner import topology
 
 
 def test_next():
-	cw  = topology.next_cw
-	ccw = topology.next_ccw
-	
 	# Clockwise
-	assert cw(topology.EAST) ==       topology.SOUTH
-	assert cw(topology.NORTH_EAST) == topology.EAST
-	assert cw(topology.NORTH) ==      topology.NORTH_EAST
-	assert cw(topology.WEST) ==       topology.NORTH
-	assert cw(topology.SOUTH_WEST) == topology.WEST
-	assert cw(topology.SOUTH) ==      topology.SOUTH_WEST
+	assert topology.Direction.east.next_cw ==       topology.Direction.south
+	assert topology.Direction.north_east.next_cw == topology.Direction.east
+	assert topology.Direction.north.next_cw ==      topology.Direction.north_east
+	assert topology.Direction.west.next_cw ==       topology.Direction.north
+	assert topology.Direction.south_west.next_cw == topology.Direction.west
+	assert topology.Direction.south.next_cw ==      topology.Direction.south_west
 	
 	# Counter-Clockwise
-	assert ccw(topology.EAST) ==       topology.NORTH_EAST
-	assert ccw(topology.NORTH_EAST) == topology.NORTH
-	assert ccw(topology.NORTH) ==      topology.WEST
-	assert ccw(topology.WEST) ==       topology.SOUTH_WEST
-	assert ccw(topology.SOUTH_WEST) == topology.SOUTH
-	assert ccw(topology.SOUTH) ==      topology.EAST
+	assert topology.Direction.east.next_ccw ==       topology.Direction.north_east
+	assert topology.Direction.north_east.next_ccw == topology.Direction.north
+	assert topology.Direction.north.next_ccw ==      topology.Direction.west
+	assert topology.Direction.west.next_ccw ==       topology.Direction.south_west
+	assert topology.Direction.south_west.next_ccw == topology.Direction.south
+	assert topology.Direction.south.next_ccw ==      topology.Direction.east
 
 def test_opposite():
-	opp = topology.opposite
-	
-	assert opp(topology.EAST) ==       topology.WEST
-	assert opp(topology.NORTH_EAST) == topology.SOUTH_WEST
-	assert opp(topology.NORTH) ==      topology.SOUTH
-	assert opp(topology.WEST) ==       topology.EAST
-	assert opp(topology.SOUTH_WEST) == topology.NORTH_EAST
-	assert opp(topology.SOUTH) ==      topology.NORTH
+	assert topology.Direction.east.opposite ==       topology.Direction.west
+	assert topology.Direction.north_east.opposite == topology.Direction.south_west
+	assert topology.Direction.north.opposite ==      topology.Direction.south
+	assert topology.Direction.west.opposite ==       topology.Direction.east
+	assert topology.Direction.south_west.opposite == topology.Direction.north_east
+	assert topology.Direction.south.opposite ==      topology.Direction.north
 
 def test_direction():
 	ad = topology.add_direction
 	
-	assert ad((11,11,11), topology.EAST) ==       (12,11,11)
-	assert ad((11,11,11), topology.NORTH_EAST) == (11,11,10)
-	assert ad((11,11,11), topology.NORTH) ==      (11,12,11)
-	assert ad((11,11,11), topology.WEST) ==       (10,11,11)
-	assert ad((11,11,11), topology.SOUTH_WEST) == (11,11,12)
-	assert ad((11,11,11), topology.SOUTH) ==      (11,10,11)
+	assert ad((11,11,11), topology.Direction.east) ==       (12,11,11)
+	assert ad((11,11,11), topology.Direction.north_east) == (11,11,10)
+	assert ad((11,11,11), topology.Direction.north) ==      (11,12,11)
+	assert ad((11,11,11), topology.Direction.west) ==       (10,11,11)
+	assert ad((11,11,11), topology.Direction.south_west) == (11,11,12)
+	assert ad((11,11,11), topology.Direction.south) ==      (11,10,11)
 
 
 def test_manhattan():

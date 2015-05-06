@@ -11,7 +11,7 @@ setup(
     license="GPLv2",
 
     # Requirements
-    install_requires=["six"],
+    install_requires=["six", "enum34"],
 
     # Scripts
     entry_points={

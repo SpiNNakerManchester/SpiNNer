@@ -7,7 +7,6 @@ and their wiring.
 
 import math
 
-from spinner import topology
 from spinner import coordinates
 
 
@@ -31,7 +30,19 @@ def wire_length(boards, board, direction, wire_offsets={}):
 	
 	if direction in wire_offsets:
 		source += wire_offsets[direction]
-	if topology.opposite(direction) in wire_offsets:
-		target += wire_offsets[topology.opposite(direction)]
+	if direction.opposite in wire_offsets:
+		target += wire_offsets[direction.opposite]
 	
 	return (source - target).magnitude()
+
+
+def dimensions(boards):
+	"""
+	Return the width and height of the space occupied by the supplied set of
+	boards.
+	"""
+	if len(boards) == 0:
+		raise ValueError("Expected at least one board")
+	
+	return type(boards[0][1])(max(x for b, (x, y) in boards) + 1,
+	                          max(y for b, (x, y) in boards) + 1)

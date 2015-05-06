@@ -21,39 +21,58 @@ This uses the hexagonal addressing scheme suggested in
 	Mobile Users and Connection Rerouting in Cellular Networks by Nocetti et. al.
 """
 
+from enum import IntEnum
+
 from spinner import coordinates
 
 ################################################################################
 # Directions
 ################################################################################
 
-EAST       = 0
-NORTH_EAST = 1
-NORTH      = 2
-WEST       = 3
-SOUTH_WEST = 4
-SOUTH      = 5
+class Direction(IntEnum):
+	east       = 0
+	north_east = 1
+	north      = 2
+	west       = 3
+	south_west = 4
+	south      = 5
+	
+	@property
+	def next_ccw(self):
+		"""
+		Returns the next direction counter-clockwise from the given direction.
+		"""
+		return Direction((self + 1) % 6)
+	
+	@property
+	def next_cw(self):
+		"""
+		Returns the next direction clockwise from the given direction.
+		"""
+		return Direction((self - 1) % 6)
+	
+	@property
+	def opposite(self):
+		"""
+		Returns the opposite direction.
+		"""
+		return Direction((self + 3) % 6)
+	
+	@property
+	def vector(self):
+		"""
+		Returns the vector which moves one unit in the given direction.
+		"""
+		return _DIRECTION_VECTORS[self]
 
-
-def next_ccw(direction):
-	"""
-	Returns the next direction counter-clockwise from the given direction.
-	"""
-	return (direction+1)%6
-
-
-def next_cw(direction):
-	"""
-	Returns the next direction counter-clockwise from the given direction.
-	"""
-	return (direction-1)%6
-
-
-def opposite(direction):
-	"""
-	Returns the opposite direction
-	"""
-	return (direction+3)%6
+_DIRECTION_VECTORS = {
+	Direction.east:       ( 1, 0, 0),
+	Direction.west:       (-1, 0, 0),
+	Direction.north:      ( 0, 1, 0),
+	Direction.south:      ( 0,-1, 0),
+	Direction.north_east: ( 0, 0,-1),
+	Direction.south_west: ( 0, 0, 1),
+}
 
 
 ################################################################################
@@ -64,16 +83,7 @@ def add_direction(vector, direction):
 	"""
 	Returns the vector moved one unit in the given direction.
 	"""
-	add = {
-		EAST:       ( 1, 0, 0),
-		WEST:       (-1, 0, 0),
-		NORTH:      ( 0, 1, 0),
-		SOUTH:      ( 0,-1, 0),
-		NORTH_EAST: ( 0, 0,-1),
-		SOUTH_WEST: ( 0, 0, 1),
-	}
-	
-	return coordinates.Hexagonal(*(v + a for (v,a) in zip(vector, add[direction])))
+	return coordinates.Hexagonal(*(v + a for (v,a) in zip(vector, direction.vector)))
 
 
 def manhattan(vector):

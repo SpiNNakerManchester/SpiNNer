@@ -5,6 +5,8 @@ import fractions
 from spinner import board
 from spinner import topology
 
+from spinner.topology import Direction
+
 
 def lcm(a, b):
 	"""
@@ -43,18 +45,10 @@ def test_threeboard_packets(w, h):
 	# Try starting from every board
 	for start_board, start_coord in boards:
 		# Try going in every possible direction
-		for direction in [ topology.EAST
-		                 , topology.NORTH_EAST
-		                 , topology.NORTH
-		                 , topology.WEST
-		                 , topology.SOUTH_WEST
-		                 , topology.SOUTH
-		                 ]:
+		for direction in Direction:
 			# Packets can enter when travelling in direction from the side with the
 			# opposite label and one counter-clockwise from that.
-			for entry_point in [topology.opposite(direction)
-			                   , topology.next_ccw(topology.opposite(direction))
-			                   ]:
+			for entry_point in [direction.opposite, direction.opposite.next_ccw]:
 				num_boards = len(list(follow_packet_loop(start_board, entry_point, direction)))
 				# For every threeboard traversed, the number of chips traversed is 3*l
 				# where l is the number of rings in the hexagon. Travelling in one
@@ -65,18 +59,18 @@ def test_threeboard_packets(w, h):
 				
 				# The principal axis is south to north, i.e. along the height in
 				# threeboards. This should have 3*l*h nodes along its length.
-				if direction in (topology.NORTH, topology.SOUTH):
+				if direction in (Direction.north, Direction.south):
 					assert num_nodes == h*3
 				
 				# The major axis is east to west, i.e. along the width in
 				# threeboards. This should have 3*l*w nodes along its length.
-				if direction in (topology.EAST, topology.WEST):
+				if direction in (Direction.east, Direction.west):
 					assert num_nodes == w*3
 				
 				# The minor axis is norht-east to south-west, i.e. diagonally across
 				# the mesh of threeboards. This should have 3*l*lcm(w,h) nodes along
 				# its length.
-				if direction in (topology.NORTH_EAST, topology.SOUTH_WEST):
+				if direction in (Direction.north_east, Direction.south_west):
 					assert num_nodes == lcm(w,h)*3
 
 
