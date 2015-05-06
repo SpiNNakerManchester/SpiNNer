@@ -99,41 +99,6 @@ def folded_torus(w, h, transformation, uncrinkle_direction, folds):
 	return (hex_boards, folded_boards)
 
 
-def folded_torus_with_minimal_wire_length(w, h):
-	"""Generate a 2D arrangement of boards in a (w, h) triad torus with the
-	shortest possible wires.
-	
-	This process follows the guidelines set out in "Bringing the Hexagonal Torus
-	Topology into the Real-World" by Heathcote et. al. (unpublished at the time of
-	writing...).
-	
-	Parameters
-	----------
-	w : int
-		Width of the system in triads
-	h : int
-		Width of the system in triads
-	
-	
-	Returns
-	-------
-	(hex_boards, folded_boards)
-		hex_boards is a list of tuples (board, Hexagonal(x, y)) giving the logical
-		coordinates for each board on a 2D hexagonal grid.
-		
-		folded_boards is a list of tuples (board, Cartesian2D(x, y)) giving the coordinates of
-		the boards laid out such that wirelength is minimised.
-	"""
-	# It is best to slice the system when the topology is twice as tall as it is
-	# wide, otherwise it is best to shear the topology.
-	if h == 2 * w:
-		transformation = "slice"
-	else:
-		transformation = "shear"
-	
-	return folded_torus(w, h, transformation, "rows", (2, 2))
-
-
 def min_num_cabinets(num_boards, frames_per_cabinet, boards_per_frame):
 	"""Calculate the minimum number of cabinets and frames required to house the
 	given set of boards.

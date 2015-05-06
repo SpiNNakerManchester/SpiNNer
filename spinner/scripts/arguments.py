@@ -1,16 +1,8 @@
 """Standard argument parsing routines for SpiNNer scripts."""
 
-from spinner.utils import \
-	ideal_system_size, \
-	folded_torus, folded_torus_with_minimal_wire_length, \
-	min_num_cabinets
+from spinner.utils import ideal_system_size, folded_torus, min_num_cabinets
 
 from spinner.cabinet import Cabinet
-
-from spinner import board
-from spinner import topology
-from spinner import coordinates
-from spinner import transforms
 
 
 def add_topology_args(parser):
@@ -48,19 +40,19 @@ def add_topology_args(parser):
 def get_topology_from_args(parser, args):
 	"""To be used with add_topology_args.
 	
-	Check that the supplied arguments are valid and build a system of boards
-	according to the specification given.
+	Check that the supplied arguments are valid and return corresponding
+	parameters for spinner.utils.folded_torus.
 	
 	Returns
 	-------
-	((w, h), hex_boards, folded_boards)
+	((w, h), transformation, uncrinkle_direction, (x, y))
 		(w, h) is the dimensions of the system in triads
 		
-		hex_boards is a list of tuples (board, Hexagonal(x, y)) giving the logical
-		coordinates for each board on a 2D hexagonal grid.
+		transformation is "slice" or "shear"
 		
-		folded_boards is a list of tuples (board, Cartesian2D(x, y)) giving the
-		coordinates of the boards laid out such that wirelength is minimised.
+		uncrinkle_direction is "rows" or "columns"
+		
+		(x, y) gives the number of pieces to fold each dimension into
 	"""
 	# Extract the system dimensions
 	if args.num_boards is not None:
@@ -79,7 +71,16 @@ def get_topology_from_args(parser, args):
 			parser.error("--uncrinkle-direction cannot be used without --transformation")
 		if args.folds is not None:
 			parser.error("--folds cannot be used without --transformation")
-		hex_boards, folded_boards = folded_torus_with_minimal_wire_length(w, h)
+		
+		# Work out the folding process to use by following the guidelines set out in
+		# "Bringing the Hexagonal Torus Topology into the Real-World" by Heathcote
+		# et. al. (unpublished at the time of writing...).
+		if h == 2 * w:
+			transformation = "slice"
+		else:
+			transformation = "shear"
+		uncrinkle_direction = "rows"
+		folds = (2, 2)
 	else:
 		if args.folds is None:
 			args.folds = (2, 2)
@@ -89,10 +90,11 @@ def get_topology_from_args(parser, args):
 		if args.folds[0] <= 0 or args.folds[1] <= 0:
 			parser.error("number of pieces to fold into must be at least 1")
 		
-		hex_boards, folded_boards = folded_torus(
-			w, h, args.transformation, args.uncrinkle_direction, args.folds)
+		transformation = args.transformation
+		uncrinkle_direction = args.uncrinkle_direction
+		folds = args.folds
 	
-	return ((w, h), hex_boards, folded_boards)
+	return ((w, h), transformation, uncrinkle_direction, tuple(folds))
 
 
 def add_cabinet_args(parser):

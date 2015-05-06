@@ -15,7 +15,7 @@ def main(args=None):
 		            " configuration of boards.")
 	arguments.add_topology_args(parser)
 	args = parser.parse_args(args)
-	(w, h), hex_boards, folded_boards =\
+	(w, h), transformation, uncrinkle_direction, folds =\
 		arguments.get_topology_from_args(parser, args)
 	
 	out = ""

@@ -123,22 +123,6 @@ def test_folded_torus_bad_transformation():
 		utils.folded_torus(1, 1, "foo", (1, 1))
 
 
-@pytest.mark.parametrize("w,h,transformation",
-                         [(1, 1, "shear"),
-                          (4, 4, "shear"),
-                          (5, 5, "shear"),
-                          (4, 2, "shear"),
-                          (2, 4, "slice"),
-                          (6, 3, "shear"),
-                          (3, 6, "slice")])
-def test_folded_torus_with_minimal_wire_length(w, h, transformation,
-                                               mock_folded_torus):
-	hex_boards, folded_boards = utils.folded_torus_with_minimal_wire_length(w, h)
-	
-	# Right folding decision taken
-	mock_folded_torus.called_once_with(w, h, transformation, (2, 2))
-
-
 def test_min_num_cabinets():
 	# Special case: 0 boards
 	assert utils.min_num_cabinets(0, 1, 1) == (0, 0)

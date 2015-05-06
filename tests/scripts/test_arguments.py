@@ -36,60 +36,44 @@ def test_get_topology_from_args_bad(argstring):
 		arguments.get_topology_from_args(parser, args)
 
 
-@pytest.mark.parametrize("argstring,dimensions,auto,transformation,"
+@pytest.mark.parametrize("argstring,dimensions,transformation,"
                          "uncrinkle_direction,folds",
-                         [("-n 3", (1, 1), True, None, None, None),
-                          ("-n 6", (1, 2), True, None, None, None),
-                          ("-n 12", (2, 2), True, None, None, None),
-                          ("-t 3 3", (3, 3), True, None, None, None),
-                          ("-t 2 3", (2, 3), True, None, None, None),
-                          ("-t 2 3 --transformation slice", (2, 3),
-                           False, "slice", None, (2, 2)),
-                          ("-t 2 3 --transformation shear", (2, 3),
-                           False, "shear", None, (2, 2)),
-                          ("-t 2 3 --transformation slice --folds 4 4", (2, 3),
-                           False, "slice", None, (4, 4)),
+                         [# Check automatic choices made are correct
+                          ("-n 3", (1, 1), "shear", "rows", (2, 2)),
+                          ("-n 6", (1, 2), "slice", "rows", (2, 2)),
+                          ("-n 12", (2, 2), "shear", "rows", (2, 2)),
+                          ("-t 1 1", (1, 1), "shear", "rows", (2, 2)),
+                          ("-t 1 2", (1, 2), "slice", "rows", (2, 2)),
+                          ("-t 2 1", (2, 1), "shear", "rows", (2, 2)),
+                          ("-t 3 6", (3, 6), "slice", "rows", (2, 2)),
+                          # Check custom options
+                          ("-t 2 3 --transformation slice",
+                           (2, 3), "slice", "rows", (2, 2)),
+                          ("-t 2 3 --transformation shear",
+                           (2, 3), "shear", "rows", (2, 2)),
+                          ("-t 2 3 --transformation slice --folds 4 4",
+                           (2, 3), "slice", "rows", (4, 4)),
                           ("-t 2 3 --transformation slice --uncrinkle-direction rows",
-                           (2, 3), False, "slice", "rows", None),
+                           (2, 3), "slice", "rows", (2, 2)),
                           ("-t 2 3 --transformation slice --uncrinkle-direction columns",
-                           (2, 3), False, "slice", "columns", None),
+                           (2, 3), "slice", "columns", (2, 2)),
                          ])
-def test_get_topology_from_args_dimensions(argstring, dimensions, auto,
+def test_get_topology_from_args_dimensions(argstring, dimensions,
                                            transformation, uncrinkle_direction,
-                                           folds, monkeypatch):
+                                           folds):
 	parser = ArgumentParser()
 	arguments.add_topology_args(parser)
 	
-	# Mock-wrap relevant construction functions to ensure they're called when
-	# appropriate
-	mock_folded_torus_with_minimal_wire_length = Mock()
-	mock_folded_torus_with_minimal_wire_length.side_effect = \
-		utils.folded_torus_with_minimal_wire_length
-	monkeypatch.setattr(utils, "folded_torus_with_minimal_wire_length",
-		mock_folded_torus_with_minimal_wire_length)
-	
-	mock_folded_torus = Mock()
-	mock_folded_torus.side_effect = utils.folded_torus
-	monkeypatch.setattr(utils, "folded_torus", mock_folded_torus)
-	
 	args = parser.parse_args(argstring.split())
-	actual_dimensions, hex_boards, folded_boards = \
-		arguments.get_topology_from_args(parser, args)
+	(actual_dimensions,
+	 actual_transformation,
+	 actual_uncrinkle_direction,
+	 actual_folds) = arguments.get_topology_from_args(parser, args)
 	
-	# Check dimensions are correct
 	assert actual_dimensions == dimensions
-	assert len(hex_boards) == 3 * dimensions[0] * dimensions[1]
-	assert len(folded_boards) == 3 * dimensions[0] * dimensions[1]
-	
-	# Check correct construction function is used
-	if auto:
-		assert mock_folded_torus_with_minimal_wire_length.called_once_with(
-			*dimensions)
-	else:
-		assert mock_folded_torus.called_once_with(dimensions[0], dimensions[1],
-		                                          transformation,
-		                                          uncrinkle_direction,
-		                                          folds)
+	assert actual_transformation == transformation
+	assert actual_uncrinkle_direction == uncrinkle_direction
+	assert actual_folds == folds
 
 
 def test_get_cabinets_from_args():
