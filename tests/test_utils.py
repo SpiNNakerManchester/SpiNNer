@@ -50,17 +50,6 @@ def mock_fold(monkeypatch):
 	return m
 
 
-@pytest.fixture
-def mock_folded_torus(monkeypatch):
-	from spinner import utils
-	
-	m = Mock()
-	m.side_effect = utils.folded_torus
-	
-	monkeypatch.setattr(utils, "folded_torus", m)
-	return m
-
-
 @pytest.mark.parametrize("w,h", [(1,1), (7,5), (5,7), (4,8), (8, 4)])
 @pytest.mark.parametrize("transformation", ["slice", "shear"])
 @pytest.mark.parametrize("uncrinkle_direction", ["rows", "columns"])
@@ -118,9 +107,11 @@ def test_folded_torus(w, h, transformation, uncrinkle_direction, folds,
 			assert max_y == 3*h or max_y + 1 == 3*h
 
 
-def test_folded_torus_bad_transformation():
+def test_folded_torus_bad_args():
 	with pytest.raises(TypeError):
-		utils.folded_torus(1, 1, "foo", (1, 1))
+		utils.folded_torus(1, 1, "foo", "rows", (1, 1))
+	with pytest.raises(TypeError):
+		utils.folded_torus(1, 1, "slice", "foo", (1, 1))
 
 
 def test_min_num_cabinets():
