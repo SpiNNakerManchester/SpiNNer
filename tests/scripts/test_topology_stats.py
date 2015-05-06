@@ -10,7 +10,6 @@ def test_topology_stats(capsys):
 	
 	assert "60x96" in stdout  # Network dimensions
 	assert "5x8" in stdout  # Board array
-	assert "15x8" in stdout  # Folded array
 	assert "120" in stdout  # Num boards
 	assert "360" in stdout  # Num cables
 	assert "5760" in stdout  # Num chips
