@@ -12,4 +12,11 @@ setup(
 
     # Requirements
     install_requires=["six"],
+
+    # Scripts
+    entry_points={
+        "console_scripts": [
+            "spinner-topology-stats = spinner.scripts.topology_stats:main",
+        ],
+    }
 )
