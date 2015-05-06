@@ -7,8 +7,6 @@ and their wiring.
 
 import math
 
-from spinner.topology import Direction
-
 from spinner import coordinates
 
 
@@ -45,23 +43,14 @@ def wire_length(boards, board, direction, board_wire_offset=None):
 	return (source - target).magnitude()
 
 
-def wire_lengths(boards, direction=None, board_wire_offset=None):
+def wire_lengths(boards, direction, board_wire_offset=None):
 	"""
 	Generate a list of wire lengths for the supplied system.
 	
-	If direction is not given, lists wire lengths in all directions, otherwise
-	lists only wires travelling in the specified direction.
-	
 	board_wire_offset is as defined for wire_length().
 	"""
-	if direction is not None:
-		directions = [direction]
-	else:
-		directions = [Direction.north, Direction.north_east, Direction.east]
-	
-	for direction in directions:
-		for board, coord in boards:
-			yield wire_length(boards, board, direction, board_wire_offset)
+	for board, coord in boards:
+		yield wire_length(boards, board, direction, board_wire_offset)
 
 
 def dimensions(boards):
@@ -74,3 +63,33 @@ def dimensions(boards):
 	
 	return type(boards[0][1])(max(x for b, (x, y) in boards) + 1,
 	                          max(y for b, (x, y) in boards) + 1)
+
+
+def count_wires(boards, direction):
+	"""
+	Given a cabinetised system, count the number of wires connecting between
+	cabinets, between frames or within frames.
+	
+	direction if given restricts the count to just those directions
+	
+	Returns a tuple (between_cabinets, between_frames, between_boards) giving the
+	counts of wires in each of the categories described above respectively.
+	"""
+	b2c = dict(boards)
+	
+	between_cabinets = 0
+	between_frames = 0
+	between_boards = 0
+	
+	for board, coord in boards:
+		other = board.follow_wire(direction)
+		other_coord = b2c[other]
+		
+		if coord.cabinet != other_coord.cabinet:
+			between_cabinets += 1
+		elif coord.frame != other_coord.frame:
+			between_frames += 1
+		else:  # if coord.board != other_coord.board:
+			between_boards += 1
+	
+	return (between_cabinets, between_frames, between_boards)

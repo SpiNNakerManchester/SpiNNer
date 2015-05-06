@@ -70,21 +70,6 @@ def test_wire_lengths():
 	#  (0,0)
 	boards = transforms.hex_to_cartesian(board.create_torus(1))
 	
-	assert sorted(metrics.wire_lengths(boards)) == sorted([
-		# 0.0 
-		2**0.5,  # North-East
-		2.0,     # South-West
-		2.0,     # North
-		2**0.5,  # South
-		2**0.5,  # West
-		2.0,     # East
-		# 1,1 (excluding those included above)
-		2**0.5,  # North-East
-		2**0.5,  # South
-		2**0.5,  # West
-		# 1,1 (excluding those included above, i.e. all of them!)
-	])
-	
 	assert sorted(metrics.wire_lengths(boards, Direction.north)) == sorted([
 		# 0.0 
 		2.0,     # North
@@ -116,3 +101,21 @@ def test_dimensions():
 	assert metrics.dimensions([(o0, c(0, 0)),
 	                           (o1, c(1, 0)),
 	                           (o2, c(0, 1))]) == c(2, 2)
+
+@pytest.mark.parametrize("coord_a,coord_b,counts",
+                         [((0,0,0), (0,0,1), (0,0,2)),
+                          ((0,0,1), (0,1,1), (0,2,0)),
+                          ((0,0,0), (0,1,1), (0,2,0)),
+                          ((0,1,1), (1,1,1), (2,0,0)),
+                          ((0,1,0), (1,1,1), (2,0,0)),
+                          ((0,0,1), (1,1,1), (2,0,0)),
+                          ((0,0,0), (1,1,1), (2,0,0)),
+                         ])
+def test_count_wires(coord_a, coord_b, counts):
+	# Set up a system with two boards connected via North links only.
+	boards = [(board.Board(), coordinates.Cabinet(*coord_a)),
+	          (board.Board(), coordinates.Cabinet(*coord_b))]
+	boards[0][0].connect_wire(boards[1][0], Direction.north)
+	boards[1][0].connect_wire(boards[0][0], Direction.north)
+	
+	assert metrics.count_wires(boards, Direction.north) == counts
