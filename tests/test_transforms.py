@@ -2,6 +2,9 @@ import pytest
 
 from spinner import transforms
 from spinner import coordinates
+from spinner import cabinet
+
+from example_cabinet_params import exact
 
 
 def test_hex_to_cartesian():
@@ -141,3 +144,30 @@ def test_remove_gaps():
 	assert set(transforms.remove_gaps(
 		[(o0, c(0,0,0)), (o1, c(0,0,3)), (o2, c(1,0,3))])) ==\
 		set([(o0, c(0,0,0)), (o1, c(0,0,1)), (o2, c(1,0,0))])
+
+
+def test_cabinet_to_physical():
+	c = cabinet.Cabinet(**exact)
+	
+	o0 = "o0"
+	o1 = "o1"
+	o2 = "o2"
+	o3 = "o3"
+	
+	boards = transforms.cabinet_to_physical([(o0, coordinates.Cabinet(0, 0, 0)),
+	                                         (o1, coordinates.Cabinet(0, 0, 1)),
+	                                         (o2, coordinates.Cabinet(0, 1, 1)),
+	                                         (o3, coordinates.Cabinet(1, 1, 1)),
+	                                        ], c)
+	
+	b2c = dict(boards)
+	
+	# Make sure all boards make it through
+	assert len(boards) == len(b2c)
+	assert set([o0, o1, o2, o3]) == set(b2c)
+	
+	# Check all board positions
+	assert b2c[o0] == (2.0, 2.0, 2.0)
+	assert b2c[o1] == (3.5, 2.0, 2.0)
+	assert b2c[o2] == (3.5, 5.0, 2.0)
+	assert b2c[o3] == (30.0, 5.0, 2.0)

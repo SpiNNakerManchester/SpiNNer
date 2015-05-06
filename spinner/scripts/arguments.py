@@ -66,12 +66,11 @@ def get_topology_from_args(parser, args):
 			parser.error("system dimensions must be positive and non-zero")
 	
 	# Fold accordingly
+	transformation = "shear"
+	uncrinkle_direction = "rows"
+	folds = (2, 2)
+	
 	if args.transformation is None:
-		if args.uncrinkle_direction is not None:
-			parser.error("--uncrinkle-direction cannot be used without --transformation")
-		if args.folds is not None:
-			parser.error("--folds cannot be used without --transformation")
-		
 		# Work out the folding process to use by following the guidelines set out in
 		# "Bringing the Hexagonal Torus Topology into the Real-World" by Heathcote
 		# et. al. (unpublished at the time of writing...).
@@ -82,19 +81,18 @@ def get_topology_from_args(parser, args):
 		uncrinkle_direction = "rows"
 		folds = (2, 2)
 	else:
-		if args.folds is None:
-			args.folds = (2, 2)
-		if args.uncrinkle_direction is None:
-			args.uncrinkle_direction = "rows"
-		
-		if args.folds[0] <= 0 or args.folds[1] <= 0:
-			parser.error("number of pieces to fold into must be at least 1")
-		
 		transformation = args.transformation
-		uncrinkle_direction = args.uncrinkle_direction
-		folds = args.folds
 	
-	return ((w, h), transformation, uncrinkle_direction, tuple(folds))
+	if args.folds is not None:
+		folds = tuple(args.folds)
+	
+	if folds[0] <= 0 or folds[1] <= 0:
+		parser.error("number of pieces to fold into must be at least 1")
+	
+	if args.uncrinkle_direction is not None:
+		uncrinkle_direction = args.uncrinkle_direction
+	
+	return ((w, h), transformation, uncrinkle_direction, folds)
 
 
 def add_cabinet_args(parser):

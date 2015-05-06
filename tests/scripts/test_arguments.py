@@ -2,6 +2,8 @@ import pytest
 
 from mock import Mock
 
+from six import iteritems
+
 from argparse import ArgumentParser
 
 from spinner.topology import Direction
@@ -9,6 +11,8 @@ from spinner.topology import Direction
 from spinner.scripts import arguments
 
 from spinner import utils
+
+from example_cabinet_params import board_wire_offset_fields, unique
 
 
 @pytest.mark.parametrize("argstring",
@@ -20,9 +24,6 @@ from spinner import utils
                           "-t -1 1",  # "
                           "-t 1 -1",  # "
                           "-n 8",  # Num boards must be a multiple of 3
-                          "-n 3 --folds 2 2",  # Require transformation with folds
-                          # Require transformation with uncrinkle-direction
-                          "-n 3 --uncrinkle-direction rows",
                           "-n 3 --transformation foo",  # Only slice or shear
                           "-n 3 --transformation slice --folds 0 0",  # Invalid folds
                           "-n 3 --transformation slice --folds -1 1",  # "
@@ -56,10 +57,12 @@ def test_get_topology_from_args_bad(argstring):
                            (2, 3), "shear", "rows", (2, 2)),
                           ("-t 2 3 --transformation slice --folds 4 4",
                            (2, 3), "slice", "rows", (4, 4)),
+                          ("-t 2 3 --folds 4 4",
+                           (2, 3), "shear", "rows", (4, 4)),
                           ("-t 2 3 --transformation slice --uncrinkle-direction rows",
                            (2, 3), "slice", "rows", (2, 2)),
-                          ("-t 2 3 --transformation slice --uncrinkle-direction columns",
-                           (2, 3), "slice", "columns", (2, 2)),
+                          ("-t 2 3 --uncrinkle-direction columns",
+                           (2, 3), "shear", "columns", (2, 2)),
                          ])
 def test_get_topology_from_args_dimensions(argstring, dimensions,
                                            transformation, uncrinkle_direction,
@@ -83,54 +86,23 @@ def test_get_cabinets_from_args():
 	parser = ArgumentParser()
 	arguments.add_cabinet_args(parser)
 	
-	# Map from board wire offset parameter names to their corresponding direction
-	# enum value to enable easy lookup
-	board_wire_offset_fields = {
-		"board_wire_offset_south_west": Direction.south_west,
-		"board_wire_offset_north_east": Direction.north_east,
-		"board_wire_offset_east": Direction.east,
-		"board_wire_offset_west": Direction.west,
-		"board_wire_offset_north": Direction.north,
-		"board_wire_offset_south": Direction.south,
-	}
-	
-	# Tuples of value name to value pairs (chosen such that all values are unique
-	# but are not impossible
-	value_names = [("board_dimensions", (0.1, 0.2, 0.3)),
-	               ("board_wire_offset_south_west", (0.01,0.001,0.0001)),
-	               ("board_wire_offset_north_east", (0.02,0.002,0.0002)),
-	               ("board_wire_offset_east", (0.03,0.003,0.0003)),
-	               ("board_wire_offset_west", (0.04,0.004,0.0004)),
-	               ("board_wire_offset_north", (0.05,0.005,0.0005)),
-	               ("board_wire_offset_south", (0.06,0.006,0.0006)),
-	               ("inter_board_spacing", (0.123,)),
-	               ("boards_per_frame", (2,)),
-	               ("frame_dimensions", (1.0, 2.0, 3.0)),
-	               ("frame_board_offset", (0.11, 0.22, 0.33)),
-	               ("inter_frame_spacing", (0.321,)),
-	               ("frames_per_cabinet", (3,)),
-	               ("cabinet_dimensions", (10.0, 20.0, 30.0)),
-	               ("cabinet_frame_offset", (0.111, 0.222, 0.333)),
-	               ("inter_cabinet_spacing", (3.21,))]
-	
 	# Construct an argument string to set all possible arguments
 	argstring = " ".join("--{} {}".format(name.replace("_", "-"),
-	                                      " ".join(map(str, vals)))
-	                     for (name, vals) in value_names)
+	                                      " ".join(map(str, vals))
+	                                      if isinstance(vals, tuple)
+	                                      else str(vals))
+	                     for (name, vals) in iteritems(unique))
 	
 	args = parser.parse_args(argstring.split())
 	cabinet = arguments.get_cabinets_from_args(parser, args)
 	
 	# Check all arguments propagated through to the cabinet
-	for name, value in value_names:
+	for name, value in iteritems(unique):
 		if name in board_wire_offset_fields:
 			cabinet.board_wire_offset[board_wire_offset_fields[name]] == value
 		else:
 			assert hasattr(cabinet, name)
-			if len(value) == 1:
-				assert getattr(cabinet, name) == value[0]
-			else:
-				assert getattr(cabinet, name) == value
+			assert getattr(cabinet, name) == value
 
 
 def test_get_cabinets_from_args_bad():

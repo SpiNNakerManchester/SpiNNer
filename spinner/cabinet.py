@@ -120,14 +120,16 @@ class Cabinet(object):
 		"""The distance of the left-bottom-back corner of the boards from the
 		right-top-front corner of the frame."""
 		
-		return (# X
-		        ((((self.board_dimensions[0] + self.inter_board_spacing) *
-		           self.boards_per_frame) - self.inter_board_spacing)
-		         + self.frame_board_offset[0]),
-		        # Y
-		        self.board_dimensions[1] + self.frame_board_offset[1],
-		        # Z
-		        self.board_dimensions[2] + self.frame_board_offset[2])
+		return Cartesian3D(
+			# X
+			((((self.board_dimensions[0] + self.inter_board_spacing) *
+			   self.boards_per_frame) - self.inter_board_spacing)
+			 + self.frame_board_offset[0]),
+			# Y
+			self.board_dimensions[1] + self.frame_board_offset[1],
+			# Z
+			self.board_dimensions[2] + self.frame_board_offset[2]
+		)
 	
 	
 	@property
@@ -135,11 +137,43 @@ class Cabinet(object):
 		"""The distance of the left-bottom-back corner of the frames from the
 		right-top-front corner of the cabinets."""
 		
-		return (# X
-		        self.frame_dimensions[0] + self.cabinet_frame_offset[0],
-		        # Y
-		        ((((self.frame_dimensions[1] + self.inter_frame_spacing) *
-		           self.frames_per_cabinet) - self.inter_frame_spacing)
-		         + self.cabinet_frame_offset[1]),
-		        # Z
-		        self.frame_dimensions[2] + self.cabinet_frame_offset[2])
+		return Cartesian3D(
+			# X
+			self.frame_dimensions[0] + self.cabinet_frame_offset[0],
+			# Y
+			((((self.frame_dimensions[1] + self.inter_frame_spacing) *
+			   self.frames_per_cabinet) - self.inter_frame_spacing)
+			 + self.cabinet_frame_offset[1]),
+			# Z
+			self.frame_dimensions[2] + self.cabinet_frame_offset[2]
+		)
+	
+	
+	def get_position(self, cabinet, frame=None, board=None, wire=None):
+		"""
+		Get the physical position of a given cabinet, frame, board or wire.
+		"""
+		
+		pos = Cartesian3D(0, 0, 0)
+		pos += Cartesian3D((self.cabinet_dimensions[0] + self.inter_cabinet_spacing) * cabinet, 0, 0)
+		
+		if frame is None:
+			assert board is None and wire is None
+			return pos
+		
+		pos += self.cabinet_frame_offset
+		pos += Cartesian3D(0, (self.frame_dimensions[1] + self.inter_frame_spacing) * frame, 0)
+		
+		if board is None:
+			assert wire is None
+			return pos
+		
+		pos += self.frame_board_offset
+		pos += Cartesian3D((self.board_dimensions[0] + self.inter_board_spacing) * board, 0, 0)
+		
+		if wire is None:
+			return pos
+		
+		pos += self.board_wire_offset[wire]
+		
+		return pos

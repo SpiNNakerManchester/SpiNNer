@@ -190,3 +190,13 @@ def remove_gaps(boards):
 			b += 1
 	return boards
 
+
+def cabinet_to_physical(boards, cabinet):
+	"""
+	Takes Cabinet coordinates and converts them into Cartesian3D coordinates
+	representing the physical positions of cabinets based on a
+	spinner.cabinet.Cabinet specification.
+	"""
+	_assert_coord(boards, coordinates.Cabinet)
+	
+	return [(board, cabinet.get_position(*coord)) for (board,coord) in boards]
