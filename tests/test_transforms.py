@@ -177,7 +177,7 @@ def test_cabinet_to_physical():
 	assert set([o0, o1, o2, o3]) == set(b2c)
 	
 	# Check all board positions
-	assert b2c[o0] == (2.0, 2.0, 2.0)
-	assert b2c[o1] == (3.5, 2.0, 2.0)
-	assert b2c[o2] == (3.5, 5.0, 2.0)
-	assert b2c[o3] == (30.0, 5.0, 2.0)
+	assert b2c[o0] == (15.5, 2.0, 2.0)
+	assert b2c[o1] == (14.0, 2.0, 2.0)
+	assert b2c[o2] == (14.0, 5.0, 2.0)
+	assert b2c[o3] == (40.5, 5.0, 2.0)

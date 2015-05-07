@@ -85,27 +85,17 @@ def test_impossible(changes):
 		Cabinet(**values)
 
 
-def test_frame_board_offset_opposite():
-	c = Cabinet(**exact)
-	assert c.frame_board_offset_opposite == c.frame_dimensions
-
-
-def test_cabinet_frame_offset_opposite():
-	c = Cabinet(**exact)
-	assert c.cabinet_frame_offset_opposite == c.cabinet_dimensions
-
-
 @pytest.mark.parametrize("args,pos",
                          [([0], (0.0, 0.0, 0.0)),
                           ([1], (26.5, 0.0, 0.0)),
                           ([0, 0], (1.0, 1.0, 1.0)),
                           ([0, 1], (1.0, 4.0, 1.0)),
                           ([1, 1], (27.5, 4.0, 1.0)),
-                          ([0, 0, 0], (2.0, 2.0, 2.0)),
-                          ([0, 0, 1], (3.5, 2.0, 2.0)),
-                          ([0, 1, 1], (3.5, 5.0, 2.0)),
-                          ([0, 0, 0, Direction.north], (2.5, 2.5, 2.5)),
-                          ([0, 0, 1, Direction.north], (4.0, 2.5, 2.5)),
+                          ([0, 0, 0], (15.5, 2.0, 2.0)),
+                          ([0, 0, 1], (14.0, 2.0, 2.0)),
+                          ([0, 1, 1], (14.0, 5.0, 2.0)),
+                          ([0, 0, 0, Direction.north], (16.0, 2.5, 2.5)),
+                          ([0, 0, 1, Direction.north], (14.5, 2.5, 2.5)),
                          ])
 def test_cabinet_get_position(args, pos):
 	c = Cabinet(**exact)
@@ -118,11 +108,11 @@ def test_cabinet_get_position(args, pos):
                           ([0, 0], (16.5, 3.0, 3.0)),
                           ([0, 1], (16.5, 6.0, 3.0)),
                           ([1, 1], (43.0, 6.0, 3.0)),
-                          ([0, 0, 0], (3.0, 3.0, 3.0)),
-                          ([0, 0, 1], (4.5, 3.0, 3.0)),
-                          ([0, 1, 1], (4.5, 6.0, 3.0)),
-                          ([0, 0, 0, Direction.north], (2.5, 2.5, 2.5)),
-                          ([0, 0, 1, Direction.north], (4.0, 2.5, 2.5)),
+                          ([0, 0, 0], (16.5, 3.0, 3.0)),
+                          ([0, 0, 1], (15.0, 3.0, 3.0)),
+                          ([0, 1, 1], (15.0, 6.0, 3.0)),
+                          ([0, 0, 0, Direction.north], (16.0, 2.5, 2.5)),
+                          ([0, 0, 1, Direction.north], (14.5, 2.5, 2.5)),
                          ])
 def test_cabinet_get_position_opposite(args, pos):
 	c = Cabinet(**exact)

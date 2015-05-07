@@ -114,7 +114,7 @@ def add_cabinet_args(parser):
 		                         type=float, nargs=3, default=default,
 		                         metavar=("X", "Y", "Z"),
 		                         help="physical offset of the {} connector from "
-		                              "board right-top-front corner in meters "
+		                              "board left-top-front corner in meters "
 		                              "(default: %(default)s)".format(direction))
 	board_group.add_argument("--inter-board-spacing", type=float,
 	                         default=0.0, metavar=("S"),
@@ -131,11 +131,12 @@ def add_cabinet_args(parser):
 	                         help="frame physical dimensions in meters (default: "
 	                              "%(default)s)")
 	frame_group.add_argument("--frame-board-offset", type=float, nargs=3,
-	                         default=(0.00424, 0.017, 0.0),
+	                         default=(0.06, 0.017, 0.0),
 	                         metavar=("X", "Y", "Z"),
-	                         help="physical offset of the right-most board "
-	                              "from the right-top-front corner of a frame in "
-	                              "meters (default: %(default)s)")
+	                         help="physical offset of the left-top-front corner of "
+	                              "the left-most board from the left-top-front "
+	                              "corner of a frame in meters (default: "
+	                              "%(default)s)")
 	frame_group.add_argument("--inter-frame-spacing", type=float,
 	                         default=0.089, metavar=("S"),
 	                         help="physical spacing between frames in a "
@@ -153,9 +154,10 @@ def add_cabinet_args(parser):
 	cabinet_group.add_argument("--cabinet-frame-offset", type=float, nargs=3,
 	                           default=(0.085, 0.047, 0.0),
 	                           metavar=("X", "Y", "Z"),
-	                           help="physical offset of the top frame from the "
-	                                "right-top-front corner of a cabinet in "
-	                                "meters (default: %(default)s)")
+	                           help="physical offset of the left-top-front corner "
+	                                "of the top frame from the left-top-front "
+	                                "corner of a cabinet in meters (default: "
+	                                "%(default)s)")
 	cabinet_group.add_argument("--inter-cabinet-spacing", type=float,
 	                           default=0.0, metavar=("S"),
 	                           help="physical spacing between each cabinet in "
