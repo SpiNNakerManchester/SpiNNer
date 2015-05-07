@@ -110,3 +110,20 @@ def test_cabinet_frame_offset_opposite():
 def test_cabinet_get_position(args, pos):
 	c = Cabinet(**exact)
 	assert c.get_position(*args) == pos
+
+
+@pytest.mark.parametrize("args,pos",
+                         [([0], (16.5, 6.0, 3.0)),
+                          ([1], (43.0, 6.0, 3.0)),
+                          ([0, 0], (16.5, 3.0, 3.0)),
+                          ([0, 1], (16.5, 6.0, 3.0)),
+                          ([1, 1], (43.0, 6.0, 3.0)),
+                          ([0, 0, 0], (3.0, 3.0, 3.0)),
+                          ([0, 0, 1], (4.5, 3.0, 3.0)),
+                          ([0, 1, 1], (4.5, 6.0, 3.0)),
+                          ([0, 0, 0, Direction.north], (2.5, 2.5, 2.5)),
+                          ([0, 0, 1, Direction.north], (4.0, 2.5, 2.5)),
+                         ])
+def test_cabinet_get_position_opposite(args, pos):
+	c = Cabinet(**exact)
+	assert c.get_position_opposite(*args) == pos

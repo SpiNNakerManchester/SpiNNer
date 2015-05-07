@@ -151,7 +151,8 @@ class Cabinet(object):
 	
 	def get_position(self, cabinet, frame=None, board=None, wire=None):
 		"""
-		Get the physical position of a given cabinet, frame, board or wire.
+		Get the physical position of a given cabinet, frame, board or wire (i.e. the
+		right-top-front corner).
 		"""
 		
 		pos = Cartesian3D(0, 0, 0)
@@ -176,4 +177,27 @@ class Cabinet(object):
 		
 		pos += self.board_wire_offset[wire]
 		
+		return pos
+	
+	
+	def get_position_opposite(self, cabinet, frame=None, board=None, wire=None):
+		"""
+		Get the physical position of the opposite-corner of a given cabinet, frame,
+		board or wire (i.e. the left-bottom-back corner).
+		"""
+		
+		pos = self.get_position(cabinet, frame, board, wire)
+		
+		if frame is None:
+			assert board is None and wire is None
+			return pos + self.cabinet_dimensions
+		
+		if board is None:
+			assert wire is None
+			return pos + self.frame_dimensions
+		
+		if wire is None:
+			return pos + self.board_dimensions
+		
+		# Wires have zero size so no adjustment is necessary
 		return pos
