@@ -127,3 +127,17 @@ def test_cabinet_get_position(args, pos):
 def test_cabinet_get_position_opposite(args, pos):
 	c = Cabinet(**exact)
 	assert c.get_position_opposite(*args) == pos
+
+
+@pytest.mark.parametrize(
+	"kwargs,dimen",
+	[({"cabinets": 1}, (16.5, 6.0, 3.0)),
+	 ({"cabinets": 2}, (43.0, 6.0, 3.0)),
+	 ({"frames": 1}, (15.5, 2.0, 2.0)),
+	 ({"frames": 2}, (15.5, 5.0, 2.0)),
+	 ({"boards": 1}, (1.0, 1.0, 1.0)),
+	 ({"boards": 2}, (2.5, 1.0, 1.0)),
+	])
+def test_cabinet_get_dimensions(kwargs, dimen):
+	c = Cabinet(**exact)
+	assert c.get_dimensions(**kwargs) == dimen

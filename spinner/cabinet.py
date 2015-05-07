@@ -155,6 +155,8 @@ class Cabinet(object):
 		right-top-front corner).
 		"""
 		
+		assert cabinet >= 0
+		
 		pos = Cartesian3D(0, 0, 0)
 		pos += Cartesian3D((self.cabinet_dimensions[0] + self.inter_cabinet_spacing) * cabinet, 0, 0)
 		
@@ -162,12 +164,16 @@ class Cabinet(object):
 			assert board is None and wire is None
 			return pos
 		
+		assert 0 <= frame < self.frames_per_cabinet
+		
 		pos += self.cabinet_frame_offset
 		pos += Cartesian3D(0, (self.frame_dimensions[1] + self.inter_frame_spacing) * frame, 0)
 		
 		if board is None:
 			assert wire is None
 			return pos
+		
+		assert 0 <= board < self.boards_per_frame
 		
 		pos += self.frame_board_offset
 		pos += Cartesian3D((self.board_dimensions[0] + self.inter_board_spacing) * board, 0, 0)
@@ -201,3 +207,25 @@ class Cabinet(object):
 		
 		# Wires have zero size so no adjustment is necessary
 		return pos
+	
+	
+	def get_dimensions(self, cabinets=None, frames=None, boards=None):
+		"""
+		Get the dimensions of the specified number of cabinets, frames or boards.
+		"""
+		if cabinets is not None:
+			assert frames is None and boards is None
+			assert cabinets >= 1
+			return self.get_position_opposite(cabinets-1) - self.get_position(0)
+		
+		if frames is not None:
+			assert cabinets is None and boards is None
+			assert 0 < frames <= self.frames_per_cabinet
+			return self.get_position_opposite(0, frames-1) - self.get_position(0, 0)
+		
+		if boards is not None:
+			assert cabinets is None and frames is None
+			assert 0 < boards <= self.boards_per_frame
+			return self.get_position_opposite(0, 0, boards-1) - self.get_position(0, 0, 0)
+		
+		assert False, "at least one argument must be given"
