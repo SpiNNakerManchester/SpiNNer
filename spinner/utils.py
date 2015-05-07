@@ -17,8 +17,8 @@ def ideal_system_size(num_boards):
 	(w, h)
 		Width and height in triads of the most square system possible with the given
 		number of boards. When a square system cannot be made, the function prefers
-		taller systems over wider systems. This enables advantageous folding in the
-		case where the system is twice as tall as it is wide.
+		wider systems over taller systems on the basis that most cabinet
+		arrangements are much wider than they are tall.
 	
 	Raises
 	------
@@ -34,11 +34,11 @@ def ideal_system_size(num_boards):
 		return (0, 0)
 	
 	# Find the largest pair of factors to discover the squarest system
-	for w in reversed(range(1, int(sqrt(num_boards//3)) + 1)):  # pragma: no branch
-		if (num_boards//3) % w == 0:
+	for h in reversed(range(1, int(sqrt(num_boards//3)) + 1)):  # pragma: no branch
+		if (num_boards//3) % h == 0:
 			break
 	
-	h = (num_boards//3) // w
+	w = (num_boards//3) // h
 	
 	return (w, h)
 

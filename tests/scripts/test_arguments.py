@@ -44,7 +44,7 @@ def test_get_topology_from_args_bad(argstring):
                          "uncrinkle_direction,folds",
                          [# Check automatic choices made are correct
                           ("-n 3", (1, 1), "shear", "rows", (2, 2)),
-                          ("-n 6", (1, 2), "slice", "rows", (2, 2)),
+                          ("-n 6", (2, 1), "shear", "rows", (2, 2)),
                           ("-n 12", (2, 2), "shear", "rows", (2, 2)),
                           ("-t 1 1", (1, 1), "shear", "rows", (2, 2)),
                           ("-t 1 2", (1, 2), "slice", "rows", (2, 2)),

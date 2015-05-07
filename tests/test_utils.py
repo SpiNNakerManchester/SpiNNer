@@ -21,11 +21,11 @@ def test_ideal_system_size():
 	assert utils.ideal_system_size(3 * 2 * 2) == (2, 2)
 	assert utils.ideal_system_size(3 * 20 * 20) == (20, 20)
 	
-	# Rectangular systems (should always be tall
-	assert utils.ideal_system_size(3 * 1 * 2) == (1, 2)
-	assert utils.ideal_system_size(3 * 1 * 3) == (1, 3)
-	assert utils.ideal_system_size(3 * 2 * 4) == (2, 4)
-	assert utils.ideal_system_size(3 * 1 * 17) == (1, 17)
+	# Rectangular systems (should always be wide)
+	assert utils.ideal_system_size(3 * 1 * 2) == (2, 1)
+	assert utils.ideal_system_size(3 * 1 * 3) == (3, 1)
+	assert utils.ideal_system_size(3 * 2 * 4) == (4, 2)
+	assert utils.ideal_system_size(3 * 1 * 17) == (17, 1)
 
 
 @pytest.fixture
