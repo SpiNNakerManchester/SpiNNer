@@ -77,6 +77,13 @@ class _CartesianCoordsMixin(_ElementwiseCoordsMixin):
 		_ElementwiseCoordsMixin.__init__(self)
 	
 	
+	def to_positive(self):
+		"""
+		Return a positive-only version of the coordinate.
+		"""
+		return type(self)(*(abs(v) for v in self))
+	
+	
 	def magnitude(self):
 		"""
 		Magnitude (Euclidean distance)

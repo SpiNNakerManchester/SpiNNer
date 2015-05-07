@@ -59,6 +59,10 @@ def test_cartesian3d():
 	assert a-b == (2,3,4)
 	assert abs(b) == (1,1,1)
 	
+	# To-Positive
+	assert a.to_positive() == (1, 2, 3)
+	assert b.to_positive() == (1, 1, 1)
+	
 	# Magnitude
 	assert a.magnitude() == (1**2 + 2**2 + 3**2)**0.5
 	assert b.magnitude() == (3)**0.5
@@ -76,6 +80,10 @@ def test_cartesian2d():
 	assert a+b == (0,1)
 	assert a-b == (2,3)
 	assert abs(b) == (1,1)
+	
+	# To-Positive
+	assert a.to_positive() == (1, 2)
+	assert b.to_positive() == (1, 1)
 	
 	# Magnitude
 	assert a.magnitude() == (1**2 + 2**2)**0.5
