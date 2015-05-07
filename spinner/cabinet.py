@@ -21,7 +21,8 @@ class Cabinet(object):
 	             boards_per_frame, frame_dimensions, frame_board_offset,
 	             inter_frame_spacing,
 	             frames_per_cabinet, cabinet_dimensions, cabinet_frame_offset,
-	             inter_cabinet_spacing):
+	             inter_cabinet_spacing,
+	             num_cabinets):
 		"""Create a new Cabinet structure with the specified measurements (all in
 		meters).
 		
@@ -52,6 +53,8 @@ class Cabinet(object):
 			cabinet in meters.
 		inter_cabinet_spacing : float
 			Physical spacing between each cabinet in meters.
+		num_cabinets : int
+			Total number of cabinets in the system
 		"""
 		c = Cartesian3D
 		
@@ -78,6 +81,8 @@ class Cabinet(object):
 		self.cabinet_frame_offset  = c(*cabinet_frame_offset)
 		self.inter_cabinet_spacing = inter_cabinet_spacing
 		
+		self.num_cabinets = num_cabinets
+		
 		# Check that all values are positive that are meant to be...
 		for field in ["board_dimensions",
 		              "inter_board_spacing",
@@ -88,7 +93,8 @@ class Cabinet(object):
 		              "frames_per_cabinet",
 		              "cabinet_dimensions",
 		              "cabinet_frame_offset",
-		              "inter_cabinet_spacing"]:
+		              "inter_cabinet_spacing",
+		              "num_cabinets"]:
 			value = getattr(self, field)
 			if isinstance(value, tuple):
 				if any(v < 0.0 for v in value):
@@ -129,10 +135,14 @@ class Cabinet(object):
 		left-top-front corner).
 		"""
 		
-		assert cabinet >= 0
+		assert 0 <= cabinet < self.num_cabinets
 		
+		# Note: cabinets go right-to-left(!)
 		pos = Cartesian3D(0, 0, 0)
-		pos += Cartesian3D((self.cabinet_dimensions.x + self.inter_cabinet_spacing) * cabinet, 0, 0)
+		pos += Cartesian3D(((self.cabinet_dimensions.x + self.inter_cabinet_spacing) *
+		                    (self.num_cabinets - cabinet - 1)),
+		                   0,
+		                   0)
 		
 		if frame is None:
 			assert board is None and wire is None
@@ -181,7 +191,6 @@ class Cabinet(object):
 			return pos + self.frame_dimensions
 		
 		if wire is None:
-			# Note: boards grow right-to-left, hence inverted X
 			return pos + self.board_dimensions
 		
 		# Wires have zero size so no adjustment is necessary
@@ -190,22 +199,22 @@ class Cabinet(object):
 	
 	def get_dimensions(self, cabinets=None, frames=None, boards=None):
 		"""
-		Get the dimensions of the specified number of cabinets, frames or boards.
+		Get the dimensions of the specified number of the system (no arguments) or a
+		specified number of cabinets, frames or boards.
 		"""
 		if cabinets is not None:
 			assert frames is None and boards is None
-			assert cabinets >= 1
-			return self.get_position_opposite(cabinets-1) - self.get_position(0)
-		
-		if frames is not None:
+			assert 0 < cabinets <= self.num_cabinets
+			# Note: cabinets go in opposite directions
+			return self.get_position_opposite(0) - self.get_position(cabinets-1)
+		elif frames is not None:
 			assert cabinets is None and boards is None
 			assert 0 < frames <= self.frames_per_cabinet
 			return self.get_position_opposite(0, frames-1) - self.get_position(0, 0)
-		
-		if boards is not None:  # pragma: no branch
+		elif boards is not None:
 			assert cabinets is None and frames is None
 			assert 0 < boards <= self.boards_per_frame
 			# Note: boards go in opposite directions
 			return self.get_position_opposite(0, 0, 0) - self.get_position(0, 0, boards-1)
-		
-		assert False, "at least one argument must be given"  # pragma: no cover
+		else:
+			return self.get_dimensions(self.num_cabinets)

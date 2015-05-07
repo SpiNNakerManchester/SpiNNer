@@ -162,101 +162,102 @@ def add_cabinet_args(parser):
 	                           default=0.0, metavar=("S"),
 	                           help="physical spacing between each cabinet in "
 	                                "meters (default: %(default)s)")
+	cabinet_group.add_argument("--num-cabinets", "-c", type=int, metavar="N",
+	                           help="specify how many cabinets to spread the "
+	                                "system over (default: the minimum possible)")
+	cabinet_group.add_argument("--num-frames", "-f", type=int, metavar="N",
+                             help="when only one cabinet is required, "
+                                  "specifies how many frames within that "
+                                  "cabinet the system should be spread "
+                                  "across (default: the minimum possible)")
 
 
 def get_cabinets_from_args(parser, args):
-	"""For use with add_cabinet_args.
+	"""For use with add_cabinet_args (and optionally add_topology_args).
 	
 	Get information about the dimensions of the cabinets in the system from the
 	supplied arguments.
 	
 	Returns
 	-------
-	:py:class:`spinner.cabinet.Cabinet`
+	(:py:class:`spinner.cabinet.Cabinet`, num_frames)
+		num_frames is the number of frames (per cabinet) to actually fill with
+		boards.
 	"""
-	try:
-		return Cabinet(**{
-			kw: tuple(getattr(args, kw))
-			    if type(getattr(args, kw)) is list
-			    else getattr(args, kw)
-			for kw in [
-				"board_dimensions",
-				"board_wire_offset_south_west",
-				"board_wire_offset_north_east",
-				"board_wire_offset_east",
-				"board_wire_offset_west",
-				"board_wire_offset_north",
-				"board_wire_offset_south",
-				"inter_board_spacing",
-				"boards_per_frame",
-				"frame_dimensions",
-				"frame_board_offset",
-				"inter_frame_spacing",
-				"frames_per_cabinet",
-				"cabinet_dimensions",
-				"cabinet_frame_offset",
-				"inter_cabinet_spacing",
-			]
-		})
-	except ValueError as e:
-		parser.error(e.args[0])
-
-
-def add_space_args(parser):
-	"""Add arguments for specifying the physical space (i.e. cabinets/frames)
-	available for a given system. Should always be used along-side
-	add_topology_args and add_cabinet_args."""
-	space_group = parser.add_argument_group("physical space availability")
-	space_mut_group = space_group.add_mutually_exclusive_group()
-	space_mut_group.add_argument("--num-cabinets", "-c", type=int, metavar="N",
-	                             help="spread across N cabinets (default: "
-	                                  "automatically work out minimum needed)")
-	space_mut_group.add_argument("--num-frames", "-f", type=int, metavar="N",
-                               help="spread across N frames in one cabinet "
-                                    "(default: automatically work out "
-                                    "minimum needed)")
-
-
-def get_space_from_args(parser, args):
-	"""To be used with add_space_args (and add_topology_args and add_cabinet_args).
+	kwargs = {
+		kw: tuple(getattr(args, kw))
+		    if type(getattr(args, kw)) is list
+		    else getattr(args, kw)
+		for kw in [
+			"board_dimensions",
+			"board_wire_offset_south_west",
+			"board_wire_offset_north_east",
+			"board_wire_offset_east",
+			"board_wire_offset_west",
+			"board_wire_offset_north",
+			"board_wire_offset_south",
+			"inter_board_spacing",
+			"boards_per_frame",
+			"frame_dimensions",
+			"frame_board_offset",
+			"inter_frame_spacing",
+			"frames_per_cabinet",
+			"cabinet_dimensions",
+			"cabinet_frame_offset",
+			"inter_cabinet_spacing",
+		]
+	}
 	
-	Check that the supplied arguments are valid and get the number of cabinets and
-	frames the user wishes to spread their system across.
-	
-	Returns
-	-------
-	(num_cabinets, num_frames)
-		num_cabinets is the number of cabinets to use, num_frames is the number of
-		frames to use which will be equal to frames_per_cabinet unless num_cabinets
-		is 1 in which case it may be less.
-	"""
-	# Work out number of boards present
-	if args.num_boards is not None:
+	# Work out number of boards to allow checking of num_cabinets and num_frames
+	# (only possible if topology args are present)
+	if hasattr(args, "num_boards") and args.num_boards is not None:
 		num_boards = args.num_boards
-	else:  # if args.triads is not None:
+	elif hasattr(args, "triads") and args.triads is not None:
 		num_boards = 3 * args.triads[0] * args.triads[1]
+	else:
+		num_boards = None  # unknown!
 	
-	# Work out size based on arguments
 	if args.num_cabinets is None and args.num_frames is None:
-		num_cabinets, num_frames = min_num_cabinets(num_boards,
-		                                            args.frames_per_cabinet,
-		                                            args.boards_per_frame)
-	elif args.num_cabinets is not None:
-		num_cabinets = args.num_cabinets
-		num_frames = args.frames_per_cabinet
-	else:  # if args.num_frames is not None:
-		num_cabinets = 1
-		num_frames = args.num_frames
+		# Try to pick an sensible default value if number of boards is known,
+		# otherwise default to a single cabinet system.
+		if num_boards is not None:
+			num_cabinets, num_frames = min_num_cabinets(num_boards,
+			                                            args.frames_per_cabinet,
+			                                            args.boards_per_frame)
+		else:
+			num_cabinets = 1
+			num_frames = args.frames_per_cabinet
+	else:
+		# Default to 1 cabinet
+		if args.num_cabinets is None:
+			num_cabinets = 1
+		else:
+			num_cabinets = args.num_cabinets
 		
-		if num_frames > args.frames_per_cabinet:
-			parser.error("more frames specified than fit in a cabinet")
+		# Default to the full number of frames
+		if args.num_frames is None:
+			num_frames = args.frames_per_cabinet
+		else:
+			num_frames = args.num_frames
+			if num_frames > args.frames_per_cabinet:
+				parser.error("more frames specified than fit in a cabinet")
+			if num_cabinets > 1 and num_frames != args.frames_per_cabinet:
+				parser.error("--num-frames must equal --frames-per-cabinet "
+				             "when there is more than one cabinet")
 	
-	# Check that the number of cabinets is definately sufficient
-	if num_cabinets * num_frames * args.boards_per_frame < num_boards:
+	# Check that the number of cabinets/frames is sufficient for the number of
+	# boards present (if known)
+	if (num_boards is not None and
+	    num_cabinets * num_frames * args.boards_per_frame < num_boards):
 		parser.error("not enough cabinets/frames available for {} "
 		             "boards".format(num_boards))
 	
-	return (num_cabinets, num_frames)
+	kwargs["num_cabinets"] = num_cabinets
+	
+	try:
+		return (Cabinet(**kwargs), num_frames)
+	except ValueError as e:
+		parser.error(e.args[0])
 
 
 def add_histogram_args(parser):
@@ -321,12 +322,10 @@ if __name__=="__main__":  # pragma: no cover
 	import argparse
 	parser = argparse.ArgumentParser()
 	add_topology_args(parser)
-	add_space_args(parser)
 	add_cabinet_args(parser)
 	add_histogram_args(parser)
 	
 	args = parser.parse_args()
 	print(get_topology_from_args(parser, args))
-	print(get_space_from_args(parser, args))
 	print(get_cabinets_from_args(parser, args))
 	print(get_histogram_from_args(parser, args))

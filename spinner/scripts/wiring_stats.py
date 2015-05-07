@@ -93,15 +93,13 @@ def main(args=None):
 	arguments.add_topology_args(parser)
 	arguments.add_histogram_args(parser)
 	arguments.add_cabinet_args(parser)
-	arguments.add_space_args(parser)
 	
 	# Process and display command-line arguments
 	args = parser.parse_args(args)
 	(w, h), transformation, uncrinkle_direction, folds =\
 		arguments.get_topology_from_args(parser, args)
 	histogram_bins = arguments.get_histogram_from_args(parser, args)
-	cabinet = arguments.get_cabinets_from_args(parser, args)
-	num_cabinets, num_frames = arguments.get_space_from_args(parser, args)
+	cabinet, num_frames = arguments.get_cabinets_from_args(parser, args)
 	
 	print(heading("Wiring Statistics", 1))
 	print(heading("Folding Parameters", 2))
@@ -111,7 +109,7 @@ def main(args=None):
 	             ["Transformation", transformation, ""],
 	             ["Uncrinkle Direction", uncrinkle_direction, ""],
 	             ["Folds", "{}x{}".format(*folds), "pieces"],
-	             ["Number of cabinets", num_cabinets, ""],
+	             ["Number of cabinets", cabinet.num_cabinets, ""],
 	             ["Number of frames-per-cabinet", num_frames, ""],
 	             ["Number of boards-per-frame", cabinet.boards_per_frame, ""],
 	            ]))
@@ -126,7 +124,7 @@ def main(args=None):
 	
 	# Divide into cabinets and report crossings
 	cabinetised_boards = transforms.cabinetise(folded_boards,
-	                                           num_cabinets,
+	                                           cabinet.num_cabinets,
 	                                           num_frames,
 	                                           cabinet.boards_per_frame)
 	cabinetised_boards = transforms.remove_gaps(cabinetised_boards)

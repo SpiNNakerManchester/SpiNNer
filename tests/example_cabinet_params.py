@@ -23,14 +23,15 @@ unique = {"board_dimensions": (0.1, 0.2, 0.3),
           "board_wire_offset_north": (0.05,0.005,0.0005),
           "board_wire_offset_south": (0.06,0.006,0.0006),
           "inter_board_spacing": 0.123,
-          "boards_per_frame": 2,
+          "boards_per_frame": 3,
           "frame_dimensions": (1.0, 2.0, 3.0),
           "frame_board_offset": (0.11, 0.22, 0.33),
           "inter_frame_spacing": 0.321,
-          "frames_per_cabinet": 3,
+          "frames_per_cabinet": 2,
           "cabinet_dimensions": (10.0, 20.0, 30.0),
           "cabinet_frame_offset": (0.111, 0.222, 0.333),
-          "inter_cabinet_spacing": 3.21}
+          "inter_cabinet_spacing": 3.21,
+          "num_cabinets": 4}
 
 # A set of values where everything *exactly* fits
 exact = {"board_dimensions": (1, 1, 1),
@@ -48,7 +49,8 @@ exact = {"board_dimensions": (1, 1, 1),
          "frames_per_cabinet": 2,
          "cabinet_dimensions": (16.5, 6.0, 3.0),
          "cabinet_frame_offset": (1.0, 1.0, 1.0),
-         "inter_cabinet_spacing": 10.0}
+         "inter_cabinet_spacing": 10.0,
+         "num_cabinets": 2}
 
 # A set of values which are well within the required bounds
 within = {"board_dimensions": (1.0, 1.0, 1.0),
@@ -66,4 +68,5 @@ within = {"board_dimensions": (1.0, 1.0, 1.0),
           "frames_per_cabinet": 2,
           "cabinet_dimensions": (18.5, 9.0, 5.0),
           "cabinet_frame_offset": (1.0, 1.0, 1.0),
-          "inter_cabinet_spacing": 10.0}
+          "inter_cabinet_spacing": 10.0,
+          "num_cabinets": 2}

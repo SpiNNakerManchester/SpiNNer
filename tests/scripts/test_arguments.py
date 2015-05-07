@@ -82,100 +82,116 @@ def test_get_topology_from_args_dimensions(argstring, dimensions,
 	assert actual_folds == folds
 
 
-def test_get_cabinets_from_args():
+@pytest.mark.parametrize("with_topology", [True, False])
+@pytest.mark.parametrize("set_num_cabinets", [True, False])
+@pytest.mark.parametrize("set_num_frames", [True, False])
+def test_get_cabinets_from_args(with_topology,
+                                set_num_cabinets,
+                                set_num_frames):
 	parser = ArgumentParser()
+	if with_topology:
+		arguments.add_topology_args(parser)
 	arguments.add_cabinet_args(parser)
+	
+	unique_copy = unique.copy()
+	del unique_copy["num_cabinets"]
 	
 	# Construct an argument string to set all possible arguments
 	argstring = " ".join("--{} {}".format(name.replace("_", "-"),
 	                                      " ".join(map(str, vals))
 	                                      if isinstance(vals, tuple)
 	                                      else str(vals))
-	                     for (name, vals) in iteritems(unique))
+	                     for (name, vals) in iteritems(unique_copy))
+	
+	if with_topology:
+		argstring += " -n 3"
+	if set_num_cabinets:
+		argstring += " --num-cabinets 1"
+	if set_num_frames:
+		argstring += " --num-frames 1"
 	
 	args = parser.parse_args(argstring.split())
-	cabinet = arguments.get_cabinets_from_args(parser, args)
+	cabinet, num_frames = arguments.get_cabinets_from_args(parser, args)
 	
 	# Check all arguments propagated through to the cabinet
-	for name, value in iteritems(unique):
+	for name, value in iteritems(unique_copy):
 		if name in board_wire_offset_fields:
 			cabinet.board_wire_offset[board_wire_offset_fields[name]] == value
 		else:
 			assert hasattr(cabinet, name)
 			assert getattr(cabinet, name) == value
+	
+	# Check that the cabinet/frame count is correct
+	if ((not with_topology and not set_num_frames) or
+	    (set_num_cabinets and not set_num_frames)):
+		assert cabinet.num_cabinets == 1
+		assert num_frames == 2
+	else:
+		assert cabinet.num_cabinets == 1
+		assert num_frames == 1
 
 
-def test_get_cabinets_from_args_bad():
-	# Make sure it fails if an impossible parameter combination is given
-	
-	# Invalid since dimensions must be positive
-	argstring = "--board-dimensions -1 -1 -1 "
-	
+@pytest.mark.parametrize("argstring,num_cabinets,num_frames",
+                         [# Test automatic selection
+                          ("-n 3", 1, 1),
+                          ("-n 24", 1, 1),
+                          ("-t 1 1", 1, 1),
+                          ("-t 2 4", 1, 1),
+                          ("-t 3 4", 1, 2),
+                          ("-n 27", 1, 2),
+                          ("-n 120", 1, 5),
+                          ("-n 123", 2, 5),
+                          ("-n 1200", 10, 5),
+                          # Test manual selection
+                          ("-n 3 --num-frames 1", 1, 1),
+                          ("-n 3 --num-frames 2", 1, 2),
+                          ("-n 3 --num-frames 5", 1, 5),
+                          ("-n 3 --num-cabinets 1", 1, 5),
+                          ("-n 3 --num-cabinets 2", 2, 5),
+                          ("-n 3 --num-cabinets 2 --num-frames 5", 2, 5),
+                         ])
+def test_get_cabinets_from_args_num_cabinets_num_frames(argstring,
+                                                        num_cabinets,
+                                                        num_frames):
+	# Ensure that the number of frames/cabinets required is worked out correctly.
 	parser = ArgumentParser()
+	arguments.add_topology_args(parser)
+	arguments.add_cabinet_args(parser)
+	
+	args = parser.parse_args(argstring.split())
+	cabinet, actual_num_frames =\
+		arguments.get_cabinets_from_args(parser, args)
+	actual_num_cabinets = cabinet.num_cabinets
+	
+	assert actual_num_cabinets == num_cabinets
+	assert actual_num_frames == num_frames
+
+
+@pytest.mark.parametrize("argstring",
+                         [# Make sure cabinet value validation failure causes a
+                          # parser error rather than letting its exception
+                          # trickle out.
+                          "-n 3 --board-dimensions -1 -1 -1 ",
+                          # Can't set num-frames to anything but the number of
+                          # frames per cabinet when more than one cabinet
+                          # present.
+                          "-n 3 --num-cabinets 2 --num-frames 3",
+                          # Can't set num-frames to anything larger than the
+                          # number of frames per cabinet.
+                          "-n 3 --num-frames 7",
+                          "-n 3 --num-cabinets 1 --num-frames 7",
+                          # Can't suggest too few frames/cabinets
+                          "-n 25 --num-frames 1",
+                          "-n 121 --num-cabinets 1",
+                         ])
+def test_get_cabinets_from_args_bad(argstring):
+	parser = ArgumentParser()
+	arguments.add_topology_args(parser)
 	arguments.add_cabinet_args(parser)
 	
 	with pytest.raises(SystemExit):
 		args = parser.parse_args(argstring.split())
 		cabinet = arguments.get_cabinets_from_args(parser, args)
-
-
-@pytest.mark.parametrize("argstring,cabinets_frames",
-                         [# Automatic sizing should work as usual
-                          ("-n 3", (1, 1)),
-                          ("-n 24", (1, 1)),
-                          ("-n 48", (1, 2)),
-                          ("-n 120", (1, 5)),
-                          ("-n 1200", (10, 5)),
-                          ("-t 1 1", (1, 1)),
-                          ("-t 4 2", (1, 1)),
-                          ("-t 4 4", (1, 2)),
-                          ("-t 5 8", (1, 5)),
-                          ("-t 20 20", (10, 5)),
-                          # Manual sizing should work
-                          ("-n 120 -c 1", (1, 5)),
-                          ("-n 120 -c 2", (2, 5)),
-                          ("-n 12 -c 1", (1, 5)),
-                          ("-n 12 -c 2", (2, 5)),
-                          ("-n 12 -f 1", (1, 1)),
-                          ("-n 12 -f 2", (1, 2)),
-                         ])
-def test_get_space_from_args(argstring, cabinets_frames):
-	# Make sure the expected number of cabinets and frames are allocated
-	parser = ArgumentParser()
-	arguments.add_topology_args(parser)
-	arguments.add_cabinet_args(parser)
-	arguments.add_space_args(parser)
-	
-	args = parser.parse_args(argstring.split())
-	assert arguments.get_space_from_args(parser, args) == cabinets_frames
-
-
-@pytest.mark.parametrize("argstring",
-                         [# Specifying both cabinets and frames should fail,
-                          # even if the numbers are vaild.
-                          "-n 9 -c 10 -f 1",
-                          "-n 9 -c 10 -f 5",
-                          # Suggesting less cabinets or frames than needed
-                          # should fail.
-                          "-n 3 -f 0",
-                          "-n 3 -c 0",
-                          "-n 48 -f 1",
-                          "-n 240 -f 5",
-                          "-n 240 -c 1",
-                          # Suggesting more frames than fit in a rack should
-                          # fail.
-                          "-n 240 -f 10",
-                         ])
-def test_get_space_from_args_bad(argstring):
-	# Make sure bad arguments fail to validate
-	parser = ArgumentParser()
-	arguments.add_topology_args(parser)
-	arguments.add_cabinet_args(parser)
-	arguments.add_space_args(parser)
-	
-	with pytest.raises(SystemExit):
-		args = parser.parse_args(argstring.split())
-		arguments.get_space_from_args(parser, args)
 
 
 @pytest.mark.parametrize("argstring,expectation",
