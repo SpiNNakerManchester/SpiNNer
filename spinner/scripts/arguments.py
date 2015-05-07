@@ -104,12 +104,12 @@ def add_cabinet_args(parser):
 	                         default=(0.01524, 0.233, 0.240),
 	                         help="physical board dimensions in meters (default: "
 	                              "%(default)s)")
-	for direction, default in [("south-west", (0.005, 0.013, 0.0)),
-	                           ("north-east", (0.005, 0.031, 0.0)),
-	                           ("east",       (0.005, 0.049, 0.0)),
-	                           ("west",       (0.005, 0.067, 0.0)),
-	                           ("north",      (0.005, 0.085, 0.0)),
-	                           ("south",      (0.005, 0.103, 0.0))]:
+	for direction, default in [("south-west", (0.008, 0.013, 0.0)),
+	                           ("north-east", (0.008, 0.031, 0.0)),
+	                           ("east",       (0.008, 0.049, 0.0)),
+	                           ("west",       (0.008, 0.067, 0.0)),
+	                           ("north",      (0.008, 0.085, 0.0)),
+	                           ("south",      (0.008, 0.103, 0.0))]:
 		board_group.add_argument("--board-wire-offset-{}".format(direction),
 		                         type=float, nargs=3, default=default,
 		                         metavar=("X", "Y", "Z"),
