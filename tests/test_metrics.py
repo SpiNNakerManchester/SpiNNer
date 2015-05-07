@@ -80,6 +80,31 @@ def test_wire_lengths():
 	])
 
 
+def test_wire_length_histogram():
+	# Test with automatic binning
+	test_case = sum([[n+1]*(n+1) for n in range(10)], [])
+	
+	# Automatically bin
+	assert metrics.wire_length_histogram(test_case, 10) == [  # pragma: no branch
+		(float(n), float(n+1), n+1) for n in range(10)
+	]
+	
+	# Single bin
+	assert metrics.wire_length_histogram(test_case, 1) == [
+		(0.0, 10.0, len(test_case))
+	]
+	
+	# Manual binning
+	assert metrics.wire_length_histogram(test_case, [10,5]) == [  # pragma: no branch
+		(0.0, 5.0, len([v for v in test_case if v <= 5])),
+		(5.0, 10.0, len([v for v in test_case if 5 < v <= 10])),
+	]
+	
+	# Fail if bins not sufficient
+	with pytest.raises(ValueError):
+		metrics.wire_length_histogram(test_case, [1])
+
+
 def test_dimensions():
 	o0 = "o0"
 	o1 = "o1"

@@ -7,6 +7,8 @@ and their wiring.
 
 import math
 
+from six import integer_types
+
 from spinner import coordinates
 
 
@@ -53,6 +55,53 @@ def wire_lengths(boards, direction, board_wire_offset=None):
 		yield wire_length(boards, board, direction, board_wire_offset)
 
 
+def wire_length_histogram(wire_lengths, bins=10):
+	"""
+	Generate a histogram of wire lengths.
+	
+	wire_lengths is an iterable of wire length values (e.g. from wire_lengths).
+	
+	bins is either an int (giving the total number of bins) or a list of bin upper
+	bounds. If the last bin supplied is smaller than the longest wire length, a
+	ValueError will be raised.
+	
+	Returns a list [(min, max, count), ...] where each entry indicates the count
+	of wire lengths min < x <= max.
+	"""
+	wire_lengths = sorted(wire_lengths)
+	max_wire_length = wire_lengths[-1]
+	
+	# Auto-generate bins if required
+	if isinstance(bins, integer_types):
+		bins = [((n+1)/float(bins)) * float(max_wire_length)
+		        for n in range(bins)]
+	else:
+		bins = sorted(map(float, bins))
+	
+	# Check bins are sufficient
+	if bins[-1] < max_wire_length:
+		raise ValueError(
+			"largest wire length, {}, is larger than largest bin, {}".format(
+				max_wire_length, bins[-1]))
+	
+	# Bin the wire lengths
+	last_bin = 0.0
+	out = []
+	for bin in bins:
+		count = 0
+		while wire_lengths:
+			if wire_lengths[0] <= bin:
+				# Add to bin
+				wire_lengths.pop(0)
+				count += 1
+			else:
+				# Wire length is too large for this bin
+				break
+		out.append((last_bin, bin, count))
+		last_bin = bin
+	
+	return out
+
 def dimensions(boards):
 	"""
 	Return the width and height of the space occupied by the supplied set of
@@ -93,3 +142,4 @@ def count_wires(boards, direction):
 			between_boards += 1
 	
 	return (between_cabinets, between_frames, between_boards)
+
