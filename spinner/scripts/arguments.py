@@ -269,7 +269,7 @@ def add_histogram_args(parser):
 	                                      "lengths will be used to construct the "
 	                                      "histogram of wire lengths)")
 	histogram_mut_group.add_argument("--histogram-bins", "-H", type=int, metavar="N",
-	                                 default=10,
+	                                 default=5,
 	                                 help="number of bins to pack wire lengths into "
 	                                      "in the histogram of wire lengths (default: "
 	                                      "%(default)s)")

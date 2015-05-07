@@ -17,6 +17,7 @@ setup(
     entry_points={
         "console_scripts": [
             "spinner-topology-stats = spinner.scripts.topology_stats:main",
+            "spinner-wiring-stats = spinner.scripts.wiring_stats:main",
         ],
     }
 )

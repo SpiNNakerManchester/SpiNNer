@@ -179,9 +179,7 @@ def test_get_space_from_args_bad(argstring):
 
 
 @pytest.mark.parametrize("argstring,expectation",
-                         [# Defaults
-                          ("", 10),
-                          # Numbers of bins
+                         [# Numbers of bins
                           ("-H 1", 1),
                           ("-H 99", 99),
                           # Sets of wire lengths
