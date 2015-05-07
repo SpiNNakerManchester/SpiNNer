@@ -257,6 +257,61 @@ def get_space_from_args(parser, args):
 	return (num_cabinets, num_frames)
 
 
+def add_histogram_args(parser):
+	"""Add arguments for specifying the histogram of wire lengths (i.e.
+	cabinets/frames) available for a given system."""
+	histogram_group = parser.add_argument_group("available wire lengths")
+	histogram_mut_group = histogram_group.add_mutually_exclusive_group()
+	histogram_mut_group.add_argument("--wire-length", "-l", type=float, metavar="L",
+	                                 action="append", nargs="+",
+	                                 help="specify one or more available wire "
+	                                      "lengths in meters (if supplied, these "
+	                                      "lengths will be used to construct the "
+	                                      "histogram of wire lengths)")
+	histogram_mut_group.add_argument("--histogram-bins", "-H", type=int, metavar="N",
+	                                 default=10,
+	                                 help="number of bins to pack wire lengths into "
+	                                      "in the histogram of wire lengths (default: "
+	                                      "%(default)s)")
+
+
+def get_histogram_from_args(parser, args):
+	"""To be used with add_histogram_args.
+	
+	Check that the supplied arguments are valid and then return either the number
+	of histogram bins or the set of bin boundaries.
+	
+	Returns
+	-------
+	int or [float, ...]
+		If a single int, gives the number of bins to use in the wire-length
+		histogram.
+		
+		If a list of floats, gives the upper-boundary of each bin to create (in
+		ascending order).
+	"""
+	if args.wire_length is None:
+		# Number of bins supplied
+		if args.histogram_bins < 1:
+			parser.error("--histogram-bins must be at least 1")
+		return args.histogram_bins
+	else:
+		# List of wire-lengths supplied
+		
+		# Flatten list of lists
+		args.wire_length = sum(args.wire_length, [])
+		
+		# Check signs and for duplicates
+		seen = set()
+		for wire_length in args.wire_length:
+			if wire_length <= 0.0:
+				parser.error("--wire-lengths must be positive and non-zero")
+			if wire_length in seen:
+				parser.error("wire length {} defined multiple times".format(wire_length))
+			seen.add(wire_length)
+		
+		return sorted(args.wire_length)
+
 
 if __name__=="__main__":  # pragma: no cover
 	# This file when run as a script acts as a quick proof-of-concept of all
@@ -266,8 +321,10 @@ if __name__=="__main__":  # pragma: no cover
 	add_topology_args(parser)
 	add_space_args(parser)
 	add_cabinet_args(parser)
+	add_histogram_args(parser)
 	
 	args = parser.parse_args()
 	print(get_topology_from_args(parser, args))
 	print(get_space_from_args(parser, args))
 	print(get_cabinets_from_args(parser, args))
+	print(get_histogram_from_args(parser, args))

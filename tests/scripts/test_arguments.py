@@ -177,3 +177,67 @@ def test_get_space_from_args_bad(argstring):
 		args = parser.parse_args(argstring.split())
 		arguments.get_space_from_args(parser, args)
 
+
+@pytest.mark.parametrize("argstring,expectation",
+                         [# Defaults
+                          ("", 10),
+                          # Numbers of bins
+                          ("-H 1", 1),
+                          ("-H 99", 99),
+                          # Sets of wire lengths
+                          ("-l 1", [1.0]),
+                          ("-l 1 2 3", [1.0, 2.0, 3.0]),
+                          ("-l 3 2 1", [1.0, 2.0, 3.0]),
+                          ("-l 1 -l 2 -l 3", [1.0, 2.0, 3.0]),
+                          ("-l 3 -l 2 -l 1", [1.0, 2.0, 3.0]),
+                          ("-l 3 -l 2 1", [1.0, 2.0, 3.0]),
+                         ])
+def test_get_histogram_from_args(argstring, expectation):
+	parser = ArgumentParser()
+	arguments.add_histogram_args(parser)
+	
+	args = parser.parse_args(argstring.split())
+	assert arguments.get_histogram_from_args(parser, args) == expectation
+
+
+
+@pytest.mark.parametrize("argstring",
+                         [# Specifying lengths at the same time as number of
+                          # bins
+                          "-H 100 -l 1",
+                          "-H 100 -l 1 -l 2",
+                          # Supplying a zero/negative/fractional number of bins
+                          "-H 0",
+                          "-H -1",
+                          "-H -2",
+                          "-H 0.5",
+                          # Supplying an empty set of wire lengths
+                          "-l",
+                          # Supplying some zero/negative wire lengths
+                          "-l 0",  # Alone
+                          "-l 0.0",
+                          "-l -1",
+                          "-l -1.0",
+                          "-l 1 0 2",  # With other values
+                          "-l 1 0.0 2",
+                          "-l 1 -1 2",
+                          "-l 1 -1.0 2",
+                          "-l 3 -l 1 0 2",  # With multiple -l options
+                          "-l 3 -l 1 0.0 2",
+                          "-l 3 -l 1 -1 2",
+                          "-l 3 -l 1 -1.0 2",
+                          # Supplying duplicate lengths
+                          "-l 1 1",
+                          "-l 1 2 1",
+                          "-l 1 -l 1",
+                          "-l 1 2 -l 1 3",
+                         ])
+def test_get_histogram_from_args_bad(argstring):
+	# Make sure bad arguments fail to validate
+	parser = ArgumentParser()
+	arguments.add_histogram_args(parser)
+	
+	with pytest.raises(SystemExit):
+		args = parser.parse_args(argstring.split())
+		arguments.get_histogram_from_args(parser, args)
+
