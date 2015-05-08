@@ -55,9 +55,12 @@ def test_unsupported_3D_connectors():
 		MachineDiagram(c)
 
 
-@pytest.mark.parametrize("add_wires", [True, False])
-@pytest.mark.parametrize("add_highlights", [True, False])
-def test_draw(add_wires, add_highlights):
+@pytest.mark.parametrize("add_wires,add_labels,add_highlights",
+                         [(False, False, False),
+                          (True, False, False),
+                          (False, True, False),
+                          (False, False, True)])
+def test_draw(add_wires, add_labels, add_highlights):
 	"""
 	A very incomplete test of the drawing functions but enough to see that nothing
 	outright crashes.
@@ -70,11 +73,17 @@ def test_draw(add_wires, add_highlights):
 		md.add_highlight(1, 2, 3)
 		md.add_highlight(1, 2, 3, Direction.north)
 	
+	if add_labels:
+		md.add_label("one", 0)
+		md.add_label("two", 0, 1)
+		md.add_label("three", 0, 1, 2)
+	
 	if add_wires:
 		md.add_wire((0,0,0,Direction.north), (1,2,3,Direction.north))
 		md.add_wire((1,2,3,Direction.west), (1,2,3,Direction.east))
 	
 	ctx = Mock()
+	ctx.text_extents.return_value = [1.0]*6
 	
 	md.draw(ctx, 1.0, 1.0)
 	
@@ -122,6 +131,14 @@ def test_draw(add_wires, add_highlights):
 		c.frames_per_cabinet *
 		c.boards_per_frame) + int(add_highlights)
 	
+	# Check that the correct labels were drawn
+	labels_drawn = set()
+	for show_text_mock in ctx.show_text.mock_calls:
+		labels_drawn.add(show_text_mock[1][0])
+	if add_labels:
+		assert labels_drawn == set("one two three".split())
+	else:
+		assert len(labels_drawn) == 0
 	
 	# Check that the correct wires were drawn
 	lines_drawn = set()

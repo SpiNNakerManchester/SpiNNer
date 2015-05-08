@@ -4,6 +4,8 @@
 A module which generates diagrams (using Cairo) of cabinetised systems.
 """
 
+from math import pi
+
 import cairocffi as cairo
 
 from six import itervalues, integer_types
@@ -70,6 +72,10 @@ class MachineDiagram(object):
 		# Set of highlight rectangles to draw into the image before wires are added.
 		# A list [(x,y, w,h, rgba, width), ...].
 		self.highlights = []
+		
+		# Set of labels to add to the diagram.
+		# A list [(str, x,y, angle, size, alignment, rgba), ...]
+		self.labels = []
 	
 	
 	def add_wire( self
@@ -112,6 +118,53 @@ class MachineDiagram(object):
 			w, h, _ = self.cabinet.cabinet_dimensions
 	
 		self.highlights.append((x,y, w,h, rgba, width))
+	
+	
+	def add_label(self, label, cabinet, frame=None, board=None,
+	              rgba=(0.0,0.0,0.0,1.0)):
+		"""
+		Add a textual label to a specific cabinet/frame/board/socket.
+		"""
+		if board is not None:
+			assert frame is not None
+			# Render text going bottom-to-top in the center of the board
+			x, y, _ = self.cabinet.get_position(cabinet, frame, board)
+			w, h, _ = self.cabinet.board_dimensions
+			
+			alignment = 0.0
+			size = w * 0.8
+			x += w/2.0
+			y += h*0.99
+			angle = -pi/2.0
+		elif frame is not None:
+			# Render text going left-to-right in the space at the left-hand-side of
+			# the frame before the boards start.
+			
+			x, y, _ = self.cabinet.get_position(cabinet, frame)
+			w = self.cabinet.frame_board_offset.x
+			h = self.cabinet.frame_dimensions.y
+			
+			alignment = 0.5
+			size = w * 0.8
+			x += w/2.0
+			y += h/2.0
+			angle = 0.0
+		else:
+			# Render text going left-to-right in the space at the bottom of each
+			# cabinet.
+			x = self.cabinet.get_position(cabinet).x
+			y = self.cabinet.get_position_opposite(
+				cabinet, self.cabinet.frames_per_cabinet-1).y
+			w = self.cabinet.cabinet_dimensions.x
+			h = self.cabinet.get_position_opposite(cabinet).y - y
+			
+			alignment = 0.5
+			size = h * 0.8
+			x += w/2.0
+			y += h/2.0
+			angle = 0.0
+	
+		self.labels.append((str(label), x,y, angle, size, alignment, rgba))
 	
 	
 	@property
@@ -203,9 +256,35 @@ class MachineDiagram(object):
 			self._draw_cabinet(ctx, cabinet_num, frames, boards)
 	
 	
+	def _draw_labels(self, ctx):
+		"""
+		Draw any labels rectangles specified using the add_label method.
+		"""
+		for string, x,y, angle, size, alignment, rgba in self.labels:
+			ctx.save()
+			
+			# Set font properties
+			ctx.select_font_face("Sans")
+			ctx.set_source_rgba(*rgba)
+			ctx.set_font_size(size)
+			
+			# Move into position
+			ctx.move_to(x, y)
+			ctx.rotate(angle)
+			
+			# Center the text at the current position
+			x,y, w,h, _w,_h = ctx.text_extents(string)
+			ctx.rel_move_to(-x -w*alignment, h*0.5)
+			
+			# Render the string
+			ctx.show_text(string)
+			
+			ctx.restore()
+	
+	
 	def _draw_highlights(self, ctx):
 		"""
-		Draw any highlight rectangles specified using the highlight_* methods.
+		Draw any highlight rectangles specified using the add_highlight method.
 		"""
 		for x,y, w,h, rgba, width in self.highlights:
 			ctx.rectangle(x,y, w,h)
@@ -298,10 +377,10 @@ class MachineDiagram(object):
 		else:
 			self._draw_system(ctx)
 		
-		# Draw the wires
-		self._draw_wires(ctx)
 		
-		# Draw borders around highlighted areas
+		# Draw extra details
+		self._draw_labels(ctx)
+		self._draw_wires(ctx)
 		self._draw_highlights(ctx)
 		
 		ctx.restore()
