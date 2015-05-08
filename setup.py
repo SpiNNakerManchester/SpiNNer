@@ -11,7 +11,7 @@ setup(
     license="GPLv2",
 
     # Requirements
-    install_requires=["six", "enum34"],
+    install_requires=["six", "enum34", "cairocffi"],
 
     # Scripts
     entry_points={

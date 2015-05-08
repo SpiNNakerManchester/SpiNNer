@@ -7,10 +7,10 @@ from spinner.topology import Direction
 from spinner.cabinet import Cabinet
 
 from example_cabinet_params import \
-	board_wire_offset_fields, unique, exact, within
+	board_wire_offset_fields, unique, exact, within, real
 
 
-@pytest.mark.parametrize("values", [unique, exact, within])
+@pytest.mark.parametrize("values", [unique, exact, within, real])
 def test_possible(values):
 	# Test that all attributes given as arguments get set correctly and that all
 	# supplied situations do not get rejected as impossible.
