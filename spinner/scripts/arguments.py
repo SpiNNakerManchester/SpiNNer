@@ -1,8 +1,74 @@
 """Standard argument parsing routines for SpiNNer scripts."""
 
+import argparse
+
+from spinner.topology import Direction
+
 from spinner.utils import ideal_system_size, folded_torus, min_num_cabinets
 
 from spinner.cabinet import Cabinet
+
+
+def CabinetAction(num_levels=4, append=False):
+	""""An argparse Action which accepts cabinet/frame/board/link references."""
+	assert 1 <= num_levels <= 4
+	
+	class _CabinetAction(argparse.Action):
+		
+		"""Names of directions for command line arguments."""
+		DIRECTION_NAMES = {d.name.replace("_", "-"): d for d in Direction}
+		
+		def __init__(self, *args, **kwargs):
+			kwargs.setdefault("type", str)
+			kwargs.setdefault("nargs", "+")
+			
+			metavar = ""
+			if num_levels >= 4:
+				metavar = " [{{{}}}{}]".format(",".join(self.DIRECTION_NAMES), metavar)
+			if num_levels >= 3:
+				metavar = " [BOARD{}]".format(metavar)
+			if num_levels >= 2:
+				metavar = " [FRAME{}]".format(metavar)
+			metavar = "CABINET{}".format(metavar)
+			kwargs.setdefault("metavar", (metavar, ""))
+			
+			argparse.Action.__init__(self, *args, **kwargs)
+		
+		def __call__(self, parser, namespace, values, option_string=None):
+			# Fail with too many/few arguments
+			if not 1 <= len(values) <= num_levels:
+				parser.error("{} expects between 1 and {} values".format(
+					option_string, num_levels))
+			
+			# Check cabinet/frame/board are integer types (and cast to int as
+			# appropriate)
+			for int_val, name in enumerate("CABINET FRAME BOARD".split()):
+				if len(values) > int_val:
+					if not values[int_val].isdigit():
+						parser.error("{} value for {} must be a non-negative integer, not '{}'".format(
+							option_string, name, values[int_val]))
+					else:
+						values[int_val] = int(values[int_val])
+			
+			# Convert direction into a Direction
+			if len(values) >= 4:
+				# Typecheck
+				if not values[3] in self.DIRECTION_NAMES:
+					parser.error("{} value for link must be one of {{{}}}, not {}".format(
+						option_string, ",".join(self.DIRECTION_NAMES), values[3]))
+				
+				values[3] = self.DIRECTION_NAMES[values[3]]
+			
+			values = tuple(values)
+			
+			if append:
+				if getattr(namespace, self.dest) is None:
+					setattr(namespace, self.dest, [])
+				getattr(namespace, self.dest).append(values)
+			else:
+				setattr(namespace, self.dest, values)
+	
+	return _CabinetAction
 
 
 def add_topology_args(parser):
@@ -316,16 +382,95 @@ def get_histogram_from_args(parser, args):
 		return sorted(args.wire_length)
 
 
+def add_image_args(parser):
+	"""Add arguments for specifying output image filenames and dimensions."""
+	image_group = parser.add_argument_group("image file parameters")
+	image_group.add_argument("filename", type=str,
+	                         help="filename to write the output to (.pdf or .png)")
+	image_group.add_argument("width", type=float, nargs="?",
+	                         help="width of the image in mm for PDF and pixels for "
+	                              "PNG (defaults to 280 mm if PDF and 1000 px for PNG)")
+	image_group.add_argument("height", type=float, nargs="?",
+	                         help="height of the image in mm for PDF and pixels for "
+	                              "PNG (if only width is given, output will be at "
+	                              "most width wide and width tall)")
+	
+
+
+def get_image_from_args(parser, args, aspect_ratio=1.0):
+	"""To be used with add_image_args.
+	
+	Check that the supplied arguments are valid and then return the filename, type
+	and dimensions of the image to be created.
+	
+	Parameters
+	----------
+	aspect_ratio : float
+		If the user does not fully specify the image size, what aspect ratio
+		(width/height) should the image defined be?
+	
+	Returns
+	-------
+	output_filename, file_type, image_width, image_height
+	"""
+	output_filename = args.filename
+	
+	# Detect file-type from file-name
+	if args.filename.lower().endswith(".png"):
+		file_type = "png"
+	elif args.filename.lower().endswith(".pdf"):
+		file_type = "pdf"
+	else:
+		parser.error("filename must end in .png or .pdf")
+	
+	# Determine the size of the output image
+	if args.width is None and args.height is None:
+		# Width and height not specified, use default sizes
+		if file_type == "png":
+			args.width = 1000
+		else:  # if file_type == "png":
+			args.width = 280.0
+	
+	if args.width is not None and args.height is None:
+		# Height is not specified, make the longest side as long as width and make
+		# the whole image the same aspect ratio as the part of the system we're
+		# focusing on
+		if aspect_ratio < 1.0:
+			# Tall image
+			args.height = args.width
+			args.width = args.height * aspect_ratio
+		else:
+			# Wide image
+			args.height = args.width / aspect_ratio
+	
+	# Clamp to integers if PNG
+	if file_type == "png":
+		args.width = int(args.width)
+		args.height = int(args.height)
+	
+	image_width = args.width
+	image_height = args.height
+	
+	# Image dimensions must be non-zero and positive
+	if image_width <= 0 or image_height <= 0:
+		parser.error("image dimensions must be greater than 0")
+	
+	return (output_filename, file_type, image_width, image_height)
+	
+
+
 if __name__=="__main__":  # pragma: no cover
 	# This file when run as a script acts as a quick proof-of-concept of all
 	# argument parsing capabilities
 	import argparse
 	parser = argparse.ArgumentParser()
+	add_image_args(parser)
 	add_topology_args(parser)
 	add_cabinet_args(parser)
 	add_histogram_args(parser)
 	
 	args = parser.parse_args()
+	print(get_image_from_args(parser, args, 0.5))
 	print(get_topology_from_args(parser, args))
 	print(get_cabinets_from_args(parser, args))
 	print(get_histogram_from_args(parser, args))
