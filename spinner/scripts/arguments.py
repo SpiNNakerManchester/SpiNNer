@@ -101,7 +101,7 @@ def add_cabinet_args(parser):
 	board_group = parser.add_argument_group("board physical dimensions")
 	board_group.add_argument("--board-dimensions", type=float, nargs=3,
 	                         metavar=("W", "H", "D"),
-	                         default=(0.01524, 0.233, 0.240),
+	                         default=(0.014, 0.233, 0.240),
 	                         help="physical board dimensions in meters (default: "
 	                              "%(default)s)")
 	for direction, default in [("south-west", (0.008, 0.013, 0.0)),
@@ -117,7 +117,7 @@ def add_cabinet_args(parser):
 		                              "board left-top-front corner in meters "
 		                              "(default: %(default)s)".format(direction))
 	board_group.add_argument("--inter-board-spacing", type=float,
-	                         default=0.0, metavar=("S"),
+	                         default=0.00124, metavar=("S"),
 	                         help="physical spacing between each board in a "
 	                              "frame in meters (default: %(default)s)")
 	

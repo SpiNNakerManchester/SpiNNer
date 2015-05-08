@@ -72,14 +72,14 @@ within = {"board_dimensions": (1.0, 1.0, 1.0),
           "num_cabinets": 2}
 
 # A set of realistic values
-real = {"board_dimensions": (0.01524, 0.233, 0.240),
+real = {"board_dimensions": (0.014, 0.233, 0.240),
         "board_wire_offset_south_west": (0.008, 0.013, 0.0),
         "board_wire_offset_north_east": (0.008, 0.031, 0.0),
         "board_wire_offset_east": (0.008, 0.049, 0.0),
         "board_wire_offset_west": (0.008, 0.067, 0.0),
         "board_wire_offset_north": (0.008, 0.085, 0.0),
         "board_wire_offset_south": (0.008, 0.103, 0.0),
-        "inter_board_spacing": 0.0,
+        "inter_board_spacing": 0.00124,
         "boards_per_frame": 24,
         "frame_dimensions": (0.430, 0.266, 0.250),
         "frame_board_offset": (0.06, 0.017, 0.0),
