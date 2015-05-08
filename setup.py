@@ -18,6 +18,7 @@ setup(
         "console_scripts": [
             "spinner-topology-stats = spinner.scripts.topology_stats:main",
             "spinner-wiring-stats = spinner.scripts.wiring_stats:main",
+            "spinner-wiring-diagram = spinner.scripts.wiring_diagram:main",
         ],
     }
 )
