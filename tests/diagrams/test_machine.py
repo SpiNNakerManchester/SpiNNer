@@ -247,7 +247,6 @@ def test_focus(w, h, args, offset, dimensions):
 	assert approx_equal(x2, w) or approx_equal(y2, h)
 
 
-@pytest.mark.parametrize("hide_unfocused", [False, True])
 @pytest.mark.parametrize(
 	"args",
 	[[],
@@ -261,29 +260,23 @@ def test_focus(w, h, args, offset, dimensions):
 	 [1, 2, 1],
 	 [1, 2, slice(2, 4)],
 	])
-def test_hide_unfocused(args, hide_unfocused):
+def test_masks(args):
 	# Build the expected set of boards/frames/cabinets to render
 	expected_cabinets = set()
 	expected_frames = set()
 	expected_boards = set()
-	if hide_unfocused:
-		args_padded = args + [None, None, None]
-		cabinets = normalise_slice(args_padded[0], c.num_cabinets)
-		frames = normalise_slice(args_padded[1], c.frames_per_cabinet)
-		boards = normalise_slice(args_padded[2], c.boards_per_frame)
-		for cabinet in range(cabinets.start, cabinets.stop):
-			expected_cabinets.add(cabinet)
-			for frame in range(frames.start, frames.stop):
-				expected_frames.add((cabinet, frame))
-				for board in range(boards.start, boards.stop):
-					expected_boards.add((cabinet, frame, board))
-	else:
-		for cabinet in range(c.num_cabinets):
-			expected_cabinets.add(cabinet)
-			for frame in range(c.frames_per_cabinet):
-				expected_frames.add((cabinet, frame))
-				for board in range(c.boards_per_frame):
-					expected_boards.add((cabinet, frame, board))
+	
+	args_padded = args + [None, None, None]
+	cabinets = normalise_slice(args_padded[0], c.num_cabinets)
+	frames = normalise_slice(args_padded[1], c.frames_per_cabinet)
+	boards = normalise_slice(args_padded[2], c.boards_per_frame)
+	
+	for cabinet in range(cabinets.start, cabinets.stop):
+		expected_cabinets.add(cabinet)
+		for frame in range(frames.start, frames.stop):
+			expected_frames.add((cabinet, frame))
+			for board in range(boards.start, boards.stop):
+				expected_boards.add((cabinet, frame, board))
 	
 	# From this expected set, build the expected set of rectangles to draw
 	expected_rectangles = set()
@@ -303,7 +296,7 @@ def test_hide_unfocused(args, hide_unfocused):
 	md = MachineDiagram(c)
 	
 	ctx = Mock()
-	md.draw(ctx, 1, 1, *args, hide_unfocused=hide_unfocused)
+	md.draw(ctx, 1, 1, None, None, None, *args)
 	
 	expected_sizes = set([c.cabinet_dimensions[:2],
 	                      c.frame_dimensions[:2],

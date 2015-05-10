@@ -307,8 +307,8 @@ class MachineDiagram(object):
 	
 	
 	def draw(self, ctx, max_width, max_height,
-	         cabinet = None, frame = None, board = None,
-	         hide_unfocused=False):
+	         cabinet=None, frame=None, board=None,
+	         cabinet_mask=None, frame_mask=None, board_mask=None):
 		"""
 		Draw the diagram onto the supplied context at the sizes defined. Optionally
 		zoom the diagram to a specific cabinet, frame or board.
@@ -321,8 +321,9 @@ class MachineDiagram(object):
 		cabinet, frame and board define a desired part of the system to focus on.
 		The last to be specified may be an integer or a slice.
 		
-		hide_unfocused determines whether unfocused boards/frames/cabinets should be
-		drawn or not.
+		the cabinet_mask, frame_mask and board_mask specify the ranges of cabinets,
+		frames and boards which should actually be drawn. (Note: wires, highlights
+		and labels going to any boards outside these ranges will still be drawn.)
 		"""
 		ctx.save()
 		
@@ -372,10 +373,10 @@ class MachineDiagram(object):
 		ctx.translate(-focus_x, -focus_y)
 		
 		# Draw the specified subset of the system
-		if hide_unfocused:
-			self._draw_system(ctx, cabinets, frames, boards)
-		else:
-			self._draw_system(ctx)
+		self._draw_system(ctx,
+		                  normalise_slice(cabinet_mask, self.cabinet.num_cabinets),
+		                  normalise_slice(frame_mask, self.cabinet.frames_per_cabinet),
+		                  normalise_slice(board_mask, self.cabinet.boards_per_frame))
 		
 		
 		# Draw extra details

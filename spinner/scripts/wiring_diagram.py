@@ -112,9 +112,9 @@ def main(args=None):
 	
 	# Add wires
 	wire_thickness_m = {
-		"thick" : cabinet.board_dimensions.x / 5,
-		"normal" : cabinet.board_dimensions.x / 10,
-		"thin" : cabinet.board_dimensions.x / 20,
+		"thick" : cabinet.board_dimensions.x / 5.0,
+		"normal" : cabinet.board_dimensions.x / 10.0,
+		"thin" : cabinet.board_dimensions.x / 20.0,
 	}[wire_thickness]
 	b2c = dict(cabinetised_boards)
 	for direction in [Direction.north, Direction.west, Direction.north_east]:
@@ -129,7 +129,7 @@ def main(args=None):
 	Context = {"png": PNGContextManager,
 	           "pdf": PDFContextManager}[file_type]
 	with Context(output_filename, image_width, image_height) as ctx:
-		md.draw(ctx, image_width, image_height, *focus, hide_unfocused=True)
+		md.draw(ctx, image_width, image_height, *(((list(focus) + [None]*3)[:3])*2))
 	
 	return 0
 
