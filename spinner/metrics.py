@@ -24,7 +24,7 @@ def wire_length(boards, board, direction, board_wire_offset=None):
 	direction is a wire direction to measure
 	
 	board_wire_offset is an (optional) dict {direction:offset,...} where the
-	offset of each wire from the right-top-front corner of a board is supplied.
+	offset of each wire from the left-top-front corner of a board is supplied.
 	This structure can be attained from a spinner.cabinet.Cabinet object.
 	"""
 	b2c = dict(boards)
