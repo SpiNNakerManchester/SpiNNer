@@ -287,6 +287,7 @@ def test_get_cabinets_from_args_bad(argstring):
                           ("-H 99", 99),
                           # Sets of wire lengths
                           ("-l 1", [1.0]),
+                          ("-l 1.5", [1.5]),
                           ("-l 1 2 3", [1.0, 2.0, 3.0]),
                           ("-l 3 2 1", [1.0, 2.0, 3.0]),
                           ("-l 1 -l 2 -l 3", [1.0, 2.0, 3.0]),
@@ -343,6 +344,58 @@ def test_get_histogram_from_args_bad(argstring):
 		arguments.get_histogram_from_args(parser, args)
 
 
+@pytest.mark.parametrize("argstring,expectation",
+                         [("-l 1", [1.0]),
+                          ("-l 1.5", [1.5]),
+                          ("-l 1 2 3", [1.0, 2.0, 3.0]),
+                          ("-l 3 2 1", [1.0, 2.0, 3.0]),
+                          ("-l 1 -l 2 -l 3", [1.0, 2.0, 3.0]),
+                          ("-l 3 -l 2 -l 1", [1.0, 2.0, 3.0]),
+                          ("-l 3 -l 2 1", [1.0, 2.0, 3.0]),
+                         ])
+def test_get_wire_lengths_from_args(argstring, expectation):
+	parser = ArgumentParser()
+	arguments.add_wire_length_args(parser)
+	
+	args = parser.parse_args(argstring.split())
+	assert arguments.get_wire_lengths_from_args(parser, args) == expectation
+
+
+
+@pytest.mark.parametrize("argstring",
+                         [# Supplying no wire lengths
+                          "",
+                          # Supplying an empty set of wire lengths
+                          "-l",
+                          # Supplying some zero/negative wire lengths
+                          "-l 0",  # Alone
+                          "-l 0.0",
+                          "-l -1",
+                          "-l -1.0",
+                          "-l 1 0 2",  # With other values
+                          "-l 1 0.0 2",
+                          "-l 1 -1 2",
+                          "-l 1 -1.0 2",
+                          "-l 3 -l 1 0 2",  # With multiple -l options
+                          "-l 3 -l 1 0.0 2",
+                          "-l 3 -l 1 -1 2",
+                          "-l 3 -l 1 -1.0 2",
+                          # Supplying duplicate lengths
+                          "-l 1 1",
+                          "-l 1 2 1",
+                          "-l 1 -l 1",
+                          "-l 1 2 -l 1 3",
+                         ])
+def test_get_wire_lengths_from_args_bad(argstring):
+	# Make sure bad arguments fail to validate
+	parser = ArgumentParser()
+	arguments.add_wire_length_args(parser)
+	
+	with pytest.raises(SystemExit):
+		args = parser.parse_args(argstring.split())
+		arguments.get_wire_lengths_from_args(parser, args)
+
+
 @pytest.mark.parametrize("argstring,aspect_ratio,to_check",
                          [# Passes through the filename...
                           ("/super/happy/smiley.png", 0.5,
@@ -387,7 +440,7 @@ def test_get_histogram_from_args_bad(argstring):
                           ("out.pdf", 1.5, {"image_width":280.0,
                                              "aspect_ratio":1.5}),
                          ])
-def test_get_arguments(argstring, aspect_ratio, to_check):
+def test_get_image_args(argstring, aspect_ratio, to_check):
 	parser = ArgumentParser()
 	arguments.add_image_args(parser)
 	
@@ -435,10 +488,49 @@ def test_get_arguments(argstring, aspect_ratio, to_check):
                           "out.pdf 1 0",
                           "out.pdf 0 1",
                          ])
-def test_get_arguments_bad(argstring):
+def test_get_image_args_bad(argstring):
 	parser = ArgumentParser()
 	arguments.add_image_args(parser)
 	
 	with pytest.raises(SystemExit):
 		args = parser.parse_args(argstring.split())
 		arguments.get_image_from_args(parser, args)
+
+
+@pytest.mark.parametrize("argstring,expectation",
+                         [("", {}),
+                          ("--bmp 1 2 three", {(1, 2): "three"}),
+                          ("--bmp 1 2 three --bmp 4 5 six",
+                           {(1, 2): "three", (4, 5): "six"}),
+                         ])
+def test_get_bmps_from_args(argstring, expectation):
+	parser = ArgumentParser()
+	arguments.add_bmp_args(parser)
+	
+	args = parser.parse_args(argstring.split())
+	assert arguments.get_bmps_from_args(parser, args) == expectation
+
+
+
+@pytest.mark.parametrize("argstring",
+                         [# Supplying wrong number of arguments
+                          "--bmp",
+                          "--bmp 0",
+                          "--bmp 0 0",
+                          # Supplying arguments of the wrong type
+                          "--bmp bad 0 localhost",
+                          "--bmp 0 bad localhost",
+                          # Supplying arguments of the wrong sign
+                          "--bmp -1 0 localhost",
+                          "--bmp 0 -1 localhost",
+                         ])
+def test_get_bmps_from_args_bad(argstring):
+	# Make sure bad arguments fail to validate
+	parser = ArgumentParser()
+	arguments.add_bmp_args(parser)
+	
+	with pytest.raises(SystemExit):
+		args = parser.parse_args(argstring.split())
+		arguments.get_bmps_from_args(parser, args)
+
+

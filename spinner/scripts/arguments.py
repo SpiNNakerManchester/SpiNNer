@@ -2,6 +2,8 @@
 
 import argparse
 
+from six import itervalues
+
 from spinner.topology import Direction
 
 from spinner.utils import ideal_system_size, folded_torus, min_num_cabinets
@@ -366,7 +368,39 @@ def get_histogram_from_args(parser, args):
 		return args.histogram_bins
 	else:
 		# List of wire-lengths supplied
-		
+		return get_wire_lengths_from_args(parser, args)
+
+
+
+
+def add_wire_length_args(parser):
+	"""Add arguments for specifying sets of wire lengths available for a given
+	system."""
+	histogram_group = parser.add_argument_group("available wire lengths")
+	histogram_group.add_argument("--wire-length", "-l", type=float, metavar="L",
+	                             action="append", nargs="+",
+	                             help="specify one or more available wire "
+	                                  "lengths in meters (if supplied, these "
+	                                  "lengths will be used to construct the "
+	                                  "histogram of wire lengths)")
+
+
+def get_wire_lengths_from_args(parser, args):
+	"""To be used with add_wire_length_args.
+	
+	Also used internally by get_histogram_from_args.
+	
+	Check that the supplied arguments are valid and then return the list of wire
+	lengths supplied..
+	
+	Returns
+	-------
+	[float, ...]
+		A list of floats, gives the wire lengths available.
+	"""
+	if args.wire_length is None:
+		parser.error("at least one wire length must be supplied")
+	else:
 		# Flatten list of lists
 		args.wire_length = sum(args.wire_length, [])
 		
@@ -456,7 +490,51 @@ def get_image_from_args(parser, args, aspect_ratio=1.0):
 		parser.error("image dimensions must be greater than 0")
 	
 	return (output_filename, file_type, image_width, image_height)
+
+
+def add_bmp_args(parser):
+	"""Add arguments for specifying a set of BMPs to connect to."""
+	bmp_group = parser.add_argument_group("SpiNNaker BMP connection details")
+	bmp_group.add_argument("--bmp", type=str, nargs=3, action="append",
+	                       metavar=("CABINET", "FRAME", "HOSTNAME"),
+	                       help="specify the hostname of a BMP to use to "
+	                            "communicate with SpiNNaker boards in the given "
+	                            "frame")
+
+
+def get_bmps_from_args(parser, args):
+	"""To be used with add_bmp_args.
 	
+	Check that the supplied arguments are valid and then return a dictionary
+	mapping (cabinet, frame) tuples to hostnames.
+	"""
+	# Special case when no arguments supplied.
+	if args.bmp is None:
+		return {}
+	else:
+		bmp_hostnames = {}
+		
+		for cabinet, frame, hostname in args.bmp:
+			# Check types
+			if not cabinet.isdigit():
+				parser.error("--bmp cabinet number must be a number")
+			cabinet = int(cabinet)
+			
+			if not frame.isdigit():
+				parser.error("--bmp frame number must be a number")
+			frame = int(frame)
+			
+			# Check for duplicates
+			if (cabinet, frame) in bmp_hostnames:
+				parser.error("bmp hostname for cabinet {}, frame {} "
+				             "specified multiple times".format(cabinet, frame))
+			if hostname in itervalues(bmp_hostnames):
+				parser.error("bmp hostname '{}' given for more than one frame".format(
+					hostname))
+			
+			bmp_hostnames[(cabinet, frame)] = hostname
+		
+		return bmp_hostnames
 
 
 if __name__=="__main__":  # pragma: no cover
@@ -468,9 +546,11 @@ if __name__=="__main__":  # pragma: no cover
 	add_topology_args(parser)
 	add_cabinet_args(parser)
 	add_histogram_args(parser)
+	add_bmp_args(parser)
 	
 	args = parser.parse_args()
 	print(get_image_from_args(parser, args, 0.5))
 	print(get_topology_from_args(parser, args))
 	print(get_cabinets_from_args(parser, args))
 	print(get_histogram_from_args(parser, args))
+	print(get_bmps_from_args(parser, args))
