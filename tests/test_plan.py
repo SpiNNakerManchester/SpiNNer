@@ -249,7 +249,7 @@ def test_flatten_wiring_plan():
 	
 	cab = cabinet.Cabinet(**real)
 	direction_order = sorted([Direction.north, Direction.east, Direction.south_west],
-	                         key=(lambda d: -cab.board_wire_offset[d].y))
+	                         key=(lambda d: cab.board_wire_offset[d].y))
 	
 	num = [0]
 	def gen_wire(d_num):

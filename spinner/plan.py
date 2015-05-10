@@ -203,7 +203,7 @@ def flatten_wiring_plan( wires_between_boards
 			directions = set(d for (c,f,d) in wires_between_boards
 			                   if c == cabinet and f == frame
 			                )
-			for direction in sorted(directions, key=(lambda d: -board_wire_offset[d].y)):
+			for direction in sorted(directions, key=(lambda d: board_wire_offset[d].y)):
 				out += wires_between_boards[(cabinet,frame,direction)]
 	
 	# Wires between frames in the same cabinet
@@ -212,12 +212,12 @@ def flatten_wiring_plan( wires_between_boards
 		directions = set(d for (c,d) in wires_between_frames
 		                   if c == cabinet
 		                )
-		for direction in sorted(directions, key=(lambda d: -board_wire_offset[d].y)):
+		for direction in sorted(directions, key=(lambda d: board_wire_offset[d].y)):
 			out += wires_between_frames[(cabinet,direction)]
 	
 	# Wires between cabinets
 	directions = set(wires_between_cabinets)
-	for direction in sorted(directions, key=(lambda d: -board_wire_offset[d].y)):
+	for direction in sorted(directions, key=(lambda d: board_wire_offset[d].y)):
 		out += wires_between_cabinets[direction]
 	
 	return out
