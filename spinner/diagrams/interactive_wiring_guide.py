@@ -1,12 +1,8 @@
-#!/usr/bin/env python
+"""An interactive, graphical tool which can guide a user through a predefined
+list of wiring instructions."""
 
-"""
-An object which can provide visual and auditory instructions for wiring
-SpiNNaker machines. If called as a program, acts as an interactive wiring guide.
-"""
-
-import sys
 import colorsys
+
 import subprocess
 
 import pygame
@@ -14,16 +10,11 @@ import cairo
 import numpy
 from PIL import Image
 
-from wiring_plan_generator import generate_wiring_plan, flatten_wiring_plan
-from machine_diagram import MachineDiagram
+from spinner.topology import Direction
 
-try:
-	from spinnman.transceiver import create_transceiver_from_hostname
-except ImportError:
-	sys.stderr.write( "WARNING: SpiNNMan not found, LEDs will not be illuminated"
-	                + " and wire validation will not be possible."
-	                )
-	create_transceiver_from_hostname = None
+from spinner.diagrams.machine import MachineDiagram
+
+from rig.machine_control import BMPController
 
 
 class InteractiveWiringGuide(object):
@@ -42,10 +33,6 @@ class InteractiveWiringGuide(object):
 	* Colour code diagrams by wire-length
 	"""
 	
-	# TODO: Make this less constrained
-	WIDTH  = 1024
-	HEIGHT =  706
-	
 	# Colour of highlights for top-left and bottom-right ends of the current
 	# cable.
 	TOP_LEFT_COLOUR     = (1.0, 0.0, 0.0, 1.0)
@@ -61,8 +48,7 @@ class InteractiveWiringGuide(object):
 	ZOOMED_MARGINS = 0.8
 	
 	def __init__( self
-	            , cabinet_system
-	            , socket_names
+	            , cabinet
 	            , wire_lengths
 	            , wires
 	            , starting_wire = 0
@@ -74,11 +60,9 @@ class InteractiveWiringGuide(object):
 	            , show_future_wires    = False
 	            ):
 		"""
-		cabinet_system defines the size of cabinets in the system.
+		cabinet defines the size of cabinets in the system.
 		
-		socket_names is a dictionary {direction: human-name}.
-		
-		wire_lengths is a dictionary {length: name} listing all valid wire lengths.
+		wire_lengths is a list of all valid wire lengths.
 		
 		wires is a list [(src, dst, length), ...] where src and dst are tuples
 		(cabinet, rack, slot, socket) and length is a length included in
@@ -108,15 +92,13 @@ class InteractiveWiringGuide(object):
 		(feintly) at all times.
 		"""
 		
-		self.cabinet_system = cabinet_system
-		self.socket_names   = socket_names
-		self.wire_lengths   = wire_lengths
-		self.wires          = wires
+		self.cabinet      = cabinet
+		self.wire_lengths = wire_lengths
+		self.wires        = wires
 		
 		self.cur_wire  = starting_wire
 		assert 0 <= self.cur_wire < len(self.wires), "Starting wire out of range."
 		
-		self.bmp_ips = bmp_ips
 		self.bmp_led = bmp_led
 		
 		self.use_tts = use_tts
@@ -125,6 +107,14 @@ class InteractiveWiringGuide(object):
 		
 		self.show_installed_wires = show_installed_wires
 		self.show_future_wires    = show_future_wires
+		
+		if len(bmp_ips) > 0:
+			self.bmp_controller = BMPController(bmp_ips)
+		else:
+			self.bmp_controller = None
+		
+		# Human readable names for each socket
+		self.socket_names = {d: d.name.replace("_", " ") for d in Direction}
 		
 		# A reference to any running TTS job
 		self.tts_process = None
@@ -151,13 +141,9 @@ class InteractiveWiringGuide(object):
 		Set the LEDs for the given wire index to the given state (assuming the
 		board's IP is known).
 		"""
-		for c,r,s,p in self.wires[wire][:2]:
-			ip = self._get_bmp_ip(c,r,s)
-			if ip is not None:
-				transceiver = create_transceiver_from_hostname(ip, discover = False)
-				transceiver.set_leds(0,0, s, {self.bmp_led: state})
-				transceiver.close()
-				del transceiver
+		for c,r,b,p in self.wires[wire][:2]:
+			if self.bmp_controller is not None:
+				self.bmp_controller.set_led(self.bmp_led, state, c, f, b)
 	
 	
 	def _describe_cabinet_change(self, src_cabinet, dst_cabinet):
@@ -172,7 +158,7 @@ class InteractiveWiringGuide(object):
 			return "%d cabinet%s to the %s. "%(
 				abs(src_cabinet - dst_cabinet),
 				"s" if abs(src_cabinet - dst_cabinet) != 1 else "",
-				"right" if src_cabinet < dst_cabinet else "left",
+				"left" if src_cabinet < dst_cabinet else "right",
 			)
 		else:
 			# Distant cabinet
@@ -238,7 +224,7 @@ class InteractiveWiringGuide(object):
 			if this_length is None:
 				message += "Disconnect cable. "
 			else:
-				message += "%s cable. "%(self.wire_lengths[this_length])
+				message += "%0.2f meter cable. "%(this_length)
 		
 		# Announce connection
 		message += self.socket_names[this_tl[3]]
@@ -274,17 +260,6 @@ class InteractiveWiringGuide(object):
 		                                   )
 	
 	
-	def _get_bmp_ip(self, cabinet, rack, slot = None):
-		"""
-		Get the IP of the requested board (if known). Returns either the IP as a
-		string or None.
-		"""
-		
-		return self.bmp_ips.get( (cabinet,rack,slot)
-		                       , self.bmp_ips.get((cabinet,rack), None)
-		                       )
-	
-	
 	def _get_wire_colour(self, length):
 		"""
 		Get the RGB colour (as a tuple) for wires of the specified length.
@@ -295,7 +270,7 @@ class InteractiveWiringGuide(object):
 		if length is None:
 			return (0.0, 0.0, 0.0)
 		
-		index = sorted(self.wire_lengths.keys()).index(length)
+		index = sorted(self.wire_lengths).index(length)
 		
 		hue = index / float(len(self.wire_lengths))
 		
@@ -336,25 +311,28 @@ class InteractiveWiringGuide(object):
 		"""
 		Get the MachineDiagram ready to draw the system's current state.
 		"""
-		md = MachineDiagram(self.cabinet_system)
+		md = MachineDiagram(self.cabinet)
+		
+		bg_wire = self.cabinet.board_dimensions.x / 10.0
+		fg_wire = self.cabinet.board_dimensions.x / 5.0
 		
 		# Wires already installed
 		if self.show_installed_wires:
 			for src, dst, length in self.wires[:self.cur_wire]:
 				r,g,b = self._get_wire_colour(length)
-				md.add_wire(src, dst, rgba = (r,g,b,0.5), width = 0.005)
+				md.add_wire(src, dst, rgba = (r,g,b,0.5), width = bg_wire)
 		
 		# Wires still to be installed
 		if self.show_future_wires:
 			for src, dst, length in self.wires[self.cur_wire+1:]:
 				r,g,b = self._get_wire_colour(length)
-				md.add_wire(src, dst, rgba = (r,g,b,0.5), width = 0.005)
+				md.add_wire(src, dst, rgba = (r,g,b,0.5), width = bg_wire)
 		
 		# Current wire (with a white outline)
 		src, dst, length = self.wires[self.cur_wire]
 		r,g,b = self._get_wire_colour(length)
-		md.add_wire(src, dst, rgba = (1.0,1.0,1.0,1.0), width = 0.020)
-		md.add_wire(src, dst, rgba = (r,g,b,1.0),       width = 0.010)
+		md.add_wire(src, dst, rgba = (1.0,1.0,1.0,1.0), width = fg_wire * 2)
+		md.add_wire(src, dst, rgba = (r,g,b,1.0),       width = fg_wire)
 		
 		# Highlight source and destination
 		c,r,s,d = self._top_left_socket(self.cur_wire)
@@ -452,7 +430,7 @@ class InteractiveWiringGuide(object):
 		ctx.translate(width/2, height*(1 - (2*self.TEXT_ROW_HEIGHT)))
 		length = self.wires[self.cur_wire][2]
 		self._draw_text( ctx
-		               , "%s (%0.2fm)"%(self.wire_lengths[length], length)
+		               , "%0.2f meters"%(length)
 		                 if length is not None
 		                 else "Disconnect Wire"
 		               , height*self.TEXT_ROW_HEIGHT
@@ -596,7 +574,7 @@ class InteractiveWiringGuide(object):
 		"""
 		Main loop.
 		"""
-		width, height = self.WIDTH, self.HEIGHT
+		width, height = 1024, 768
 		
 		pygame_depth = 32
 		pygame_flags = pygame.RESIZABLE | pygame.DOUBLEBUF | pygame.HWSURFACE
@@ -648,230 +626,4 @@ class InteractiveWiringGuide(object):
 		self.set_leds(self.cur_wire, False)
 
 
-if __name__=="__main__":
-	import sys
-	
-	from model_builder import build_model
-	from param_parser import parse_params, parse_bmp_ips
-	
-	################################################################################
-	# Parse command-line arguments
-	################################################################################
-	
-	import argparse
-	
-	parser = argparse.ArgumentParser(description = "Interactive Wiring Guide For SpiNNaker Machines")
-	
-	parser.add_argument( "param_files", type=str, nargs="+"
-	                   , help="parameter files describing machine parameters"
-	                   )
-	
-	parser.add_argument( "-c", "--check", action="store_true", default=False
-	                   , dest="check"
-	                   , help="probe the machine's wiring and only report corrections (requires -b/--bmp-ips)"
-	                   )
-	
-	parser.add_argument( "-s", "--start", type=int, nargs="?", default=1
-	                   , help="index of first wire to be placed"
-	                   )
-	
-	parser.add_argument( "-l", "--bmp-led", type=int, nargs="?", default=7
-	                   , help="BMP LED number to illuminate"
-	                   )
-	
-	parser.add_argument( "-b", "--bmp-ips", type=str, nargs="?"
-	                   , help="Config file defining BMP IP addresses"
-	                   )
-	
-	parser.add_argument( "-t", "--use-tts", action="store_true", default=True
-	                   , dest="use_tts"
-	                   , help="enable text-to-speech instructions (default)"
-	                   )
-	parser.add_argument( "-T", "--no-tts", action="store_false"
-	                   , dest="use_tts"
-	                   , help="disable text-to-speech"
-	                   )
-	
-	parser.add_argument( "-r", "--describe-relative-positions", action="store_true", default=False
-	                   , dest="describe_relative_position"
-	                   , help="announce every wire's relative position via text-to-speech"
-	                   )
-	parser.add_argument( "-R", "--no-relative-positions", action="store_false"
-	                   , dest="describe_relative_position"
-	                   , help="only announce wire lengths and directions via text-to-speech (default)"
-	                   )
-	
-	parser.add_argument( "-i", "--show-installed-wires", action="store_true", default=True
-	                   , dest="show_installed_wires"
-	                   , help="feintly show wires already installed (default)"
-	                   )
-	parser.add_argument( "-I", "--hide-installed-wires", action="store_false"
-	                   , dest="show_installed_wires"
-	                   , help="hide wires already installed"
-	                   )
-	
-	parser.add_argument( "-f", "--show-future-wires", action="store_true", default=False
-	                   , dest="show_future_wires"
-	                   , help="feintly show wires not-yet installed"
-	                   )
-	parser.add_argument( "-F", "--hide-future-wires", action="store_false"
-	                   , dest="show_future_wires"
-	                   , help="hide wires not-yet installed (default)"
-	                   )
-	
-	args = parser.parse_args()
-	
-	if args.check and not args.bmp_ips:
-		sys.stderr.write("ERROR: If -c/--check is used, -b/--bmp-ips must be provided.\n")
-		sys.exit(-1)
-	
-	################################################################################
-	# Load Parameters
-	################################################################################
-	params = parse_params(["machine_params/universal.param"] + args.param_files)
-	
-	title                          = params["title"]
-	
-	diagram_scaling                = params["diagram_scaling"]
-	cabinet_diagram_scaling_factor = params["cabinet_diagram_scaling_factor"]
-	show_wiring_metrics            = params["show_wiring_metrics"]
-	show_topology_metrics          = params["show_topology_metrics"]
-	show_development               = params["show_development"]
-	show_board_position_list       = params["show_board_position_list"]
-	show_wiring_instructions       = params["show_wiring_instructions"]
-	wire_length_histogram_bins     = params["wire_length_histogram_bins"]
-	
-	slot_width                     = params["slot_width"]
-	slot_height                    = params["slot_height"]
-	slot_depth                     = params["slot_depth"]
-	
-	rack_width                     = params["rack_width"]
-	rack_height                    = params["rack_height"]
-	rack_depth                     = params["rack_depth"]
-	
-	cabinet_width                  = params["cabinet_width"]
-	cabinet_height                 = params["cabinet_height"]
-	cabinet_depth                  = params["cabinet_depth"]
-	
-	wire_positions                 = params["wire_positions"]
-	socket_names                   = params["socket_names"]
-	
-	slot_spacing                   = params["slot_spacing"]
-	slot_offset                    = params["slot_offset"]
-	num_slots_per_rack             = params["num_slots_per_rack"]
-	rack_spacing                   = params["rack_spacing"]
-	rack_offset                    = params["rack_offset"]
-	
-	num_racks_per_cabinet          = params["num_racks_per_cabinet"]
-	cabinet_spacing                = params["cabinet_spacing"]
-	num_cabinets                   = params["num_cabinets"]
-	
-	width                          = params["width"]
-	height                         = params["height"]
-	num_folds_x                    = params["num_folds_x"]
-	num_folds_y                    = params["num_folds_y"]
-	compress_rows                  = params["compress_rows"]
-	
-	minimum_arc_height             = params["minimum_arc_height"]
-	available_wires                = params["available_wires"]
-	
-	
-	################################################################################
-	# Generate models
-	################################################################################
-	
-	# Fold the system
-	( torus
-	, cart_torus
-	, rect_torus
-	, comp_torus
-	, fold_spaced_torus
-	, folded_cabinet_spaced_torus
-	, cabinet_torus
-	, phys_torus
-	, cabinet_system
-	) = build_model( slot_width,    slot_height,    slot_depth
-	               , rack_width,    rack_height,    rack_depth
-	               , cabinet_width, cabinet_height, cabinet_depth
-	               , wire_positions
-	               , slot_spacing, slot_offset, num_slots_per_rack
-	               , rack_spacing, rack_offset, num_racks_per_cabinet
-	               , cabinet_spacing, num_cabinets
-	               , width, height
-	               , num_folds_x, num_folds_y
-	               , compress_rows
-	               )
-	
-	# Plan the wiring
-	( wires_between_slots
-	, wires_between_racks
-	, wires_between_cabinets
-	) = generate_wiring_plan( cabinet_torus
-	                        , phys_torus
-	                        , wire_positions
-	                        , available_wires
-	                        , minimum_arc_height
-	                        )
-	
-	# Flatten the instructions
-	wires_ = flatten_wiring_plan( wires_between_slots
-	                            , wires_between_racks
-	                            , wires_between_cabinets
-	                            , wire_positions
-	                            )
-	
-	# Assemble a list of wires in terms of slot positions (rather than Board
-	# objects).
-	b2p = dict(cabinet_torus)
-	wires = []
-	for (src_board, src_direction), (dst_board, dst_direction), wire_length in wires_:
-		src = tuple(list(b2p[src_board]) + [src_direction])
-		dst = tuple(list(b2p[dst_board]) + [dst_direction])
-		wires.append((src, dst, wire_length))
-	
-	################################################################################
-	# Check wiring
-	################################################################################
-	
-	if args.check:
-		from wiring_validator import WiringProbe, wiring_diff, generate_correction_plan
-		
-		plan_wires = [(s,d) for (s,d,l) in wires]
-		
-		# Probe the actual wiring
-		p = WiringProbe(cabinet_system, parse_bmp_ips([args.bmp_ips]))
-		actual_wires = p.discover_wires()
-		p.close()
-		
-		# Create a plan for the corrections
-		remove, add = wiring_diff(actual_wires, plan_wires)
-		wires = generate_correction_plan( remove, add
-		                                , cabinet_system
-		                                , available_wires
-		                                , minimum_arc_height
-		                                )
-		
-		# Just quit with a message if the wires are already correct
-		if not wires:
-			print("All %d expected wires present and operational."%(len(plan_wires)))
-			sys.exit(0)
-	
-	################################################################################
-	# Initialise and start UI
-	################################################################################
-	
-	iwg = InteractiveWiringGuide( cabinet_system       = cabinet_system
-	                            , socket_names         = socket_names
-	                            , wire_lengths         = available_wires
-	                            , wires                = wires
-	                            , starting_wire        = args.start - 1
-	                            , bmp_ips              = parse_bmp_ips([args.bmp_ips])
-	                                                     if args.bmp_ips is not None
-	                                                     else {}
-	                            , bmp_led              = args.bmp_led
-	                            , use_tts              = args.use_tts
-	                            , tts_describe_relative_position = args.describe_relative_position
-	                            , show_installed_wires = args.show_installed_wires
-	                            , show_future_wires    = args.show_future_wires
-	                            )
-	iwg.main()
+
