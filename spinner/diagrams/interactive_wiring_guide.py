@@ -5,19 +5,23 @@ import colorsys
 
 import subprocess
 
-import pygame
-import cairo
-import numpy
-from PIL import Image
+import cairocffi as cairo
+
+try:  # pragma: no cover
+	# Python 3
+	from tkinter import Tk, Label
+except ImportError:  # pragma: no cover
+	# Python 2
+	from Tkinter import Tk, Label
+
+from PIL import Image, ImageTk
 
 from spinner.topology import Direction
 
 from spinner.diagrams.machine import MachineDiagram
 
-from rig.machine_control import BMPController
 
-
-class InteractiveWiringGuide(object):
+class InteractiveWiringGuide(Tk):
 	"""
 	An interactive, graphical tool which can guide a user through a predefined
 	list of wiring instructions.
@@ -47,15 +51,21 @@ class InteractiveWiringGuide(object):
 	# Zoom-out from zoomed in areas by this ratio
 	ZOOMED_MARGINS = 0.8
 	
+	# Poll interval in ms between checking the if the current wire has been
+	# inserted or not.
+	POLL_INTERVAL_MS = 500
+	
 	def __init__( self
 	            , cabinet
 	            , wire_lengths
 	            , wires
 	            , starting_wire = 0
-	            , bmp_ips = {}
+	            , focus=[]
+	            , bmp_controller = None
 	            , bmp_led = 7
+	            , wiring_probe=None
+	            , auto_advance=True
 	            , use_tts = True
-	            , tts_describe_relative_position = False
 	            , show_installed_wires = True
 	            , show_future_wires    = False
 	            ):
@@ -71,6 +81,9 @@ class InteractiveWiringGuide(object):
 		starting_wire is the index of the first wire to be inserted. This could be
 		used, e.g. to resume installation at a specified point.
 		
+		focus is a set of arguments (cabinet, frame, board) to use to select the
+		area of interest for the central system diagram.
+		
 		bmp_ips is a dictionary {board_position: ip} where board_position is either
 		a tuple (cabinet, rack, slot) or (cabinet, rack) where the former will be
 		used if both are available. The IP should be given as a string.
@@ -78,12 +91,13 @@ class InteractiveWiringGuide(object):
 		bmp_led specifies which LED will be illuminated for boards where an IP is
 		known.
 		
+		wiring_probe is an optional WiringProbe object which will be used to
+		auto-advance through the wiring when wires are inserted correctly.
+		
+		auto_advance specifies whether auto-advance will be enabled initially.
+		
 		use_tts specifies whether text-to-spech will be used to announce
 		instructions.
-		
-		tts_describe_relative_position specifies if the TTS should describe the
-		relative position of the connection. Otherwise, only the start and end
-		sockets are stated along with the length of cable (if it changes).
 		
 		show_installed_wires selects whether already-installed wires should be shown
 		(feintly) at all times.
@@ -99,25 +113,76 @@ class InteractiveWiringGuide(object):
 		self.cur_wire  = starting_wire
 		assert 0 <= self.cur_wire < len(self.wires), "Starting wire out of range."
 		
+		self.focus = focus
+		
+		self.bmp_controller = bmp_controller
+		
 		self.bmp_led = bmp_led
+		
+		self.wiring_probe = wiring_probe
+		
+		self.auto_advance = auto_advance
 		
 		self.use_tts = use_tts
 		
-		self.tts_describe_relative_position = tts_describe_relative_position
-		
 		self.show_installed_wires = show_installed_wires
 		self.show_future_wires    = show_future_wires
-		
-		if len(bmp_ips) > 0:
-			self.bmp_controller = BMPController(bmp_ips)
-		else:
-			self.bmp_controller = None
 		
 		# Human readable names for each socket
 		self.socket_names = {d: d.name.replace("_", " ") for d in Direction}
 		
 		# A reference to any running TTS job
 		self.tts_process = None
+		
+		# Set up the Tk UI
+		super(InteractiveWiringGuide, self).__init__()
+		self._init_ui()
+		
+		# Get started
+		self.go_to_wire(starting_wire)
+	
+	
+	def _init_ui(self):
+		"""Initialise the Tk interface."""
+		self.wm_title("SpiNNer Interactive Wiring Guide")
+		self.geometry("1024x768")
+		
+		# Add a label widget into which the rendered UI is drawn
+		self.widget = Label()
+		self.widget.pack(expand=True, fill="both")
+		
+		# Used to avoid unecessary redraws on window resizes where nothing actually
+		# changes.
+		self._old_size = (None, None)
+		
+		# A flag which indicates whether, on the last poll of cable insertion, the
+		# cable was found to be inserted but inserted into the wrong socket.
+		self.connected_incorrectly = False
+		
+		# Set up a timer to poll for cable insertion
+		self.after(InteractiveWiringGuide.POLL_INTERVAL_MS, self._poll_wiring_probe)
+		
+		# Handle window events
+		self.bind("<Configure>", self._on_resize)  # Resize
+		self.protocol("WM_DELETE_WINDOW", self._on_close)  # Window closed
+		
+		# Setup key bindings
+		self.bind("<Button-1>", self._on_next)
+		for key in "space Down Right Return Tab".split():
+			self.bind("<Key-{}>".format(key), self._on_next)
+		
+		self.bind("<Button-3>", self._on_prev)
+		for key in "Up Left BackSpace".split():
+			self.bind("<Key-{}>".format(key), self._on_prev)
+		
+		self.bind("<Key-Next>".format(key), self._on_skip_next)  # PgDown
+		self.bind("<Key-Prior>".format(key), self._on_skip_prev)  # PgUp
+		
+		self.bind("<Key-Home>".format(key), self._on_first)
+		self.bind("<Key-End>".format(key), self._on_last)
+		
+		self.bind("<Key-t>".format(key), self._on_tts_toggle)
+		self.bind("<Key-a>".format(key), self._on_auto_advance_toggle)
 	
 	
 	def go_to_wire(self, wire):
@@ -126,6 +191,9 @@ class InteractiveWiringGuide(object):
 		"""
 		last_wire = self.cur_wire
 		self.cur_wire = wire
+		
+		# Reset the incorrect connection flag
+		self.connected_incorrectly = False
 		
 		# Update LEDs
 		self.set_leds(last_wire, False)
@@ -141,64 +209,9 @@ class InteractiveWiringGuide(object):
 		Set the LEDs for the given wire index to the given state (assuming the
 		board's IP is known).
 		"""
-		for c,r,b,p in self.wires[wire][:2]:
-			if self.bmp_controller is not None:
+		if self.bmp_controller is not None:
+			for c,f,b,p in self.wires[wire][:2]:
 				self.bmp_controller.set_led(self.bmp_led, state, c, f, b)
-	
-	
-	def _describe_cabinet_change(self, src_cabinet, dst_cabinet):
-		"""
-		Describe the position of another cabinet with respect to the current
-		cabinet. Returns an empty string if the soruce and destination are the same.
-		"""
-		if src_cabinet == dst_cabinet:
-			return ""
-		elif 1 <= abs(src_cabinet - dst_cabinet) <= 3:
-			# Near-by cabinet
-			return "%d cabinet%s to the %s. "%(
-				abs(src_cabinet - dst_cabinet),
-				"s" if abs(src_cabinet - dst_cabinet) != 1 else "",
-				"left" if src_cabinet < dst_cabinet else "right",
-			)
-		else:
-			# Distant cabinet
-			return "Cabinet %d. "%(dst_cabinet)
-	
-	
-	def _describe_rack_change(self, src_rack, dst_rack):
-		"""
-		Describe the position of another rack with respect to the current
-		rack. Returns an empty string if the soruce and destination are the same.
-		"""
-		if src_rack == dst_rack:
-			return ""
-		elif abs(src_rack - dst_rack) <= 3:
-			# Near-by rack
-			return "%d rack%s %s. "%(
-				abs(src_rack - dst_rack),
-				"s" if abs(src_rack - dst_rack) != 1 else "",
-				"up" if dst_rack < src_rack else "down",
-			)
-		else:
-			# Distant rack
-			return "Rack %d. "%(dst_rack)
-	
-	
-	def _describe_slot_change(self, src_slot, dst_slot):
-		"""
-		Describe the position of another slot with respect to the current slot.
-		Returns an empty string if the soruce and destination are the same.
-		"""
-		if src_slot == dst_slot:
-			return ""
-		else:
-			# Near-by slot
-			return "%d slot%s %s %s. "%(
-				abs(src_slot - dst_slot),
-				"s" if abs(src_slot - dst_slot) != 1 else "",
-				"right" if dst_slot < src_slot else "left",
-				"(slot %d)"%dst_slot if abs(src_slot - dst_slot) > 10 else "",
-			)
 	
 	
 	def tts_delta(self, last_wire, this_wire):
@@ -206,40 +219,28 @@ class InteractiveWiringGuide(object):
 		Announce via TTS a brief instruction indicating what the next wire should be
 		in terms of the difference to the previous wire.
 		
-		Changes are announced relative to the destination of the last wire.
+		Changes are announced relative to the last wire.
 		"""
-		
-		last_length = self.wires[last_wire][2]
-		last_tl = self._top_left_socket(last_wire)
-		last_br = self._bottom_right_socket(last_wire)
-		
-		this_length = self.wires[this_wire][2]
-		this_tl = self._top_left_socket(this_wire)
-		this_br = self._bottom_right_socket(this_wire)
-		
 		message = ""
 		
 		# Announce wire-length changes
+		last_length = self.wires[last_wire][2]
+		this_length = self.wires[this_wire][2]
+		
 		if last_length != this_length:
 			if this_length is None:
 				message += "Disconnect cable. "
 			else:
-				message += "%0.2f meter cable. "%(this_length)
+				message += "%s meter cable. "%(("%0.2f"%this_length).rstrip(".0"))
 		
-		# Announce connection
+		# Announce which ports are being connected
+		this_tl = self._top_left_socket(this_wire)
+		this_br = self._bottom_right_socket(this_wire)
+		
 		message += self.socket_names[this_tl[3]]
-		if self.tts_describe_relative_position:
-			message += self._describe_cabinet_change(last_br[0], this_tl[0])
-			message += self._describe_rack_change(last_br[1], this_tl[1])
-			message += self._describe_slot_change(last_br[2], this_tl[2])
-		
-		message += "going "
-		
+		message += " going "
 		message += self.socket_names[this_br[3]]
-		if self.tts_describe_relative_position:
-			message += self._describe_cabinet_change(this_tl[0], this_br[0])
-			message += self._describe_rack_change(this_tl[1], this_br[1])
-			message += self._describe_slot_change(this_tl[2], this_br[2])
+		message += "."
 		
 		self._tts_speak(message)
 	
@@ -284,12 +285,9 @@ class InteractiveWiringGuide(object):
 		
 		src, dst, length = self.wires[wire]
 		
-		if src[0] == dst[0] and src[1] == dst[1]:
-			return dst if src[2] < dst[2] else src
-		elif src[0] == dst[0]:
-			return src if src[1] < dst[1] else dst
-		else:
-			return dst if src[0] < dst[0] else src
+		return min([src, dst], key=(lambda v: (-v[0],  # Right-to-left
+		                                       +v[1],  # Top-to-bottom
+		                                       -v[2])))  # Right-to-left
 	
 	
 	def _bottom_right_socket(self, wire):
@@ -299,12 +297,9 @@ class InteractiveWiringGuide(object):
 		
 		src, dst, length = self.wires[wire]
 		
-		if src[0] == dst[0] and src[1] == dst[1]:
-			return src if src[2] < dst[2] else dst
-		elif src[0] == dst[0]:
-			return dst if src[1] < dst[1] else src
-		else:
-			return src if src[0] < dst[0] else dst
+		return max([src, dst], key=(lambda v: (-v[0],  # Right-to-left
+		                                       +v[1],  # Top-to-bottom
+		                                       -v[2])))  # Right-to-left
 	
 	
 	def _get_machine_diagram(self):
@@ -313,8 +308,11 @@ class InteractiveWiringGuide(object):
 		"""
 		md = MachineDiagram(self.cabinet)
 		
-		bg_wire = self.cabinet.board_dimensions.x / 10.0
-		fg_wire = self.cabinet.board_dimensions.x / 5.0
+		bg_wire = self.cabinet.board_dimensions.x / 5.0
+		fg_wire = self.cabinet.board_dimensions.x / 3.0
+		
+		board_hl = self.cabinet.board_dimensions.x / 3.0
+		wire_hl = self.cabinet.board_dimensions.x / 2.0
 		
 		# Wires already installed
 		if self.show_installed_wires:
@@ -336,11 +334,11 @@ class InteractiveWiringGuide(object):
 		
 		# Highlight source and destination
 		c,r,s,d = self._top_left_socket(self.cur_wire)
-		md.highlight_socket(c,r,s,d, rgba = self.TOP_LEFT_COLOUR)
-		md.highlight_slot(  c,r,s,   rgba = self.TOP_LEFT_COLOUR)
+		md.add_highlight(c,r,s,d, rgba = self.TOP_LEFT_COLOUR, width=wire_hl)
+		md.add_highlight(c,r,s,   rgba = self.TOP_LEFT_COLOUR, width=board_hl)
 		c,r,s,d = self._bottom_right_socket(self.cur_wire)
-		md.highlight_socket(c,r,s,d, rgba = self.BOTTOM_RIGHT_COLOUR)
-		md.highlight_slot(  c,r,s,   rgba = self.BOTTOM_RIGHT_COLOUR)
+		md.add_highlight(c,r,s,d, rgba = self.BOTTOM_RIGHT_COLOUR, width=wire_hl)
+		md.add_highlight(c,r,s,   rgba = self.BOTTOM_RIGHT_COLOUR, width=board_hl)
 		
 		return md
 	
@@ -362,21 +360,10 @@ class InteractiveWiringGuide(object):
 		
 	
 	
-	def _draw_gui(self, screen, gui_buffer, width, height):
+	def _render_gui(self, ctx, width, height):
 		"""
-		Re-draw the whole GUI and flip the display buffer
+		Re-draw the whole GUI into the supplied Cairo context.
 		"""
-		
-		# Create the Cairo surface on which the GUI will be drawn
-		cairo_surface = cairo.ImageSurface.create_for_data(
-			gui_buffer, cairo.FORMAT_ARGB32,
-			width, height,
-			width * 4,
-		)
-		
-		# Draw with Cairo on the surface
-		ctx = cairo.Context(cairo_surface)
-		
 		# Clear the buffer background
 		ctx.set_source_rgba(1.0,1.0,1.0,1.0);
 		ctx.rectangle(0,0, width, height)
@@ -387,12 +374,14 @@ class InteractiveWiringGuide(object):
 		# Draw the main overview image
 		ctx.save()
 		ctx.translate(width*self.ZOOMED_VIEW_WIDTH, 0.0)
+		ctx.rectangle(0,0, width * (1.0 - (2*self.ZOOMED_VIEW_WIDTH)), height * (1 - (2*self.TEXT_ROW_HEIGHT)))
+		ctx.clip()
 		md.draw( ctx
 		       , width * (1.0 - (2*self.ZOOMED_VIEW_WIDTH))
 		       , height * (1 - (2*self.TEXT_ROW_HEIGHT))
+		       , *((list(self.focus) + [None]*3)[:3] * 2)
 		       )
 		ctx.restore()
-		
 		
 		# Draw the left zoomed-in image
 		ctx.save()
@@ -405,7 +394,8 @@ class InteractiveWiringGuide(object):
 		md.draw( ctx
 		       , width*self.ZOOMED_VIEW_WIDTH
 		       , height*(1 - (2*self.TEXT_ROW_HEIGHT))
-		       , *self._top_left_socket(self.cur_wire)[:3]
+		       , *(list(self._top_left_socket(self.cur_wire)[:3]) +
+		           list(self.focus))
 		       )
 		ctx.restore()
 		
@@ -421,7 +411,8 @@ class InteractiveWiringGuide(object):
 		md.draw( ctx
 		       , width*self.ZOOMED_VIEW_WIDTH
 		       , height*(1 - (2*self.TEXT_ROW_HEIGHT))
-		       , *self._bottom_right_socket(self.cur_wire)[:3]
+		       , *(list(self._bottom_right_socket(self.cur_wire)[:3]) +
+		           list(self.focus))
 		       )
 		ctx.restore()
 		
@@ -430,7 +421,7 @@ class InteractiveWiringGuide(object):
 		ctx.translate(width/2, height*(1 - (2*self.TEXT_ROW_HEIGHT)))
 		length = self.wires[self.cur_wire][2]
 		self._draw_text( ctx
-		               , "%0.2f meters"%(length)
+		               , "%0.2f m"%(length)
 		                 if length is not None
 		                 else "Disconnect Wire"
 		               , height*self.TEXT_ROW_HEIGHT
@@ -469,161 +460,139 @@ class InteractiveWiringGuide(object):
 			               , height*self.TEXT_ROW_HEIGHT
 			               )
 			ctx.restore()
-		
-		# Convert the Cairo surface into a PyGame compatible data block
-		img = Image.frombuffer('RGBA'
-		                      , ( cairo_surface.get_width()
-		                        , cairo_surface.get_height()
-		                        )
-		                      , cairo_surface.get_data()
-		                      , 'raw', 'BGRA', 0, 1
-		                      )
-		data_string = img.tostring('raw', 'RGBA', 0, 1)
-		
-		# Create PyGame surface from the converted Cairo surface
-		pygame_surface = pygame.image.frombuffer(data_string, (width, height), 'RGBA')
-		 
-		# Show the image on the PyGame display surface
-		screen.fill((255,255,255))
-		screen.blit(pygame_surface, (0,0))
-		pygame.display.flip()
-		
-		del cairo_surface, ctx, img, data_string
 	
 	
-	def _on_key_press(self, event):
-		"""
-		Event-handler for key-presses. Returns a boolean stating whether a redraw is
-		required.
-		"""
+	def _redraw(self):
+		"""Redraw the GUI and display it on the screen."""
 		
-		# Advance to the next wire
-		if event.key in (  32 # Space
-		                , 274 # Down
-		                , 275 # Right
-		                ,  13 # Return
-		                ,   9 # Tab
-		                ):
-			self.go_to_wire((self.cur_wire + 1) % len(self.wires))
-			return True
+		# Get a new context to draw the GUI into
+		height = self.winfo_height()
+		width = self.winfo_width()
 		
-		# Go back to the previous wire
-		elif event.key in ( 273 # Down
-		                  , 276 # Left
-		                  ):
-			self.go_to_wire((self.cur_wire - 1) % len(self.wires))
-			return True
+		surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+		ctx = cairo.Context(surface)
 		
-		# Go back to the first wire
-		elif event.key == 278: # Home
-			self.go_to_wire(0)
-			return True
+		# Render it
+		self._render_gui(ctx, width, height)
 		
-		# Go to the last wire
-		elif event.key == 279: # End
-			self.go_to_wire(len(self.wires)-1)
-			return True
-		
-		# Advance rapidly through the wires
-		elif event.key == 281: # Page-down
-			self.go_to_wire((self.cur_wire + 25) % len(self.wires))
-			return True
-		
-		# Go back rapidly through the wires
-		elif event.key == 280: # Page-up
-			self.go_to_wire((self.cur_wire - 25) % len(self.wires))
-			return True
-		
-		# Toggle text-to-speech
-		elif event.key == 115: # s
-			self.use_tts = not self.use_tts
-			if self.use_tts:
-				self._tts_speak("Text to speech enabled.")
+		# Draw onto the window (note: a reference to the image is kept to keep it
+		# safe from garbage collection)
+		self.widget.image = ImageTk.PhotoImage(Image.frombuffer(
+			"RGBA", (width, height), surface.get_data(), "raw", "BGRA", 0, 1))
+		self.widget.configure(image=self.widget.image)
+		self.widget.pack(expand=True, fill="both")
+	
+	
+	def _poll_wiring_probe(self):
+		"""Poll the machine's hardware to determine if the wiring is complete."""
+		if self.wiring_probe is not None and self.auto_advance:
+			src, dst, length = self.wires[self.cur_wire]
+			
+			# Check both ends of the cable
+			actual_dst = self.wiring_probe.get_link_target(*src)
+			actual_src = self.wiring_probe.get_link_target(*dst)
+			
+			advance = False
+			
+			if length is None:
+				# We're waiting for the wire to be disconnected
+				if actual_src is None and actual_dst is None:
+					# Disconnected! Advance to the next wire!
+					advance = True
 			else:
-				self._tts_speak("Text to speech disabled.")
-			return True
+				# We're waiting for a wire to be connected
+				if actual_src == src and actual_dst == dst:
+					# Connected correctly! Advance to the next wire!
+					advance = True
+				elif actual_dst is not None or actual_src is not None:
+					# The wire was connected, but was connected incorrectly!
+					if not self.connected_incorrectly:
+						self._tts_speak("Wire inserted incorrectly.")
+					self.connected_incorrectly = True
+				else:
+					# No wire is connected
+					self.connected_incorrectly = False
+				
+			# Actually advance, as required
+			if advance and self.cur_wire != len(self.wires) - 1:
+				self.go_to_wire(self.cur_wire + 1)
+				self._redraw()
 		
-		# Do nothing by default
-		return False
+		# Schedule next poll
+		self.after(InteractiveWiringGuide.POLL_INTERVAL_MS, self._poll_wiring_probe)
 	
 	
-	def _on_mouse_click(self, event):
-		"""
-		Event-handler for mouse clicks. Returns a boolean stating whether a redraw
-		is required.
-		"""
-		# Advance
-		if event.button in ( 1 # Left
-		                   , 5 # Scroll-down
-		                   ):
-			self.go_to_wire((self.cur_wire + 1) % len(self.wires))
-			return True
-		
-		# Retreat
-		elif event.button in ( 3 # Right
-		                     , 4 # Scroll-up
-		                     ):
-			self.go_to_wire((self.cur_wire - 1) % len(self.wires))
-			return True
-		
-		# Do nothing by default
-		return False
+	def _on_next(self, event):
+		"""Advance to the next wire."""
+		self.go_to_wire((self.cur_wire + 1) % len(self.wires))
+		self._redraw()
 	
 	
-	def main(self):
-		"""
-		Main loop.
-		"""
-		width, height = 1024, 768
+	def _on_prev(self, event):
+		"""Retreat to the previous wire."""
+		self.go_to_wire((self.cur_wire - 1) % len(self.wires))
+		self._redraw()
+	
+	
+	def _on_first(self, event):
+		"""Go back to the first wire."""
+		self.go_to_wire(0)
+		self._redraw()
+	
+	
+	def _on_last(self, event):
+		"""Go to the last first wire."""
+		self.go_to_wire(len(self.wires)-1)
+		self._redraw()
+	
+	
+	def _on_skip_next(self, event):
+		"""Advance rapidly forward through the wires."""
+		self.go_to_wire((self.cur_wire + 25) % len(self.wires))
+		self._redraw()
+	
+	
+	def _on_skip_prev(self, event):
+		"""Retreat rapidly backward through the wires."""
+		self.go_to_wire((self.cur_wire - 25) % len(self.wires))
+		self._redraw()
+	
+	
+	def _on_tts_toggle(self, event):
+		"""Toggle whether Text-to-Speech is enabled."""
+		self.use_tts = not self.use_tts
+		if self.use_tts:
+			self._tts_speak("Text to speech enabled.")
+		else:
+			self._tts_speak("Text to speech disabled.")
+	
+	
+	def _on_auto_advance_toggle(self, event):
+		"""Toggle whether auto-advance is enabled."""
+		if self.wiring_probe is not None:
+			self.auto_advance = not self.auto_advance
+			if self.auto_advance:
+				self._tts_speak("Auto advance enabled.")
+			else:
+				self._tts_speak("Auto advance disabled.")
+		else:
+			self._tts_speak("Auto advance not supported.")
+	
+	
+	def _on_resize(self, event):
+		"""Window has been resized, trigger a redraw."""
+		new_size = (event.width, event.height)
 		
-		pygame_depth = 32
-		pygame_flags = pygame.RESIZABLE | pygame.DOUBLEBUF | pygame.HWSURFACE
-		
-		pygame.display.init()
-		pygame.display.set_caption("SpiNNer Interactive Wiring Guide")
-		
-		screen = pygame.display.set_mode((width, height), pygame_flags, pygame_depth)
-		
-		pygame.key.set_repeat(250, 50)
-		
-		# Create raw buffer for surface data.
-		gui_buffer = numpy.empty(width * height * 4, dtype=numpy.int8)
-		
-		# Flag indicating that a redraw is required
-		redraw = True
-		
-		# Illuminate the current wire
-		self.set_leds(self.cur_wire, True)
-		
-		# Run until the window is closed
-		while True:
-			# Handle PyGame callbacks
-			pygame.event.pump()
-			
-			# Handle events
-			event = pygame.event.wait()
-			if event.type == pygame.QUIT:
-				pygame.display.quit()
-				break
-			elif event.type == pygame.VIDEORESIZE:
-				# Re-initialise when window changes size
-				width, height = event.dict['size']
-				if width > 10 and height > 10:
-					screen = pygame.display.set_mode((width, height), pygame_flags, pygame_depth)
-					del gui_buffer
-					gui_buffer = numpy.empty(width * height * 4, dtype=numpy.int8)
-					redraw = True
-			elif event.type == pygame.KEYDOWN:
-				redraw |= self._on_key_press(event)
-			elif event.type == pygame.MOUSEBUTTONDOWN:
-				redraw |= self._on_mouse_click(event)
-			
-			if redraw:
-				self._draw_gui(screen, gui_buffer, width, height)
-				redraw = False
-		
-		# Turn off the LEDs before exit
+		if self._old_size != new_size:
+			self._old_size = new_size
+			self._redraw()
+	
+	
+	def _on_close(self, event=None):
+		"""The window has been closed."""
+		# Turn off LEDs before leaving
 		self.set_leds(self.cur_wire, False)
+		self.destroy()
 
 
 
