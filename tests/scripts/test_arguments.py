@@ -499,16 +499,17 @@ def test_get_image_args_bad(argstring):
 
 @pytest.mark.parametrize("argstring,expectation",
                          [("", {}),
-                          ("--bmp 1 2 three", {(1, 2): "three"}),
-                          ("--bmp 1 2 three --bmp 4 5 six",
-                           {(1, 2): "three", (4, 5): "six"}),
+                          ("--bmp 0 0 one --bmp 0 1 two "
+                           "--bmp 1 0 three --bmp 1 1 four",
+                           {(0, 0): "one", (0, 1): "two",
+                            (1, 0): "three", (1, 1): "four"}),
                          ])
 def test_get_bmps_from_args(argstring, expectation):
 	parser = ArgumentParser()
 	arguments.add_bmp_args(parser)
 	
 	args = parser.parse_args(argstring.split())
-	assert arguments.get_bmps_from_args(parser, args) == expectation
+	assert arguments.get_bmps_from_args(parser, args, 2, 2) == expectation
 
 
 
@@ -523,6 +524,15 @@ def test_get_bmps_from_args(argstring, expectation):
                           # Supplying arguments of the wrong sign
                           "--bmp -1 0 localhost",
                           "--bmp 0 -1 localhost",
+                          # Supplying duplicate hostnames
+                          "--bmp 0 0 bad --bmp 0 1 bad",
+                          # Supplying duplicate frames
+                          "--bmp 0 1 foo --bmp 0 1 bar",
+                          # Supplying not enough BMPs
+                          "--bmp 0 0 foo",
+                          # Supplying too many/the wrong BMPs
+                          "--bmp 0 0 foo --bmp 0 1 bar --bmp 0 2 baz",
+                          "--bmp 1 0 foo --bmp 1 1 bar",
                          ])
 def test_get_bmps_from_args_bad(argstring):
 	# Make sure bad arguments fail to validate
@@ -531,6 +541,4 @@ def test_get_bmps_from_args_bad(argstring):
 	
 	with pytest.raises(SystemExit):
 		args = parser.parse_args(argstring.split())
-		arguments.get_bmps_from_args(parser, args)
-
-
+		arguments.get_bmps_from_args(parser, args, 1, 2)

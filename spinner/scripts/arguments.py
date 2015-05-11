@@ -502,11 +502,13 @@ def add_bmp_args(parser):
 	                            "frame")
 
 
-def get_bmps_from_args(parser, args):
+def get_bmps_from_args(parser, args, num_cabinets, num_frames):
 	"""To be used with add_bmp_args.
 	
 	Check that the supplied arguments are valid and then return a dictionary
 	mapping (cabinet, frame) tuples to hostnames.
+	
+	Either no arguments must be supplied or exactly one per frame.
 	"""
 	# Special case when no arguments supplied.
 	if args.bmp is None:
@@ -534,7 +536,25 @@ def get_bmps_from_args(parser, args):
 			
 			bmp_hostnames[(cabinet, frame)] = hostname
 		
+		# Check every frame is included
+		missing = set((c, f)
+		              for c in range(num_cabinets)
+		              for f in range(num_frames)) - set(bmp_hostnames)
+		extra = set(bmp_hostnames) - set((c, f)
+		                                 for c in range(num_cabinets)
+		                                 for f in range(num_frames))
+		
+		if missing:
+			parser.error("BMP hostname missing for {}".format(  # pragma: no branch
+				", ".join("C:{} F:{}".format(c, f) for c, f in missing)))
+		elif extra:
+			parser.error(  # pragma: no branch
+				"unexpected BMP for {} which are not part of the system".format(
+					", ".join("C:{} F:{}".format(c, f) for c, f in extra)))
+		
 		return bmp_hostnames
+
+
 
 
 if __name__=="__main__":  # pragma: no cover
@@ -553,4 +573,4 @@ if __name__=="__main__":  # pragma: no cover
 	print(get_topology_from_args(parser, args))
 	print(get_cabinets_from_args(parser, args))
 	print(get_histogram_from_args(parser, args))
-	print(get_bmps_from_args(parser, args))
+	print(get_bmps_from_args(parser, args, 2, 2))
