@@ -29,8 +29,9 @@ setup(
 			"spinner-topology-stats = spinner.scripts.topology_stats:main",
 			"spinner-wiring-stats = spinner.scripts.wiring_stats:main",
 			"spinner-wiring-diagram = spinner.scripts.wiring_diagram:main",
-			"spinner-machine-map = spinner.scripts.machine_map:main",
 			"spinner-wiring-guide = spinner.scripts.wiring_guide:main",
+			"spinner-wiring-validator = spinner.scripts.wiring_validator:main",
+			"spinner-machine-map = spinner.scripts.machine_map:main",
 		],
 	}
 )
