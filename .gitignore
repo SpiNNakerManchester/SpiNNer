@@ -10,3 +10,4 @@
 *.pdf
 *.bbl
 *.blg
+pip-selfcheck.json
