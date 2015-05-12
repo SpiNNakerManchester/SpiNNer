@@ -156,14 +156,16 @@ def test_labels(pdf_file, has_labels, monkeypatch):
 	if has_labels:
 		expected_labels = []
 		for cabinet in range(2):
-			expected_labels.append((cabinet, cabinet))
+			expected_labels.append(tuple([cabinet]))
 			for frame in range(5):
-				expected_labels.append((frame, cabinet, frame))
+				expected_labels.append((cabinet, frame))
 				for board in range(24):
-					expected_labels.append((board, cabinet, frame, board))
+					expected_labels.append((cabinet, frame, board))
 		expected_labels.sort()
 		
-		assert sorted(c[1] for c in add_label_mock.mock_calls) == expected_labels
+		# XXX: Note we're just checking the labels are added to the right places,
+		# not their actual content
+		assert sorted(c[1][1:] for c in add_label_mock.mock_calls) == expected_labels
 	else:
 		assert not add_label_mock.called
 

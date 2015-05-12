@@ -11,6 +11,7 @@ from spinner.topology import Direction
 from spinner.utils import folded_torus
 
 from spinner import transforms
+from spinner import topology
 
 from spinner.scripts import arguments
 
@@ -97,6 +98,12 @@ def main(args=None):
 	# Set up diagram
 	md = MachineDiagram(cabinet)
 	
+	# Create lookup from cabinet coord to chip x/y to enable labelling of boards
+	b2cab = dict(cabinetised_boards)
+	b2chip = dict((b, topology.to_xy(topology.board_to_chip(c)))
+	              for b, c in hex_boards)
+	cab2chip = dict((b2cab[b], b2chip[b]) for b, c in cabinetised_boards)
+	
 	# Add labels
 	if not hide_labels:
 		for cabinet_num in range(cabinet.num_cabinets):
@@ -104,7 +111,11 @@ def main(args=None):
 			for frame_num in range(cabinet.frames_per_cabinet):
 				md.add_label(frame_num, cabinet_num, frame_num)
 				for board_num in range(cabinet.boards_per_frame):
-					md.add_label(board_num, cabinet_num, frame_num, board_num)
+					# Only label boards which are actually part of the system
+					xy = cab2chip.get((cabinet_num, frame_num, board_num), None)
+					if xy is not None:
+						md.add_label("{} ({},{})".format(board_num, xy.x, xy.y),
+						             cabinet_num, frame_num, board_num)
 	
 	# Add highlights
 	for highlight in highlights:
