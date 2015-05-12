@@ -42,7 +42,7 @@ def wp(monkeypatch, discover_wires):
 	wp.discover_wires.return_value = discover_wires
 	
 	def get_link_target(*src):
-		src = tuple(*src)
+		src = tuple(src)
 		
 		d = dict(discover_wires)
 		if src in d:

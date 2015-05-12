@@ -79,8 +79,8 @@ def main(args=None):
 	for ((src_board, src_direction), (dst_board, dst_direction)) in wires:
 		src = tuple(list(b2c[src_board]) + [src_direction])
 		dst = tuple(list(b2c[dst_board]) + [dst_direction])
-		actual_dst = wiring_probe.get_link_target(src)
-		actual_src = wiring_probe.get_link_target(dst)
+		actual_dst = wiring_probe.get_link_target(*src)
+		actual_src = wiring_probe.get_link_target(*dst)
 		
 		if actual_dst != dst or actual_src != src:
 			missing.append((src, dst))
