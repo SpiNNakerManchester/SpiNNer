@@ -456,7 +456,7 @@ class InteractiveWiringGuide(object):
 			# Draw the progress
 			ctx.translate(0, height*self.TEXT_ROW_HEIGHT)
 			self._draw_text( ctx
-			               , "C%d R%d S%02d"%(c,r,s)
+			               , "C%d F%d B%02d"%(c,r,s)
 			               , height*self.TEXT_ROW_HEIGHT
 			               )
 			ctx.restore()

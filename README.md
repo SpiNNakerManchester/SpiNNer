@@ -7,17 +7,20 @@ of SpiNNaker boards.
 Installation
 ------------
 
-First make sure you have Python 2.7+ or 3.4+ installed along with:
+SpiNNer has the following external dependencies (aside from Python 2.7+ or 3.4+):
 
-* [Python pip](https://pip.pypa.io/en/stable/)
-* [Cairo](http://cairographics.org/)
-* [Espeak](http://espeak.sourceforge.net/)
+| Dependency                                                  | Ubuntu Package | Fedora Package | Arch Package |
+| ----------------------------------------------------------- | -------------- | -------------- | ------------ |
+| [Cairo](http://cairographics.org/)                          | libcairo2-dev  | cairo-devel    | cairo        |
+| [libffi](https://sourceware.org/libffi/)                    | libffi-dev     | libffi-devel   | libffi       |
+| [Tkinter](https://docs.python.org/3.4/library/tkinter.html) | python-tk      | tkinter        | tk           |
+| [Espeak](http://espeak.sourceforge.net/)                    | espeak         | espeak         | espeak       |
 
-Then type:
+The easiest way to install the latest release of SpiNNer (along with other
+Python packages it uses) to use use
+[pip](https://pip.pypa.io/en/latest/installing.html):
 
-	$ pip install spinnaker-spinner
-
-To install SpiNNer
+	# pip install spinnaker_spinner
 
 
 Available commands

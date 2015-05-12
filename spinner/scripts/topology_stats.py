@@ -23,7 +23,7 @@ def main(args=None):
 	out += "\n"
 	out += table([["Measurement", "Value", "Unit"],
 	              ["Network dimensions", "{}x{}".format(w*12, h*12), "chips"],
-	              ["Board array", "{}x{}".format(w, h), "traids"],
+	              ["Board array", "{}x{}".format(w, h), "triad"],
 	              ["Number of boards", 3 * w * h, ""],
 	              ["Number of cables", 3 * w * h * 3, ""],
 	              ["Number of chips", 3 * w * h * 48, ""],
