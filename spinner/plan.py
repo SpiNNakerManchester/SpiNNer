@@ -67,7 +67,8 @@ def partition_wires(wires, cabinetised_boards):
 	return (wires_between_boards, wires_between_frames, wires_between_cabinets)
 
 
-def assign_wires(wires, physical_boards, board_wire_offset, available_wire_lengths):
+def assign_wires(wires, physical_boards, board_wire_offset,
+                 available_wire_lengths, minimum_arc_height):
 	"""
 	Given a list `[((src_board,src_direction),(dst_board,dst_direction)),...]`,
 	sort into an order where the tightest wires are connected first. Returns::
@@ -76,19 +77,18 @@ def assign_wires(wires, physical_boards, board_wire_offset, available_wire_lengt
 	
 	Where wire_length is the length of the wire assigned to that connection taken
 	from the list available_wire_lengths.
+	
+	minimum_arc_height is the minimum height of the arc made by a wire to be
+	allowed.
 	"""
 	b2p = dict(physical_boards)
 	d2o = board_wire_offset
 	
-	available_wire_lengths = sorted(available_wire_lengths)
-	
 	def assign_wire(distance):
 		"""Return a tuple (wire_length, slack) shortest possible wire which coveres
 		the distance and the amount of slack."""
-		for length in available_wire_lengths:  # pragma: no branch
-			if distance <= length:
-				return (length, length - distance)
-		assert False  # pragma: no cover
+		return metrics.physical_wire_length(distance, available_wire_lengths,
+		                                    minimum_arc_height)
 	
 	# Augment each wire with a wire length and amount of slack
 	wires = [(src, dst, assign_wire(((b2p[src[0]] + d2o[src[1]]) -
@@ -106,13 +106,17 @@ def assign_wires(wires, physical_boards, board_wire_offset, available_wire_lengt
 
 
 def generate_wiring_plan(cabinetised_boards, physical_boards,
-                         board_wire_offset, available_wire_lengths):
+                         board_wire_offset, available_wire_lengths,
+                         minimum_arc_height):
 	"""
 	Get a wiring plan broken down into various stages.
 	
 	Takes a cabinetised torus (cabinetised_boards), the physical positions of the
 	boards in space (physical_boards) and a list of available wire lengths
 	(available_wire_lengths).
+	
+	minimum_arc_height is the minimum height of the arc made by a wire to be
+	allowed.
 	
 	Produces a tuple of three dictionaries::
 		
@@ -161,6 +165,7 @@ def generate_wiring_plan(cabinetised_boards, physical_boards,
 				            , physical_boards
 				            , board_wire_offset
 				            , available_wire_lengths
+				            , minimum_arc_height
 				            )
 		
 		for cabinet, w in iteritems(wires_between_frames):
@@ -169,6 +174,7 @@ def generate_wiring_plan(cabinetised_boards, physical_boards,
 				            , physical_boards
 				            , board_wire_offset
 				            , available_wire_lengths
+				            , minimum_arc_height
 				            )
 		
 		plan_between_cabinets[direction] = \
@@ -176,6 +182,7 @@ def generate_wiring_plan(cabinetised_boards, physical_boards,
 			            , physical_boards
 			            , board_wire_offset
 			            , available_wire_lengths
+			            , minimum_arc_height
 			            )
 	
 	return (plan_between_boards, plan_between_frames, plan_between_cabinets)

@@ -12,20 +12,6 @@ from six import integer_types
 from spinner import coordinates
 
 
-def wire_length(boards, board, direction, board_wire_offset=None):
-	"""
-	Returns the length of a wire leaving the specified board in a given direction.
-	
-	boards is a list [(board, coord),...)] where all coords support subtraction
-	and magnitude() (such as those from the coordinates module).
-	
-	board is a board in that list
-	
-	direction is a wire direction to measure
-	
-	"""
-
-
 def wire_lengths(boards, direction, board_wire_offset=None):
 	"""
 	Generate a list of as-the-crow-files wire lengths for the supplied system.
@@ -53,7 +39,7 @@ def wire_lengths(boards, direction, board_wire_offset=None):
 		yield (source - target).magnitude()
 
 
-def physical_wire_length(distance, available_wire_lengths, minimum_arc_height):
+def physical_wire_length(distance, available_wire_lengths, min_arc_height):
 	"""
 	Returns (wire_length, arc_height) for a wire required to span a given
 	distance. The wire length is the length of wire chosen from
@@ -80,7 +66,7 @@ def physical_wire_length(distance, available_wire_lengths, minimum_arc_height):
 	
 	available_wire_lengths is a list of available wire lengths
 	
-	minimum_arc_height is the minimum height of the arc to be allowed.
+	min_arc_height is the minimum height of the arc to be allowed.
 	"""
 	# Select the shortest wire possible for the job
 	for wire_length in sorted(available_wire_lengths):
@@ -119,60 +105,71 @@ def physical_wire_length(distance, available_wire_lengths, minimum_arc_height):
 			arc_height = r*(1.0 - math.cos(alpha/2.0))
 		
 		# Try again if this wire results in too-tight an connection
-		if arc_height < minimum_arc_height:
+		if arc_height < min_arc_height:
 			continue
 		
 		return (wire_length, arc_height)
 	
-	raise Exception("No wire is long enough to span a %fm gap."%distance) 
+	raise ValueError(
+		"No wire is long enough to span a %0.3f m gap with an arc %0.3f m high."%(
+			distance, min_arc_height)) 
 
 
-def wire_length_histogram(wire_lengths, bins=10):
+def wire_length_histogram(wire_lengths, min_arc_height, bins=10):
 	"""
-	Generate a histogram of wire lengths.
+	Generate a histogram of physical wire lengths.
 	
-	wire_lengths is an iterable of wire length values (e.g. from wire_lengths).
+	wire_lengths is an iterable of crow-flies wire length values (e.g. from
+	wire_lengths). Wires will be chosen for each length based on the
+	physical_wire_length function.
 	
-	bins is either an int (giving the total number of bins) or a list of bin upper
-	bounds. If the last bin supplied is smaller than the longest wire length, a
-	ValueError will be raised.
+	min_arc_height is the height of the tightest arc allowed by a wire between two
+	connected sockets.
 	
-	Returns a list [(min, max, count), ...] where each entry indicates the count
-	of wire lengths min < x <= max.
+	bins is either an int (giving the total number of bins) or a list of wire
+	lengths. If the last bin supplied is to short to accomodate the largest input
+	wire with a sufficently high arc, a ValueError will be raised.
+	
+	Returns a (bin_counts, bin_max_arc_heights). bin_counts is a dictionary
+	{bin: count, ...} with one entry per histogram bin. Each bin ranges from
+	zero or the next-lowest bin to the specified bin. bin_max_arc_heights records
+	the maximum wire arc height for wires in each bin.
 	"""
 	wire_lengths = sorted(wire_lengths)
-	max_wire_length = wire_lengths[-1]
 	
 	# Auto-generate bins if required
 	if isinstance(bins, integer_types):
-		bins = [((n+1)/float(bins)) * float(max_wire_length)
+		# XXX: Calculating the shortest wire-length possible for a known distance
+		# and arc height has no closed-form solution. Though a numerical solution
+		# could be used (as in physical_wire_length), since this feature is for
+		# "informational purposes", we'll simply start with the maximum distance to
+		# be covered and gradually increase this until a large enough arc is
+		# achieved.
+		max_wire_length = wire_lengths[-1]
+		max_physical_wire_length = max_wire_length
+		while True:
+			try:
+				physical_wire_length(max_wire_length, [max_physical_wire_length],
+				                     min_arc_height)
+				break
+			except ValueError:
+				# Try again with a longer wire length
+				max_physical_wire_length *= 1.1
+		
+		bins = [((n+1)/float(bins)) * float(max_physical_wire_length)
 		        for n in range(bins)]
 	else:
 		bins = sorted(map(float, bins))
 	
-	# Check bins are sufficient
-	if bins[-1] < max_wire_length:
-		raise ValueError(
-			"largest wire length, {}, is larger than largest bin, {}".format(
-				max_wire_length, bins[-1]))
+	# Construct the histogram
+	bin_counts = {bin: 0 for bin in bins}
+	bin_max_arc_heights = {bin: 0.0 for bin in bins}
+	for distance in wire_lengths:
+		bin, arc_height = physical_wire_length(distance, bins, min_arc_height)
+		bin_counts[bin] += 1
+		bin_max_arc_heights[bin] = max(bin_max_arc_heights[bin], arc_height)
 	
-	# Bin the wire lengths
-	last_bin = 0.0
-	out = []
-	for bin in bins:
-		count = 0
-		while wire_lengths:
-			if wire_lengths[0] <= bin:
-				# Add to bin
-				wire_lengths.pop(0)
-				count += 1
-			else:
-				# Wire length is too large for this bin
-				break
-		out.append((last_bin, bin, count))
-		last_bin = bin
-	
-	return out
+	return bin_counts, bin_max_arc_heights
 
 def dimensions(boards):
 	"""

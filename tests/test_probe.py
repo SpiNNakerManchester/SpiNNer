@@ -14,6 +14,8 @@ IDSO = 0x4C
 IDSI = 0x50
 HAND = 0x54
 
+SCRM = 0x00040010
+
 # Lookup from FPGA number and the top bits of read/write address to the link
 ADDR_TO_DIRECTION_MASK = 0xFFFF0000
 ADDR_TO_DIRECTION = {
@@ -50,8 +52,8 @@ def mock_bmp_controller(dead_endpoints):
 		d = ADDR_TO_DIRECTION.get((fpga_num, addr&ADDR_TO_DIRECTION_MASK), None)
 		reg = addr & ~ADDR_TO_DIRECTION_MASK
 		
-		# Should only ever write to IDSO
-		assert d is not None and reg == IDSO
+		# Should only ever write to IDSO and SCRM
+		assert (d is not None and reg == IDSO) or addr == SCRM
 		
 		idso[(c,f,b,d)] = value
 		
@@ -97,6 +99,10 @@ def test_init(mock_bmp_controller, dead_endpoints):
 		for write_fpga_reg_call in mock_bmp_controller.write_fpga_reg.mock_calls:
 			fpga_num, addr, value, c, f, b = write_fpga_reg_call[1]
 			
+			# Skip scrambler setup
+			if addr == SCRM:
+				continue
+			
 			# Determine the link written to
 			d = ADDR_TO_DIRECTION.get((fpga_num, addr&ADDR_TO_DIRECTION_MASK), None)
 			assert d is not None
@@ -119,9 +125,6 @@ def test_init(mock_bmp_controller, dead_endpoints):
 	
 	# Check each link ID is unique
 	assert len(set(itervalues(ids))) == len(ids)
-	
-	# Check that the top ID bit is never set
-	assert all(id&0x8000 == 0 for id in itervalues(ids))
 	
 	# Check that a second run assigns different IDs
 	mock_bmp_controller.write_fpga_reg.reset_mock()

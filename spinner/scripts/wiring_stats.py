@@ -64,7 +64,8 @@ def wire_counts_table(boards):
 	return table(table_data)
 
 
-def wire_length_table(boards, bins, units, wire_offsets=None, bar_length=15):
+def wire_length_table(boards, bins, min_arc_height,
+                      wire_offsets=None, bar_length=15):
 	"""Render a histogram of wire lengths in the system."""
 	wire_lengths = sum((list(metrics.wire_lengths(boards, d, wire_offsets))
 	                    for d in [Direction.north_east,
@@ -72,16 +73,20 @@ def wire_length_table(boards, bins, units, wire_offsets=None, bar_length=15):
 	                              Direction.west]),
 	                   [])
 	
-	histogram = metrics.wire_length_histogram(wire_lengths, bins)
+	bin_counts, bin_max_arc_heights = metrics.wire_length_histogram(wire_lengths, min_arc_height, bins)
 	
-	data = [["Range", "Count", "Histogram"]]
+	data = [["Range (meters)", "Count", "Histogram", "Max Arc Height (meters)"]]
 	
-	max_count = max(c for s, e, c in histogram)
-	
-	for start, end, count in histogram:
-		data.append(("%0.2f < x <= %0.2f"%(start, end),
+	max_count = max(itervalues(bin_counts))
+	last_bin = 0.0
+	for bin in sorted(bin_counts):
+		count = bin_counts[bin]
+		max_arc_height = bin_max_arc_heights[bin]
+		data.append(("%0.2f < x <= %0.2f"%(last_bin, bin),
 		             count,
-		             "#"*((count * bar_length + max_count - 1) // max_count)))
+		             "#"*((count * bar_length + max_count - 1) // max_count),
+		             "%0.2f"%max_arc_height))
+		last_bin = bin
 	
 	return table(data)
 
@@ -92,6 +97,7 @@ def main(args=None):
 		            " configuration of boards.")
 	arguments.add_topology_args(parser)
 	arguments.add_histogram_args(parser)
+	arguments.add_wire_length_args(parser)
 	arguments.add_cabinet_args(parser)
 	
 	# Process and display command-line arguments
@@ -99,6 +105,8 @@ def main(args=None):
 	(w, h), transformation, uncrinkle_direction, folds =\
 		arguments.get_topology_from_args(parser, args)
 	histogram_bins = arguments.get_histogram_from_args(parser, args)
+	wire_lengths, min_arc_height =\
+		arguments.get_wire_lengths_from_args(parser, args)
 	cabinet, num_frames = arguments.get_cabinets_from_args(parser, args)
 	
 	print(heading("Wiring Statistics", 1))
@@ -136,12 +144,18 @@ def main(args=None):
 	physical_boards = transforms.cabinet_to_physical(cabinetised_boards, cabinet)
 	
 	print(heading("Cabinetised measurements", 2))
+	print("All wire lengths described in this section do not include any slack.\n")
 	print(avg_wire_length_table(physical_boards, "meters",
 	                            cabinet.board_wire_offset))
 	
 	# Generate a histogram of wire lengths
 	print(heading("Wire length histogram", 2))
-	print(wire_length_table(physical_boards, histogram_bins, "meters",
+	print("Wire lengths are chosen to include enough slack such that each wire "
+	      "forms an arc protruding no less than {} meters from the "
+	      "system.\n".format(min_arc_height))
+	print(wire_length_table(physical_boards,
+	                        wire_lengths if wire_lengths else histogram_bins,
+	                        min_arc_height,
 	                        cabinet.board_wire_offset))
 	
 	return 0

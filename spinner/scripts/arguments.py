@@ -331,14 +331,8 @@ def get_cabinets_from_args(parser, args):
 def add_histogram_args(parser):
 	"""Add arguments for specifying the histogram of wire lengths (i.e.
 	cabinets/frames) available for a given system."""
-	histogram_group = parser.add_argument_group("available wire lengths")
+	histogram_group = parser.add_argument_group("wire length histogram options")
 	histogram_mut_group = histogram_group.add_mutually_exclusive_group()
-	histogram_mut_group.add_argument("--wire-length", "-l", type=float, metavar="L",
-	                                 action="append", nargs="+",
-	                                 help="specify one or more available wire "
-	                                      "lengths in meters (if supplied, these "
-	                                      "lengths will be used to construct the "
-	                                      "histogram of wire lengths)")
 	histogram_mut_group.add_argument("--histogram-bins", "-H", type=int, metavar="N",
 	                                 default=5,
 	                                 help="number of bins to pack wire lengths into "
@@ -349,40 +343,33 @@ def add_histogram_args(parser):
 def get_histogram_from_args(parser, args):
 	"""To be used with add_histogram_args.
 	
-	Check that the supplied arguments are valid and then return either the number
-	of histogram bins or the set of bin boundaries.
+	Check that the supplied arguments are valid and returns the number of bins
+	requested.
 	
 	Returns
 	-------
-	int or [float, ...]
-		If a single int, gives the number of bins to use in the wire-length
-		histogram.
-		
-		If a list of floats, gives the upper-boundary of each bin to create (in
-		ascending order).
+	int
+		The number of bins to use in the wire-length histogram.
 	"""
-	if args.wire_length is None:
-		# Number of bins supplied
-		if args.histogram_bins < 1:
-			parser.error("--histogram-bins must be at least 1")
-		return args.histogram_bins
-	else:
-		# List of wire-lengths supplied
-		return get_wire_lengths_from_args(parser, args)
-
-
+	if args.histogram_bins < 1:
+		parser.error("--histogram-bins must be at least 1")
+	return args.histogram_bins
 
 
 def add_wire_length_args(parser):
 	"""Add arguments for specifying sets of wire lengths available for a given
 	system."""
-	histogram_group = parser.add_argument_group("available wire lengths")
-	histogram_group.add_argument("--wire-length", "-l", type=float, metavar="L",
-	                             action="append", nargs="+",
-	                             help="specify one or more available wire "
-	                                  "lengths in meters (if supplied, these "
-	                                  "lengths will be used to construct the "
-	                                  "histogram of wire lengths)")
+	wire_length_group = parser.add_argument_group("available wire lengths")
+	wire_length_group.add_argument("--wire-length", "-l", type=float, metavar="L",
+	                               action="append", nargs="+",
+	                               help="specify one or more available wire "
+	                                    "lengths in meters")
+	wire_length_group.add_argument("--minimum-wire-arc-height", type=float, metavar="H",
+	                               default=0.05,
+	                               help="the minimum height of the arc formed by a "
+	                                    "wire connecting two boards in meters "
+	                                    "(a heuristic for determining the slack "
+	                                    "to allow when selecting wires)")
 
 
 def get_wire_lengths_from_args(parser, args):
@@ -395,11 +382,12 @@ def get_wire_lengths_from_args(parser, args):
 	
 	Returns
 	-------
-	[float, ...]
-		A list of floats, gives the wire lengths available.
+	([float, ...], min_arc_height)
+		Gives the wire lengths available (which may be empty) and the minimum arc
+		length requested.
 	"""
 	if args.wire_length is None:
-		parser.error("at least one wire length must be supplied")
+		wire_lengths = []
 	else:
 		# Flatten list of lists
 		args.wire_length = sum(args.wire_length, [])
@@ -413,7 +401,12 @@ def get_wire_lengths_from_args(parser, args):
 				parser.error("wire length {} defined multiple times".format(wire_length))
 			seen.add(wire_length)
 		
-		return sorted(args.wire_length)
+		wire_lengths = sorted(args.wire_length)
+	
+	if args.minimum_wire_arc_height < 0.0:
+		parser.error("--minimum-wire-arc-height must be positive")
+	
+	return (wire_lengths, args.minimum_wire_arc_height)
 
 
 def add_image_args(parser):

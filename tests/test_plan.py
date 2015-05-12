@@ -11,6 +11,7 @@ from spinner import transforms
 from spinner import utils
 from spinner import coordinates
 from spinner import cabinet
+from spinner import metrics
 
 from spinner.topology import Direction
 
@@ -132,22 +133,25 @@ def test_assign_wires():
 		Direction.south_west: coordinates.Cartesian3D(-1.0, -1.0, -1.0),
 	}
 	
-	last_tightness = None
+	last_wire = None
+	last_arc_height = None
 	for src, dst, wire in plan.assign_wires(wires, physical_boards,
 	                                        board_wire_offset,
-	                                        available_wire_lengths):
+	                                        available_wire_lengths, 0.0):
 		# Check the wire was chosen correctly
 		distance = ((b2c[src[0]] + board_wire_offset[src[1]]) -
 		            (b2c[dst[0]] + board_wire_offset[dst[1]])).magnitude()
-		shortest_possible_wire = min(w for w in available_wire_lengths
-		                             if w >= distance)
+		shortest_possible_wire, arc_height = metrics.physical_wire_length(
+			distance, available_wire_lengths, 0.0)
 		assert wire == shortest_possible_wire
 		
-		# Make sure wires are given in ascending order of tightness
-		tightness = distance - wire
-		if last_tightness is not None:
-			assert tightness <= last_tightness
-		last_tightness = tightness
+		# Make sure wires are given in ascending order of arc height unless the
+		# wire length changes
+		if last_wire == wire and last_arc_height is not None:
+			assert arc_height >= last_arc_height
+		last_arc_height = arc_height
+		
+		last_wire = wire
 
 
 def test_generate_wiring_plan():
@@ -165,7 +169,8 @@ def test_generate_wiring_plan():
 	between_boards, between_frames, between_cabinets =\
 		plan.generate_wiring_plan(cabinetised_boards, physical_boards,
 		                          cab.board_wire_offset,
-		                          available_wire_lengths)
+		                          available_wire_lengths,
+		                          0.0)
 	
 	seen_wires = set()
 	

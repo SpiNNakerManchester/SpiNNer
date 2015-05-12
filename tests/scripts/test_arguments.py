@@ -285,14 +285,6 @@ def test_get_cabinets_from_args_bad(argstring):
                          [# Numbers of bins
                           ("-H 1", 1),
                           ("-H 99", 99),
-                          # Sets of wire lengths
-                          ("-l 1", [1.0]),
-                          ("-l 1.5", [1.5]),
-                          ("-l 1 2 3", [1.0, 2.0, 3.0]),
-                          ("-l 3 2 1", [1.0, 2.0, 3.0]),
-                          ("-l 1 -l 2 -l 3", [1.0, 2.0, 3.0]),
-                          ("-l 3 -l 2 -l 1", [1.0, 2.0, 3.0]),
-                          ("-l 3 -l 2 1", [1.0, 2.0, 3.0]),
                          ])
 def test_get_histogram_from_args(argstring, expectation):
 	parser = ArgumentParser()
@@ -313,26 +305,6 @@ def test_get_histogram_from_args(argstring, expectation):
                           "-H -1",
                           "-H -2",
                           "-H 0.5",
-                          # Supplying an empty set of wire lengths
-                          "-l",
-                          # Supplying some zero/negative wire lengths
-                          "-l 0",  # Alone
-                          "-l 0.0",
-                          "-l -1",
-                          "-l -1.0",
-                          "-l 1 0 2",  # With other values
-                          "-l 1 0.0 2",
-                          "-l 1 -1 2",
-                          "-l 1 -1.0 2",
-                          "-l 3 -l 1 0 2",  # With multiple -l options
-                          "-l 3 -l 1 0.0 2",
-                          "-l 3 -l 1 -1 2",
-                          "-l 3 -l 1 -1.0 2",
-                          # Supplying duplicate lengths
-                          "-l 1 1",
-                          "-l 1 2 1",
-                          "-l 1 -l 1",
-                          "-l 1 2 -l 1 3",
                          ])
 def test_get_histogram_from_args_bad(argstring):
 	# Make sure bad arguments fail to validate
@@ -344,28 +316,29 @@ def test_get_histogram_from_args_bad(argstring):
 		arguments.get_histogram_from_args(parser, args)
 
 
-@pytest.mark.parametrize("argstring,expectation",
-                         [("-l 1", [1.0]),
-                          ("-l 1.5", [1.5]),
-                          ("-l 1 2 3", [1.0, 2.0, 3.0]),
-                          ("-l 3 2 1", [1.0, 2.0, 3.0]),
-                          ("-l 1 -l 2 -l 3", [1.0, 2.0, 3.0]),
-                          ("-l 3 -l 2 -l 1", [1.0, 2.0, 3.0]),
-                          ("-l 3 -l 2 1", [1.0, 2.0, 3.0]),
+@pytest.mark.parametrize("argstring,wire_lengths,min_arc_height",
+                         [("", [], 0.05),
+                          ("-l 1", [1.0], 0.05),
+                          ("-l 1.5", [1.5], 0.05),
+                          ("-l 1 2 3", [1.0, 2.0, 3.0], 0.05),
+                          ("-l 3 2 1", [1.0, 2.0, 3.0], 0.05),
+                          ("-l 1 -l 2 -l 3", [1.0, 2.0, 3.0], 0.05),
+                          ("-l 3 -l 2 -l 1", [1.0, 2.0, 3.0], 0.05),
+                          ("-l 3 -l 2 1", [1.0, 2.0, 3.0], 0.05),
+                          ("--minimum-wire-arc-height 1.2", [], 1.2)
                          ])
-def test_get_wire_lengths_from_args(argstring, expectation):
+def test_get_wire_lengths_from_args(argstring, wire_lengths, min_arc_height):
 	parser = ArgumentParser()
 	arguments.add_wire_length_args(parser)
 	
 	args = parser.parse_args(argstring.split())
-	assert arguments.get_wire_lengths_from_args(parser, args) == expectation
+	assert arguments.get_wire_lengths_from_args(parser, args) ==\
+		(wire_lengths, min_arc_height)
 
 
 
 @pytest.mark.parametrize("argstring",
-                         [# Supplying no wire lengths
-                          "",
-                          # Supplying an empty set of wire lengths
+                         [# Supplying an empty set of wire lengths
                           "-l",
                           # Supplying some zero/negative wire lengths
                           "-l 0",  # Alone
@@ -385,6 +358,8 @@ def test_get_wire_lengths_from_args(argstring, expectation):
                           "-l 1 2 1",
                           "-l 1 -l 1",
                           "-l 1 2 -l 1 3",
+                          # Negative minimum arc height
+                          "--minimum-wire-arc-height -0.1",
                          ])
 def test_get_wire_lengths_from_args_bad(argstring):
 	# Make sure bad arguments fail to validate

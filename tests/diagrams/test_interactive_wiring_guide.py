@@ -150,7 +150,7 @@ def wires(cabinetised_boards, cabinet, wire_lengths):
 	
 	wires_between_boards, wires_between_frames, wires_between_cabinets =\
 		plan.generate_wiring_plan(cabinetised_boards, physical_boards,
-		                          cabinet.board_wire_offset, wire_lengths)
+		                          cabinet.board_wire_offset, wire_lengths, 0.0)
 	flat_wiring_plan = plan.flatten_wiring_plan(wires_between_boards,
 	                                            wires_between_frames,
 	                                            wires_between_cabinets,
