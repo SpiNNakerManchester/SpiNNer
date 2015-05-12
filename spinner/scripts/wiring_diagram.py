@@ -63,6 +63,7 @@ def get_diagram_arguments(parser, args, w, h, cabinet, num_frames):
 def main(args=None):
 	parser = argparse.ArgumentParser(
 		description="Generate illustrations of SpiNNaker machine wiring.")
+	arguments.add_version_args(parser)
 	arguments.add_image_args(parser)
 	add_diagram_arguments(parser)
 	arguments.add_topology_args(parser)

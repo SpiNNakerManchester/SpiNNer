@@ -4,6 +4,8 @@ import argparse
 
 from six import itervalues
 
+import spinner
+
 from spinner.topology import Direction
 
 from spinner.utils import ideal_system_size, folded_torus, min_num_cabinets
@@ -71,6 +73,13 @@ def CabinetAction(num_levels=4, append=False):
 				setattr(namespace, self.dest, values)
 	
 	return _CabinetAction
+
+
+def add_version_args(parser):
+	"""Adds a standard --version/-V incantation which prints the version number
+	from spinner.__version__."""
+	parser.add_argument("--version", "-V", action="version",
+	                    version="%(prog)s {}".format(spinner.__version__))
 
 
 def add_topology_args(parser):

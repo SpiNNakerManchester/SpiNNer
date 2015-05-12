@@ -23,6 +23,7 @@ from rig.machine_control import BMPController
 def main(args=None):
 	parser = argparse.ArgumentParser(
 		description="Validate the wiring of a SpiNNaker system.")
+	arguments.add_version_args(parser)
 	
 	parser.add_argument("--verbose", "-v", action="store_true", default=False,
 	                    help="list all incorrect and missing wires")

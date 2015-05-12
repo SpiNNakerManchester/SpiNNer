@@ -95,6 +95,7 @@ def main(args=None):
 	parser = argparse.ArgumentParser(
 		description="Print basic wiring statistics for a specified "
 		            " configuration of boards.")
+	arguments.add_version_args(parser)
 	arguments.add_topology_args(parser)
 	arguments.add_histogram_args(parser)
 	arguments.add_wire_length_args(parser)

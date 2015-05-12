@@ -28,6 +28,7 @@ def main(args=None):
 	parser = argparse.ArgumentParser(
 		description="Interactively guide the user through the process of wiring up a "
 		            "SpiNNaker machine.")
+	arguments.add_version_args(parser)
 	
 	parser.add_argument("--no-tts", action="store_true", default=False,
 	                    help="disable text-to-speech announcements of wiring "

@@ -20,6 +20,7 @@ def main(args=None):
 	parser = argparse.ArgumentParser(
 		description="Produce CSV listings of Ethernet connected chip physical and "
 		            "network positions.")
+	arguments.add_version_args(parser)
 	arguments.add_topology_args(parser)
 	arguments.add_cabinet_args(parser)
 	

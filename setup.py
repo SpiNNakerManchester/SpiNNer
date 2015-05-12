@@ -1,8 +1,14 @@
 from setuptools import setup, find_packages
 
+
+# Defines __version__
+with open("spinner/version.py", "r") as f:
+	exec(f.read())
+
+
 setup(
 	name="spinnaker_spinner",
-	version="2.0.1",
+	version=__version__,
 	packages=find_packages(),
 	
 	# Metadata for PyPi

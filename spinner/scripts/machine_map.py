@@ -19,6 +19,7 @@ def main(args=None):
 	parser = argparse.ArgumentParser(
 		description="Generate visual maps from the SpiNNaker network topology to "
 		            "board locations.")
+	arguments.add_version_args(parser)
 	arguments.add_image_args(parser)
 	arguments.add_topology_args(parser)
 	arguments.add_cabinet_args(parser)

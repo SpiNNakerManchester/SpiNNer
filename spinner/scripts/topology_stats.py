@@ -13,6 +13,7 @@ def main(args=None):
 	parser = argparse.ArgumentParser(
 		description="Print basic topological statistics for a specified "
 		            " configuration of boards.")
+	arguments.add_version_args(parser)
 	arguments.add_topology_args(parser)
 	args = parser.parse_args(args)
 	(w, h), transformation, uncrinkle_direction, folds =\
