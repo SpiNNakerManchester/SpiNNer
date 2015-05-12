@@ -21,7 +21,7 @@ from spinner.topology import Direction
 from spinner.diagrams.machine import MachineDiagram
 
 
-class InteractiveWiringGuide(Tk):
+class InteractiveWiringGuide(object):
 	"""
 	An interactive, graphical tool which can guide a user through a predefined
 	list of wiring instructions.
@@ -135,7 +135,7 @@ class InteractiveWiringGuide(Tk):
 		self.tts_process = None
 		
 		# Set up the Tk UI
-		super(InteractiveWiringGuide, self).__init__()
+		self.tk = Tk()
 		self._init_ui()
 		
 		# Get started
@@ -144,8 +144,8 @@ class InteractiveWiringGuide(Tk):
 	
 	def _init_ui(self):
 		"""Initialise the Tk interface."""
-		self.wm_title("SpiNNer Interactive Wiring Guide")
-		self.geometry("1024x768")
+		self.tk.wm_title("SpiNNer Interactive Wiring Guide")
+		self.tk.geometry("1024x768")
 		
 		# Add a label widget into which the rendered UI is drawn
 		self.widget = Label()
@@ -160,29 +160,29 @@ class InteractiveWiringGuide(Tk):
 		self.connected_incorrectly = False
 		
 		# Set up a timer to poll for cable insertion
-		self.after(InteractiveWiringGuide.POLL_INTERVAL_MS, self._poll_wiring_probe)
+		self.tk.after(InteractiveWiringGuide.POLL_INTERVAL_MS, self._poll_wiring_probe)
 		
 		# Handle window events
-		self.bind("<Configure>", self._on_resize)  # Resize
-		self.protocol("WM_DELETE_WINDOW", self._on_close)  # Window closed
+		self.tk.bind("<Configure>", self._on_resize)  # Resize
+		self.tk.protocol("WM_DELETE_WINDOW", self._on_close)  # Window closed
 		
 		# Setup key bindings
-		self.bind("<Button-1>", self._on_next)
+		self.tk.bind("<Button-1>", self._on_next)
 		for key in "space Down Right Return Tab".split():
-			self.bind("<Key-{}>".format(key), self._on_next)
+			self.tk.bind("<Key-{}>".format(key), self._on_next)
 		
-		self.bind("<Button-3>", self._on_prev)
+		self.tk.bind("<Button-3>", self._on_prev)
 		for key in "Up Left BackSpace".split():
-			self.bind("<Key-{}>".format(key), self._on_prev)
+			self.tk.bind("<Key-{}>".format(key), self._on_prev)
 		
-		self.bind("<Key-Next>".format(key), self._on_skip_next)  # PgDown
-		self.bind("<Key-Prior>".format(key), self._on_skip_prev)  # PgUp
+		self.tk.bind("<Key-Next>".format(key), self._on_skip_next)  # PgDown
+		self.tk.bind("<Key-Prior>".format(key), self._on_skip_prev)  # PgUp
 		
-		self.bind("<Key-Home>".format(key), self._on_first)
-		self.bind("<Key-End>".format(key), self._on_last)
+		self.tk.bind("<Key-Home>".format(key), self._on_first)
+		self.tk.bind("<Key-End>".format(key), self._on_last)
 		
-		self.bind("<Key-t>".format(key), self._on_tts_toggle)
-		self.bind("<Key-a>".format(key), self._on_auto_advance_toggle)
+		self.tk.bind("<Key-t>".format(key), self._on_tts_toggle)
+		self.tk.bind("<Key-a>".format(key), self._on_auto_advance_toggle)
 	
 	
 	def go_to_wire(self, wire):
@@ -466,8 +466,8 @@ class InteractiveWiringGuide(Tk):
 		"""Redraw the GUI and display it on the screen."""
 		
 		# Get a new context to draw the GUI into
-		height = self.winfo_height()
-		width = self.winfo_width()
+		height = self.tk.winfo_height()
+		width = self.tk.winfo_width()
 		
 		surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
 		ctx = cairo.Context(surface)
@@ -519,7 +519,7 @@ class InteractiveWiringGuide(Tk):
 				self._redraw()
 		
 		# Schedule next poll
-		self.after(InteractiveWiringGuide.POLL_INTERVAL_MS, self._poll_wiring_probe)
+		self.tk.after(InteractiveWiringGuide.POLL_INTERVAL_MS, self._poll_wiring_probe)
 	
 	
 	def _on_next(self, event):
@@ -592,7 +592,11 @@ class InteractiveWiringGuide(Tk):
 		"""The window has been closed."""
 		# Turn off LEDs before leaving
 		self.set_leds(self.cur_wire, False)
-		self.destroy()
+		self.tk.destroy()
+	
+	
+	def mainloop(self):
+		return self.tk.mainloop()
 
 
 

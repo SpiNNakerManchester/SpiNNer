@@ -89,6 +89,9 @@ def tkinter(monkeypatch):
 	monkeypatch.setattr(interactive_wiring_guide, "Tk", Mock(return_value=Tk))
 	monkeypatch.setattr(interactive_wiring_guide, "Label", Mock(return_value=Label))
 	
+	Tk.winfo_height.return_value = 1024
+	Tk.winfo_width.return_value = 1024
+	
 	return (Tk, Label)
 
 
@@ -174,10 +177,6 @@ def wires(cabinetised_boards, cabinet, wire_lengths):
 @pytest.fixture
 def iwg(bmp_controller, cairo, tkinter, PIL, md, popen, wiring_probe,
         cabinet, wire_lengths, wires, monkeypatch):
-	# Prevent Tk actually schedluing callbacks in the test
-	monkeypatch.setattr(interactive_wiring_guide.InteractiveWiringGuide,
-	                    "after", Mock())
-	
 	# Create an interactive wiring guide with (basically) all external libraries
 	# mocked out.
 	iwg = interactive_wiring_guide.InteractiveWiringGuide(
