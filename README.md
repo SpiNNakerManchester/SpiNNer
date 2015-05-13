@@ -1,6 +1,11 @@
 SpiNNer: SpiNNaker Wiring Tools
 ===============================
 
+[![Latest Version](https://pypip.in/version/spinnaker_spinner/badge.svg?style=flat)](https://pypi.python.org/pypi/spinnaker_spinner/)
+[![Documentation](https://readthedocs.org/projects/spinner/badge/?version=stable)](https://readthedocs.org/projects/spinner/?badge=stable)
+[![Build Status](https://travis-ci.org/SpiNNakerManchester/SpiNNer.svg?branch=polishing)](https://travis-ci.org/SpiNNakerManchester/SpiNNer)
+[![Test Coverage](https://coveralls.io/repos/SpiNNakerManchester/SpiNNer/badge.svg)](https://coveralls.io/r/SpiNNakerManchester/SpiNNer)
+
 ![A wiring diagram for a 1-million core SpiNNaker system](docs/source/full_machine.png)
 
 SpiNNer is a collection of tools for assisting with all stages of the process of
