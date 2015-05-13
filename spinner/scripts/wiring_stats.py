@@ -113,7 +113,7 @@ def main(args=None):
 	print(heading("Wiring Statistics", 1))
 	print(heading("Folding Parameters", 2))
 	print(table([["Parameter", "Value", "Unit"],
-	             ["Number of baords", 3 * w * h, ""],
+	             ["Number of boards", 3 * w * h, ""],
 	             ["System dimensions", "{}x{}".format(w, h), "triads"],
 	             ["Transformation", transformation, ""],
 	             ["Uncrinkle Direction", uncrinkle_direction, ""],

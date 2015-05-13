@@ -1,6 +1,0 @@
-# IP addresses for BMPs in the SpiNNaker 1043 machine (24-board rack).
-
-[bmpip]
-# List of cabinet,rack,slot tuples and their associated IPs/hostnames. Note that
-# the slot field may be ommitted.
-0, 0: 192.168.3.0

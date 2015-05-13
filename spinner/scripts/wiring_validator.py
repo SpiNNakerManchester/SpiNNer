@@ -98,7 +98,7 @@ def main(args=None):
 		
 		return -1
 	else:
-		sys.stderr.write("{} wires correctly connected.\n".format(len(wires)))
+		sys.stderr.write("All {} wires correctly connected.\n".format(len(wires)))
 		return 0
 
 

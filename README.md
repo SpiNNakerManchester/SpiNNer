@@ -1,8 +1,10 @@
 SpiNNer
 =======
 
-A collection of tools for generating physical wiring info/diagrams for systems
-of SpiNNaker boards.
+![A wiring diagram for a 1-million core SpiNNaker system](docs/source/full_machine.png)
+
+SpiNNer is a collection of tools for assisting with all stages of the process of
+wiring up large SpiNNaker machines, from design to installation verification.
 
 Installation
 ------------
@@ -23,23 +25,37 @@ Python packages it uses) to use use
 	# pip install spinnaker_spinner
 
 
-Available commands
-------------------
+Documentation
+-------------
 
-The following standalone command line tools are installed by SpiNNer:
+You can read the latest version of SpiNNer's documentation on
+[ReadTheDocs](http://spinner.readthedocs.org/en/stable/).
 
-* `spinner-topology-stats`: Print basic topological statistics (including
-  network dimensions) for a specified configuration of boards.
-* `spinner-wiring-stats`: Print basic wiring statistics for a specified
-  configuration of boards.
-* `spinner-wiring-diagram`: Generate illustrations of SpiNNaker machine wiring.
-* `spinner-wiring-guide`: Interactively guide the user through the process of
-  wiring up a SpiNNaker machine.
-* `spinner-wiring-validator`: Validate the wiring of a SpiNNaker system.
-* `spinner-machine-map`: Generate visual maps from the SpiNNaker network
-  topology to board locations.
-* `spinner-ethernet-chips`: Produce CSV listings of Ethernet connected chip
-  physical and network positions.
+
+Quick Demos
+-----------
+
+Producing a wiring diagram for a 15-board machine:
+
+	$ spinner-wiring-diagram -n 15 out.png
+
+![A wiring diagram for a 15-board machine](docs/source/single_frame_machine.png)
+
+Producing a map from chip-position to physical location for a 24-board machine:
+
+	$ spiner-machine-map -n 24 out.png	
+
+![A machine map for a 24-board system](docs/source/machine_map.png)
+
+Guiding manual installation of wires for a 24-board machine:
+
+	$ spinner-wiring-guide -n 24 -l 0.15 0.30 --bmp 0 0 192.168.4.0
+
+![The interactive wiring guide GUI](docs/source/wiring_guide_24_screenshot.png)
+
+Finally, for a timelapse video of (an early version of) SpiNNer being used to
+wire up a 120-board machine [head over to
+YouTube](https://youtu.be/mcBB2o7Bmwc).
 
 
 Author
