@@ -14,6 +14,11 @@ setup(
 	# Metadata for PyPi
 	author="Jonathan Heathcote",
 	description="A tool for generating wiring instructions for large SpiNNaker machines.",
+	long_description = (
+		"See `GitHub <https://github.com/SpiNNakerManchester/SpiNNer>`_ or "
+		"the documentation on `ReadTheDocs <http://spinner.readthedocs.org/>`_ for "
+		"more information."
+	),
 	license="GPLv2",
 	
 	# Requirements

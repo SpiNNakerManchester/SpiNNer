@@ -1,5 +1,5 @@
-SpiNNer
-=======
+SpiNNer: SpiNNaker Wiring Tools
+===============================
 
 ![A wiring diagram for a 1-million core SpiNNaker system](docs/source/full_machine.png)
 
