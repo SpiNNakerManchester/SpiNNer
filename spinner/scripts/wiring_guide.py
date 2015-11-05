@@ -53,7 +53,8 @@ def main(args=None):
 	
 	cabinet, num_frames = arguments.get_cabinets_from_args(parser, args)
 	
-	wire_lengths, min_arc_height = arguments.get_wire_lengths_from_args(parser, args)
+	wire_lengths, min_arc_height = arguments.get_wire_lengths_from_args(
+		parser, args, mandatory=True)
 	
 	bmp_ips = arguments.get_bmps_from_args(parser, args,
 	                                       cabinet.num_cabinets,
@@ -88,7 +89,6 @@ def main(args=None):
 	
 	
 	# Generate wiring plan
-	# XXX: Add parameter for arc height
 	wires_between_boards, wires_between_frames, wires_between_cabinets =\
 		generate_wiring_plan(cabinetised_boards, physical_boards,
 		                     cabinet.board_wire_offset, wire_lengths, min_arc_height)
