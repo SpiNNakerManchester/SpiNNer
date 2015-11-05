@@ -32,7 +32,7 @@ def add_diagram_arguments(parser):
 	                         "with a red border")
 	
 	parser.add_argument("--hide-labels", "-L", action="store_true", default=False,
-	                    help="hide board/frame/cabinet number labels")
+	                    help="hide socket/board/frame/cabinet number labels")
 
 
 def get_diagram_arguments(parser, args, w, h, cabinet, num_frames):
@@ -117,6 +117,10 @@ def main(args=None):
 					if xy is not None:
 						md.add_label("{} ({},{})".format(board_num, xy.x, xy.y),
 						             cabinet_num, frame_num, board_num)
+						for socket in Direction:
+							name = "".join(w[0] for w in socket.name.split("_")).upper()
+							md.add_label(name, cabinet_num, frame_num, board_num, socket,
+							             rgba=(1.0, 1.0, 1.0, 0.7))
 	
 	# Add highlights
 	for highlight in highlights:

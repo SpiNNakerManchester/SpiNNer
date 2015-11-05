@@ -161,6 +161,8 @@ def test_labels(pdf_file, has_labels, monkeypatch):
 				expected_labels.append((cabinet, frame))
 				for board in range(24):
 					expected_labels.append((cabinet, frame, board))
+					for socket in Direction:
+						expected_labels.append((cabinet, frame, board, socket))
 		expected_labels.sort()
 		
 		# XXX: Note we're just checking the labels are added to the right places,

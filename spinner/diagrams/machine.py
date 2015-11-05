@@ -121,11 +121,21 @@ class MachineDiagram(object):
 	
 	
 	def add_label(self, label, cabinet, frame=None, board=None,
-	              rgba=(0.0,0.0,0.0,1.0)):
+	              socket=None, rgba=(0.0,0.0,0.0,1.0)):
 		"""
 		Add a textual label to a specific cabinet/frame/board/socket.
 		"""
-		if board is not None:
+		if socket is not None:
+			assert board is not None
+			assert frame is not None
+			# Render text going bottom-to-top in the center of the board
+			x, y, _ = self.cabinet.get_position(cabinet, frame, board, socket)
+			w, h = self._socket_dimensions
+			
+			alignment = 0.5
+			size = w * 1.0
+			angle = -pi/2.0
+		elif board is not None:
 			assert frame is not None
 			# Render text going bottom-to-top in the center of the board
 			x, y, _ = self.cabinet.get_position(cabinet, frame, board)
@@ -380,8 +390,8 @@ class MachineDiagram(object):
 		
 		
 		# Draw extra details
-		self._draw_labels(ctx)
 		self._draw_wires(ctx)
+		self._draw_labels(ctx)
 		self._draw_highlights(ctx)
 		
 		ctx.restore()

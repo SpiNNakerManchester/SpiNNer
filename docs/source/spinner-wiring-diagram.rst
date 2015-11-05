@@ -44,7 +44,7 @@ Generates illustrations of SpiNNaker machine wiring.
 	  --highlight CABINET [FRAME [BOARD [{south,north,north-east,east,west,south-west}]]] [ ...]
 	                        highlight a particular cabinet/frame/board/socket with
 	                        a red border
-	  --hide-labels, -L     hide board/frame/cabinet number labels
+	  --hide-labels, -L     hide socket/board/frame/cabinet number labels
 	
 	image file parameters:
 	  filename              filename to write the output to (.pdf or .png)

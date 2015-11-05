@@ -77,6 +77,7 @@ def test_draw(add_wires, add_labels, add_highlights):
 		md.add_label("one", 0)
 		md.add_label("two", 0, 1)
 		md.add_label("three", 0, 1, 2)
+		md.add_label("four", 0, 1, 2, Direction.north)
 	
 	if add_wires:
 		md.add_wire((0,0,0,Direction.north), (1,2,3,Direction.north))
@@ -136,7 +137,7 @@ def test_draw(add_wires, add_labels, add_highlights):
 	for show_text_mock in ctx.show_text.mock_calls:
 		labels_drawn.add(show_text_mock[1][0])
 	if add_labels:
-		assert labels_drawn == set("one two three".split())
+		assert labels_drawn == set("one two three four".split())
 	else:
 		assert len(labels_drawn) == 0
 	
