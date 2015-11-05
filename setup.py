@@ -41,6 +41,7 @@ setup(
 			"spinner-wiring-stats = spinner.scripts.wiring_stats:main",
 			"spinner-wiring-diagram = spinner.scripts.wiring_diagram:main",
 			"spinner-wiring-guide = spinner.scripts.wiring_guide:main",
+			"spinner-wiring-list = spinner.scripts.wiring_list:main",
 			"spinner-wiring-validator = spinner.scripts.wiring_validator:main",
 			"spinner-machine-map = spinner.scripts.machine_map:main",
 			"spinner-ethernet-chips = spinner.scripts.ethernet_chips:main",
