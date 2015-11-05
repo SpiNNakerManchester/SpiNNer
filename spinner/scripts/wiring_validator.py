@@ -95,6 +95,8 @@ def main(args=None):
 				print("C:{} F:{} B:{} {} <--> C:{} F:{} B:{} {}".format(
 					src[0], src[1], src[2], src[3].name.replace("_", " "),
 					dst[0], dst[1], dst[2], dst[3].name.replace("_", " ")))
+		else:
+			print("Add --verbose for a complete list.")
 		
 		return -1
 	else:
