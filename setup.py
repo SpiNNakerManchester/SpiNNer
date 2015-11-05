@@ -24,7 +24,7 @@ setup(
 	# Requirements
 	install_requires=[
 		# For Python 2/3 cross-compatibility
-		"six", "enum34",
+		"six", "enum-compat",
 		# For generating diagrams
 		"cairocffi",
 		# For displaying diagrams interactively (used to connect Cairo images to
