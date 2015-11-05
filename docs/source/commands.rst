@@ -47,6 +47,7 @@ Example of common uses for each command can be found below:
 	spinner-wiring-stats
 	spinner-wiring-diagram
 	spinner-wiring-guide
+	spinner-wiring-list
 	spinner-wiring-validator
 	spinner-machine-map
 	spinner-ethernet-chips

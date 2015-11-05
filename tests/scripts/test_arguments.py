@@ -316,6 +316,7 @@ def test_get_histogram_from_args_bad(argstring):
 		arguments.get_histogram_from_args(parser, args)
 
 
+@pytest.mark.parametrize("mandatory", [True, False])
 @pytest.mark.parametrize("argstring,wire_lengths,min_arc_height",
                          [("", [], 0.05),
                           ("-l 1", [1.0], 0.05),
@@ -327,13 +328,19 @@ def test_get_histogram_from_args_bad(argstring):
                           ("-l 3 -l 2 1", [1.0, 2.0, 3.0], 0.05),
                           ("--minimum-wire-arc-height 1.2", [], 1.2)
                          ])
-def test_get_wire_lengths_from_args(argstring, wire_lengths, min_arc_height):
+def test_get_wire_lengths_from_args(mandatory, argstring, wire_lengths, min_arc_height):
 	parser = ArgumentParser()
 	arguments.add_wire_length_args(parser)
 	
 	args = parser.parse_args(argstring.split())
-	assert arguments.get_wire_lengths_from_args(parser, args) ==\
-		(wire_lengths, min_arc_height)
+	if mandatory and not wire_lengths:
+		# Should fail with no wire lengths when mandatory
+		with pytest.raises(SystemExit):
+			arguments.get_wire_lengths_from_args(parser, args, mandatory)
+	else:
+		# Should succeed otherwise
+		assert arguments.get_wire_lengths_from_args(parser, args, mandatory) ==\
+			(wire_lengths, min_arc_height)
 
 
 

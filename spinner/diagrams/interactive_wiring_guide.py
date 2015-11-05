@@ -595,7 +595,7 @@ class InteractiveWiringGuide(object):
 		self.tk.destroy()
 	
 	
-	def mainloop(self):  # pragam: no cover
+	def mainloop(self):  # pragma: no cover
 		"""Start the interactive wiring guide GUI. Returns when the window is
 		closed."""
 		return self.tk.mainloop()

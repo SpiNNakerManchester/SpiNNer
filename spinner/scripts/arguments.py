@@ -381,7 +381,7 @@ def add_wire_length_args(parser):
 	                                    "to allow when selecting wires)")
 
 
-def get_wire_lengths_from_args(parser, args):
+def get_wire_lengths_from_args(parser, args, mandatory=False):
 	"""To be used with add_wire_length_args.
 	
 	Also used internally by get_histogram_from_args.
@@ -414,6 +414,9 @@ def get_wire_lengths_from_args(parser, args):
 	
 	if args.minimum_wire_arc_height < 0.0:
 		parser.error("--minimum-wire-arc-height must be positive")
+	
+	if mandatory and not wire_lengths:
+		parser.error("At least one --wire-length argument must be provided.")
 	
 	return (wire_lengths, args.minimum_wire_arc_height)
 
