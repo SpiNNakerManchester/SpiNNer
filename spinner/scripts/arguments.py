@@ -215,7 +215,7 @@ def add_cabinet_args(parser):
 	                              "corner of a frame in meters (default: "
 	                              "%(default)s)")
 	frame_group.add_argument("--inter-frame-spacing", type=float,
-	                         default=0.089, metavar=("S"),
+	                         default=0.133, metavar=("S"),
 	                         help="physical spacing between frames in a "
 	                              "cabinet in meters (default: %(default)s)")
 	
@@ -225,7 +225,7 @@ def add_cabinet_args(parser):
 	                                "%(default)s)")
 	cabinet_group.add_argument("--cabinet-dimensions", type=float, nargs=3,
 	                           metavar=("W", "H", "D"),
-	                           default=(0.600, 1.822, 0.250),
+	                           default=(0.600, 2.000, 0.250),
 	                           help="cabinet physical dimensions in meters (default: "
 	                                "%(default)s)")
 	cabinet_group.add_argument("--cabinet-frame-offset", type=float, nargs=3,
