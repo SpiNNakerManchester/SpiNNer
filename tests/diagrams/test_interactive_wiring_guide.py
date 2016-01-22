@@ -58,6 +58,19 @@ def wiring_probe(installed_wires):
 	
 	return probe
 
+@pytest.fixture
+def timing_logger():
+	from spinner.timing_logger import TimingLogger
+	timing_logger = Mock(spec_set=TimingLogger)
+	
+	timing_logger.paused = False
+	timing_logger.pause.side_effect = (
+		lambda: setattr(timing_logger, "paused", True))
+	timing_logger.unpause.side_effect = (
+		lambda: setattr(timing_logger, "paused", False))
+	
+	return timing_logger
+
 
 @pytest.fixture
 def cairo(monkeypatch):
@@ -176,12 +189,12 @@ def wires(cabinetised_boards, cabinet, wire_lengths):
 
 @pytest.fixture
 def iwg(bmp_controller, cairo, tkinter, PIL, md, popen, wiring_probe,
-        cabinet, wire_lengths, wires, monkeypatch):
+        timing_logger, cabinet, wire_lengths, wires):
 	# Create an interactive wiring guide with (basically) all external libraries
 	# mocked out.
 	iwg = interactive_wiring_guide.InteractiveWiringGuide(
 		cabinet, wire_lengths, wires, bmp_controller=bmp_controller,
-		wiring_probe=wiring_probe)
+		wiring_probe=wiring_probe, timing_logger=timing_logger)
 	
 	# Wrap various internal methods in Mocks to log calls
 	for name in ["_redraw", "_tts_speak"]:
@@ -205,6 +218,40 @@ def count_wires(iwg, md):
 				count += 1
 		return count
 	return count_wires
+
+
+def test_no_timing_logger(bmp_controller, cairo, tkinter, PIL, md, popen, wiring_probe,
+        timing_logger, cabinet, wire_lengths, wires, installed_wires):
+	"""Shouldn't crash if no timing logger provided"""
+	# Create an interactive wiring guide with (basically) all external libraries
+	# mocked out.
+	iwg = interactive_wiring_guide.InteractiveWiringGuide(
+		cabinet, wire_lengths, wires, bmp_controller=bmp_controller,
+		wiring_probe=wiring_probe, timing_logger=None)
+	
+	# Starting new connections should not file
+	iwg.go_to_wire(2)
+	
+	# Making mistakes should not fail
+	installed_wires[wires[2][0]] = wires[3][0]
+	installed_wires[wires[3][0]] = wires[2][0]
+	iwg._poll_wiring_probe()
+	assert iwg.cur_wire == 2
+	
+	# As should correct installations
+	installed_wires.pop(wires[2][0])
+	installed_wires.pop(wires[3][0])
+	installed_wires[wires[2][0]] = wires[2][1]
+	installed_wires[wires[2][1]] = wires[2][0]
+	iwg._poll_wiring_probe()
+	assert iwg.cur_wire == 3
+	
+	# And pausing/unpausing should not fail
+	iwg._on_pause(None)
+	iwg._on_pause(None)
+	
+	# Nor should exiting
+	iwg._on_close(None)
 
 
 def test_next_prev(iwg, count_wires, wires):
@@ -297,7 +344,7 @@ def test_tts_toggle(iwg):
 	iwg._tts_speak.reset_mock()
 	iwg._on_tts_toggle(None)
 	assert iwg.use_tts == False
-	assert iwg._tts_speak.called_once_with("Text to speech disabled.")
+	iwg._tts_speak.assert_called_once_with("Text to speech disabled.")
 	
 	# Should now be turned off
 	iwg._tts_speak.reset_mock()
@@ -307,7 +354,7 @@ def test_tts_toggle(iwg):
 	iwg._tts_speak.reset_mock()
 	iwg._on_tts_toggle(None)
 	assert iwg.use_tts == True
-	assert iwg._tts_speak.called_once_with("Text to speech enabled.")
+	iwg._tts_speak.assert_called_once_with("Text to speech enabled.")
 	
 	# Should now be turned on again
 	iwg._tts_speak.reset_mock()
@@ -472,12 +519,20 @@ def test_no_wiring_probe(iwg):
 	iwg._poll_wiring_probe()
 
 
-def test_wiring_probe(iwg, wires, wiring_probe, installed_wires):
+def test_wiring_probe(iwg, wires, wiring_probe, installed_wires,
+                      timing_logger):
 	"""Check that advancing based on the wiring probe works."""
 	iwg._redraw.reset_mock()
 	
-	# The first wire is due to be removed so we shouldn't advance
+	# The first wire is due to be removed so we shouldn't advance and the event
+	# should not be logged
+	assert len(timing_logger.connection_complete.mock_calls) == 0
+	assert len(timing_logger.connection_error.mock_calls) == 0
+	assert len(timing_logger.connection_started.mock_calls) == 0
 	iwg._poll_wiring_probe()
+	assert len(timing_logger.connection_complete.mock_calls) == 0
+	assert len(timing_logger.connection_error.mock_calls) == 0
+	assert len(timing_logger.connection_started.mock_calls) == 0
 	assert iwg.cur_wire == 0
 	assert not iwg._redraw.called
 	
@@ -485,6 +540,9 @@ def test_wiring_probe(iwg, wires, wiring_probe, installed_wires):
 	# can't really happen in practice...)
 	installed_wires.pop(wires[0][0])
 	iwg._poll_wiring_probe()
+	assert len(timing_logger.connection_complete.mock_calls) == 0
+	assert len(timing_logger.connection_error.mock_calls) == 0
+	assert len(timing_logger.connection_started.mock_calls) == 0
 	assert iwg.cur_wire == 0
 	assert not iwg._redraw.called
 	
@@ -492,40 +550,59 @@ def test_wiring_probe(iwg, wires, wiring_probe, installed_wires):
 	installed_wires.pop(wires[0][1])
 	iwg._poll_wiring_probe()
 	assert iwg.cur_wire == 1
+	assert len(timing_logger.connection_complete.mock_calls) == 0
+	assert len(timing_logger.connection_error.mock_calls) == 0
+	assert len(timing_logger.connection_started.mock_calls) == 1
 	assert iwg._redraw.called
 	iwg._redraw.reset_mock()
+	iwg._tts_speak.reset_mock()
 	
 	# We should now be stuck on the next wire
 	iwg._poll_wiring_probe()
 	assert iwg.cur_wire == 1
 	assert not iwg._redraw.called
 	
-	# If we add half of the next wire, we should not advance
+	# If we add half of the next wire, we should not advance but this should be
+	# considered an error
 	installed_wires[wires[1][0]] = wires[1][1]
 	iwg._poll_wiring_probe()
+	assert len(timing_logger.connection_complete.mock_calls) == 0
+	assert len(timing_logger.connection_error.mock_calls) == 1
+	assert len(timing_logger.connection_started.mock_calls) == 1
 	assert iwg.cur_wire == 1
 	assert not iwg._redraw.called
+	iwg._tts_speak.assert_called_once_with("Wire inserted incorrectly.")
+	iwg._tts_speak.reset_mock()
 	
 	# If we add the other half, we should advance
 	installed_wires[wires[1][1]] = wires[1][0]
 	iwg._poll_wiring_probe()
+	assert len(timing_logger.connection_complete.mock_calls) == 1
+	assert len(timing_logger.connection_error.mock_calls) == 1
+	assert len(timing_logger.connection_started.mock_calls) == 2
 	assert iwg.cur_wire == 2
 	assert iwg._redraw.called
 	iwg._redraw.reset_mock()
 	
-	# If we add the next wire incorrectly, we should get a warning and not advance
+	# If we add the next wire incorrectly, we should get another warning.
 	installed_wires[wires[2][0]] = wires[3][0]
 	installed_wires[wires[3][0]] = wires[2][0]
 	iwg._tts_speak.reset_mock()
 	iwg._poll_wiring_probe()
+	assert len(timing_logger.connection_complete.mock_calls) == 1
+	assert len(timing_logger.connection_error.mock_calls) == 2
+	assert len(timing_logger.connection_started.mock_calls) == 2
 	assert iwg.cur_wire == 2
 	assert not iwg._redraw.called
-	assert iwg._tts_speak.called_once_with("Wire inserted incorrectly.")
+	iwg._tts_speak.assert_called_once_with("Wire inserted incorrectly.")
 	iwg._tts_speak.reset_mock()
 	
 	# If nothing is changed, we shouldn't get another warning
 	iwg._poll_wiring_probe()
 	assert iwg.cur_wire == 2
+	assert len(timing_logger.connection_complete.mock_calls) == 1
+	assert len(timing_logger.connection_error.mock_calls) == 2
+	assert len(timing_logger.connection_started.mock_calls) == 2
 	assert not iwg._redraw.called
 	assert not iwg._tts_speak.called
 	
@@ -533,6 +610,9 @@ def test_wiring_probe(iwg, wires, wiring_probe, installed_wires):
 	installed_wires.pop(wires[2][0])
 	installed_wires.pop(wires[3][0])
 	iwg._poll_wiring_probe()
+	assert len(timing_logger.connection_complete.mock_calls) == 1
+	assert len(timing_logger.connection_error.mock_calls) == 2
+	assert len(timing_logger.connection_started.mock_calls) == 2
 	assert iwg.cur_wire == 2
 	assert not iwg._redraw.called
 	assert not iwg._tts_speak.called
@@ -542,8 +622,11 @@ def test_wiring_probe(iwg, wires, wiring_probe, installed_wires):
 	installed_wires[wires[3][0]] = wires[2][0]
 	iwg._poll_wiring_probe()
 	assert iwg.cur_wire == 2
+	assert len(timing_logger.connection_complete.mock_calls) == 1
+	assert len(timing_logger.connection_error.mock_calls) == 3
+	assert len(timing_logger.connection_started.mock_calls) == 2
 	assert not iwg._redraw.called
-	assert iwg._tts_speak.called_once_with("Wire inserted incorrectly.")
+	iwg._tts_speak.assert_called_once_with("Wire inserted incorrectly.")
 	iwg._tts_speak.reset_mock()
 	
 	# Finally add the correct wire
@@ -552,6 +635,9 @@ def test_wiring_probe(iwg, wires, wiring_probe, installed_wires):
 	installed_wires[wires[2][0]] = wires[2][1]
 	installed_wires[wires[2][1]] = wires[2][0]
 	iwg._poll_wiring_probe()
+	assert len(timing_logger.connection_complete.mock_calls) == 2
+	assert len(timing_logger.connection_error.mock_calls) == 3
+	assert len(timing_logger.connection_started.mock_calls) == 3
 	assert iwg.cur_wire == 3
 	assert iwg._redraw.called
 	iwg._redraw.reset_mock()
@@ -562,15 +648,24 @@ def test_wiring_probe(iwg, wires, wiring_probe, installed_wires):
 	iwg._tts_speak.reset_mock()
 	iwg._poll_wiring_probe()
 	assert iwg.cur_wire == 3
+	assert len(timing_logger.connection_complete.mock_calls) == 2
+	assert len(timing_logger.connection_error.mock_calls) == 4
+	assert len(timing_logger.connection_started.mock_calls) == 3
 	assert not iwg._redraw.called
-	assert iwg._tts_speak.called_once_with("Wire inserted incorrectly.")
+	iwg._tts_speak.assert_called_once_with("Wire inserted incorrectly.")
 	
 	# Should never advance past the last wire, even if it is installed
 	# appropriately
 	iwg.go_to_wire(len(wires) - 1)
+	assert len(timing_logger.connection_complete.mock_calls) == 2
+	assert len(timing_logger.connection_error.mock_calls) == 4
+	assert len(timing_logger.connection_started.mock_calls) == 4
 	installed_wires[wires[-1][0]] = wires[-1][1]
 	installed_wires[wires[-1][1]] = wires[-1][0]
 	iwg._poll_wiring_probe()
+	assert len(timing_logger.connection_complete.mock_calls) == 3
+	assert len(timing_logger.connection_error.mock_calls) == 4
+	assert len(timing_logger.connection_started.mock_calls) == 4
 	assert iwg.cur_wire == len(wires) - 1
 	assert not iwg._redraw.called
 
@@ -584,7 +679,7 @@ def test_auto_advance_toggle(iwg, wires, installed_wires):
 	
 	# If turned off, it should be announced and auto-advance should be disabled
 	iwg._on_auto_advance_toggle(None)
-	assert iwg._tts_speak.called_once_with("Auto advance disabled.")
+	iwg._tts_speak.assert_called_once_with("Auto advance disabled.")
 	iwg._tts_speak.reset_mock()
 	
 	# Unplug the initial wire and test that auto-advance doesn't go past it
@@ -595,7 +690,7 @@ def test_auto_advance_toggle(iwg, wires, installed_wires):
 	
 	# Turn on auto-advance again
 	iwg._on_auto_advance_toggle(None)
-	assert iwg._tts_speak.called_once_with("Auto advance enabled.")
+	iwg._tts_speak.assert_called_once_with("Auto advance enabled.")
 	iwg._tts_speak.reset_mock()
 	
 	# Should now work as usual
@@ -607,4 +702,27 @@ def test_auto_advance_toggle(iwg, wires, installed_wires):
 	# should be announced
 	iwg.wiring_probe = None
 	iwg._on_auto_advance_toggle(None)
-	assert iwg._tts_speak.called_once_with("Auto advance not supported.")
+	iwg._tts_speak.assert_called_once_with("Auto advance not supported.")
+
+def test_pause_toggle(iwg, timing_logger):
+	"""Check that we can pause/unpause recording."""
+	timing_logger.unpause.reset_mock()
+	
+	# Should initially be unpaused
+	assert not timing_logger.paused
+	
+	# When pausing the timer should be informed
+	iwg._on_pause(None)
+	assert timing_logger.paused
+	timing_logger.pause.assert_called_once_with()
+	timing_logger.pause.reset_mock()
+	assert iwg._redraw.called
+	iwg._redraw.reset_mock()
+	
+	# When unpausing the timer should be informed
+	iwg._on_pause(None)
+	assert not timing_logger.paused
+	timing_logger.unpause.assert_called_once_with()
+	timing_logger.unpause.reset_mock()
+	assert iwg._redraw.called
+	iwg._redraw.reset_mock()

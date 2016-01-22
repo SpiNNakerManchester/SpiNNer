@@ -2,6 +2,12 @@ import pytest
 
 from mock import Mock
 
+import os.path
+
+from tempfile import mkdtemp
+
+from shutil import rmtree
+
 from spinner.scripts import wiring_guide
 
 from spinner.topology import Direction
@@ -40,6 +46,11 @@ def iwg(monkeypatch):
 	return iwg
 
 
+@pytest.yield_fixture
+def logdir():
+	logdir = mkdtemp()
+	yield logdir
+	rmtree(logdir)
 
 
 @pytest.mark.parametrize("argstring",
@@ -47,6 +58,8 @@ def iwg(monkeypatch):
                           "-l 1 -n 48 --bmp 0 0 localhost",
                           # --fix without any BMPs
                           "-l 1 -n 3 --fix",
+                          # --log without a filename
+                          "--log",
                          ])
 def test_bad_args(argstring):
 	with pytest.raises(SystemExit):
@@ -84,6 +97,9 @@ def test_bad_args(argstring):
 def test_argument_parsing(argstring, to_check, bc, wp, iwg):
 	# Command should exit happily
 	assert wiring_guide.main(argstring.split()) == 0
+	
+	# The timing logger should not be provided
+	assert iwg.mock_calls[0][2]["timing_logger"] is None
 	
 	# Check if the BMP is used
 	if "bmp" in to_check:  # pragma: no branch
@@ -129,3 +145,29 @@ def test_focus(argstring, focus, bc, wp, iwg):
 	assert wiring_guide.main(argstring.split()) == 0
 	
 	assert iwg.mock_calls[0][2]["focus"] == focus
+
+
+def test_logging(logdir, bc, wp, iwg):
+	filename = os.path.join(logdir, "test.log")
+	
+	def iwg_constructor(*args, **kwargs):
+		# Pretend to drive the timing logger
+		tl = kwargs["timing_logger"]
+		tl.logging_started()
+		tl.logging_stopped()
+		return Mock()
+	iwg.side_effect = iwg_constructor
+	
+	# First time the file is written, the header should be included
+	assert wiring_guide.main(["-n3", "-l1", "--log", filename]) == 0
+	assert iwg.mock_calls[0][2]["timing_logger"] is not None
+	with open(filename, "r") as f:
+		assert len(f.read().split("\n")) == 4
+	
+	# Second time the file is written, we should have opened for append and no
+	# additional header should be included
+	assert wiring_guide.main(["-n3", "-l1", "--log", filename]) == 0
+	assert iwg.mock_calls[0][2]["timing_logger"] is not None
+	with open(filename, "r") as f:
+		data = f.read()
+		assert len(data.split("\n")) == 6

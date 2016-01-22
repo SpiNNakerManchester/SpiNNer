@@ -8,7 +8,8 @@ machine and correcting wiring errors.
 
 	$ spinner-wiring-guide -h
 	usage: spinner-wiring-guide [-h] [--version] [--no-tts] [--no-auto-advance]
-	                            [--fix] (--num-boards N | --triads W H)
+	                            [--fix] [--log LOGFILE]
+	                            (--num-boards N | --triads W H)
 	                            [--transformation {shear,slice}]
 	                            [--uncrinkle-direction {columns,rows}]
 	                            [--folds X Y] [--board-dimensions W H D]
@@ -41,6 +42,7 @@ machine and correcting wiring errors.
 	  --no-auto-advance     disable auto-advancing through wiring steps
 	  --fix                 detect errors in existing wiring and just show
 	                        corrective steps
+	  --log LOGFILE         record the times at which each cable is installed
 	
 	machine topology dimensions:
 	  --num-boards N, -n N  build the 'squarest' system with this many boards
@@ -103,14 +105,14 @@ machine and correcting wiring errors.
 	                        frame in meters (default: (0.06, 0.017, 0.0))
 	  --inter-frame-spacing S
 	                        physical spacing between frames in a cabinet in meters
-	                        (default: 0.089)
+	                        (default: 0.133)
 	
 	cabinet physical dimensions:
 	  --frames-per-cabinet FRAMES_PER_CABINET
 	                        number of frames per cabinet (default: 5)
 	  --cabinet-dimensions W H D
 	                        cabinet physical dimensions in meters (default: (0.6,
-	                        1.822, 0.25))
+	                        2.0, 0.25))
 	  --cabinet-frame-offset X Y Z
 	                        physical offset of the left-top-front corner of the
 	                        top frame from the left-top-front corner of a cabinet
@@ -189,6 +191,7 @@ Go to first wire              Home
 Go to last wire               End
 Toggle Text-to-Speech         t
 Toggle Auto-Advance           a
+Pause logging                 p
 ============================  ==========================
 
 Future versions of this tool hope to include the ability to organise multiple
@@ -233,3 +236,63 @@ Adding the ``--fix`` option will check all installed wires in the machine and
 guide you through any corrections which must be made::
 
 	$ spinner-wiring-guide -n 24 -l 0.15 0.30 0.50 1.00 --bmp 0 0 BMP_HOSTNAME --fix
+
+Logging
+-------
+
+The ``--log FILENAME`` argument causes the wiring guide to log (into a CSV
+file) how long it took to install each ceable. This may be useful for research
+comparing ease of installation and maintainance of a SpiNNaker system. Note
+that this system does not currently log cables being removed.
+
+The CSV file contains the set of columns defined below. Various types of events
+are recorded in the log and not every event has a sensible value for every
+column. Columns without a sensible value are set to NA.
+
+:event_type:
+  The type of event being logged (see list below).
+
+:realtime:
+  The real time and date the event occurred.
+
+:time:
+	Time that the event occurred, in seconds since the start of logging and
+	excluding any time spent paused.
+
+:sc, sf, sb, sd, dc, df, db, dd:
+  Source and destination cabinet, frame, board and direction of a cable being
+  installed.
+
+:duration:
+  Overall time, in seconds, to connect a cable correctly (or time spent paused for pause
+  events).
+
+:attempt_duration:
+  Time since last attempt to connect the cable, in seconds.
+
+:num_attempts:
+  Number of attempts made to install the current cable.
+
+The following event types are defined:
+
+:logging_started:
+  This event is produced when a new wiring session begins. All relative times
+  are measured in seconds from this point.
+
+:logging_stopped:
+  Produced when logging ceases.
+
+:connection_started:
+  Produced when a new cable to install is displayed on the screen.
+
+:connection_error:
+  Produced each time a cable is connected incorrectly according the the wiring
+  probe.
+
+:connection_complete:
+  Produced when the wiring probe detects that the cable has been installed
+  correctly.
+
+:pause:
+  Produced *after* logging has been paused for some period of time. Relative
+  timings reported by other events will not include any time spent paused.

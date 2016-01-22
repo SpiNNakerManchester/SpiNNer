@@ -9,6 +9,8 @@ import sys
 
 import argparse
 
+import os.path
+
 from spinner.utils import folded_torus
 
 from spinner import transforms
@@ -20,6 +22,8 @@ from spinner.plan import generate_wiring_plan, flatten_wiring_plan
 from spinner.diagrams.interactive_wiring_guide import InteractiveWiringGuide
 
 from spinner.probe import WiringProbe
+
+from spinner.timing_logger import TimingLogger
 
 from rig.machine_control import BMPController
 
@@ -40,6 +44,9 @@ def main(args=None):
 	parser.add_argument("--fix", action="store_true", default=False,
 	                    help="detect errors in existing wiring and just show "
 	                         "corrective steps")
+	
+	parser.add_argument("--log", type=str, metavar="LOGFILE",
+	                    help="record the times at which each cable is installed")
 	
 	arguments.add_topology_args(parser)
 	arguments.add_cabinet_args(parser)
@@ -113,6 +120,19 @@ def main(args=None):
 		                           num_frames,
 		                           num_boards)
 	
+	# Create a TimingLogger if required
+	if args.log:
+		if os.path.isfile(args.log):
+			logfile = open(args.log, "a")
+			add_header = False
+		else:
+			logfile = open(args.log, "w")
+			add_header = True
+		timing_logger = TimingLogger(logfile, add_header)
+	else:
+		logfile = None
+		timing_logger = None
+	
 	# Convert wiring plan into cabinet coordinates
 	b2c = dict(cabinetised_boards)
 	wires = []
@@ -153,8 +173,12 @@ def main(args=None):
 	                            use_tts=not args.no_tts,
 	                            focus=focus,
 	                            wiring_probe=wiring_probe,
-	                            auto_advance=not args.no_auto_advance)
+	                            auto_advance=not args.no_auto_advance,
+	                            timing_logger=timing_logger)
 	ui.mainloop()
+	
+	if logfile is not None:
+		logfile.close()
 	
 	return 0
 
