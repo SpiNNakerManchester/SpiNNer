@@ -68,6 +68,7 @@ def main(args=None):
 	add_diagram_arguments(parser)
 	arguments.add_topology_args(parser)
 	arguments.add_cabinet_args(parser)
+	arguments.add_subset_args(parser)
 	
 	# Process command-line arguments
 	args = parser.parse_args(args)
@@ -82,6 +83,8 @@ def main(args=None):
 	
 	output_filename, file_type, image_width, image_height =\
 		arguments.get_image_from_args(parser, args, aspect_ratio)
+	
+	wire_filter = arguments.get_subset_from_args(parser, args)
 	
 	# Generate folded system
 	hex_boards, folded_boards = folded_torus(w, h,
@@ -137,9 +140,11 @@ def main(args=None):
 		for b, c in cabinetised_boards:
 			ob = b.follow_wire(direction)
 			oc = b2c[ob]
-			md.add_wire((c.cabinet, c.frame, c.board, direction),
-			            (oc.cabinet, oc.frame, oc.board, direction.opposite),
-			            width=wire_thickness_m)
+			
+			src = (c.cabinet, c.frame, c.board, direction)
+			dst = (oc.cabinet, oc.frame, oc.board, direction.opposite)
+			if wire_filter((src, dst)):
+				md.add_wire(src, dst, width=wire_thickness_m)
 	
 	# Render the image
 	Context = {"png": PNGContextManager,

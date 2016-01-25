@@ -52,6 +52,7 @@ def main(args=None):
 	arguments.add_cabinet_args(parser)
 	arguments.add_wire_length_args(parser)
 	arguments.add_bmp_args(parser)
+	arguments.add_subset_args(parser)
 	
 	# Process command-line arguments
 	args = parser.parse_args(args)
@@ -66,6 +67,8 @@ def main(args=None):
 	bmp_ips = arguments.get_bmps_from_args(parser, args,
 	                                       cabinet.num_cabinets,
 	                                       num_frames)
+	
+	wire_filter = arguments.get_subset_from_args(parser, args)
 	
 	if cabinet.num_cabinets == num_frames == 1:
 		num_boards = 3 * w * h
@@ -144,6 +147,11 @@ def main(args=None):
 		wires.append(((sc, sf, sb, src_direction),
 		              (dc, df, db, dst_direction),
 		              wire_length))
+	
+	# Filter wires according to user-specified rules
+	wires = list(filter(wire_filter, wires))
+	if len(wires) == 0:
+		parser.error("--subset selects no wires")
 	
 	if not args.fix:
 		# If running normally, just run through the full set of wires

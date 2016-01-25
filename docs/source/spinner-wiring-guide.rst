@@ -31,6 +31,7 @@ machine and correcting wiring errors.
 	                            [--num-frames N] [--wire-length L [L ...]]
 	                            [--minimum-wire-arc-height H]
 	                            [--bmp CABINET FRAME HOSTNAME]
+	                            [--subset SUBSET [SUBSET ...]]
 	
 	Interactively guide the user through the process of wiring up a SpiNNaker
 	machine.
@@ -139,6 +140,18 @@ machine and correcting wiring errors.
 	  --bmp CABINET FRAME HOSTNAME
 	                        specify the hostname of a BMP to use to communicate
 	                        with SpiNNaker boards in the given frame
+	
+	wire subset selection:
+	  These arguments allow the specificiation of subsets of wires to install,
+	  for example, selecting only particular wires within a particular cabinet
+	  or frame. If no subsets are specified, all wires will be included,
+	  otherwise the union of all specified subsets are included. Use '1.2.*' to
+	  select all wires between boards in cabinet 1, frame 2. Use '1.*.*' to
+	  select all wires between boards in cabinet 1. Use '1-2.*.*' to select all
+	  wires which cross between cabinets 1 and 2.
+	
+	  --subset SUBSET [SUBSET ...]
+	                        specify the subset of wires to include
 
 
 User Interface
@@ -236,6 +249,39 @@ Adding the ``--fix`` option will check all installed wires in the machine and
 guide you through any corrections which must be made::
 
 	$ spinner-wiring-guide -n 24 -l 0.15 0.30 0.50 1.00 --bmp 0 0 BMP_HOSTNAME --fix
+
+.. _subset-argument:
+
+Installing subsets of machines
+------------------------------
+
+If installation is to be split into multiple phases focusing on one subsection
+at a time, the ``--subset`` argument may be used to filter the wires displayed
+or repaired by the wiring guide.
+
+The ``--subset`` argument takes a set of arguments in the form ``c.f.b`` where
+``c``, ``f``, and ``b`` are described below and specify a range of cabinets,
+frames or boards. The three parts must be in one of the following formats:
+
+* A number (e.g. ``3``) specifying a specific cabinet, frame or board.
+* A pair (e.g. ``1-2``) specifying a specific pair of cabinets, frames or
+  boards.
+* A wildcard (``*``).
+
+For example:
+
+* Subset ``0.1.*`` would select wires going between any boards within cabinet
+  0, frame 1.
+* Subset ``0-1.*.*`` would select any cable which connects between cabinet 0
+  and cabinet 1.
+
+If multiple subsets are defined, cables matched by at least one of the subsets
+will be defined. For example, the screenshot below was produced by the
+following command-line which defines two subsets::
+
+	$ spinner-wiring-guide -n 360 -l 0.15 0.3 0.5 0.9 --subset 0.*.* 0-1.*.*
+
+.. image:: wiring_guide_subset_screenshot.png
 
 Logging
 -------

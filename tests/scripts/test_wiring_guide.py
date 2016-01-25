@@ -171,3 +171,20 @@ def test_logging(logdir, bc, wp, iwg):
 	with open(filename, "r") as f:
 		data = f.read()
 		assert len(data.split("\n")) == 6
+
+
+@pytest.mark.parametrize("argstring,num_wires",
+                         [ # By default should include everything
+                           ("-n 48 -l1", 144)
+                           # If subset selected, should include that subset
+                         , ("-n 48 -l1 --subset 0.*.*", 144)
+                         , ("-n 48 -l1 --subset 0.0.*", 56)
+                         ])
+def test_subset(argstring, num_wires, bc, wp, iwg):
+	assert wiring_guide.main(argstring.split()) == 0
+	assert len(iwg.mock_calls[0][2]["wires"]) == num_wires
+
+
+def test_subset_empty(bc, wp, iwg):
+	with pytest.raises(SystemExit):
+		wiring_guide.main("-n 48 -l1 --subset 1.0.0".split())
