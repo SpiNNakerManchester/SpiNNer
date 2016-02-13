@@ -23,6 +23,8 @@ from spinner.diagrams.interactive_wiring_guide import InteractiveWiringGuide
 
 from spinner.probe import WiringProbe
 
+from spinner.proxy import ProxyClient
+
 from spinner.timing_logger import TimingLogger
 
 from rig.machine_control import BMPController
@@ -52,6 +54,7 @@ def main(args=None):
 	arguments.add_cabinet_args(parser)
 	arguments.add_wire_length_args(parser)
 	arguments.add_bmp_args(parser)
+	arguments.add_proxy_args(parser)
 	arguments.add_subset_args(parser)
 	
 	# Process command-line arguments
@@ -67,6 +70,8 @@ def main(args=None):
 	bmp_ips = arguments.get_bmps_from_args(parser, args,
 	                                       cabinet.num_cabinets,
 	                                       num_frames)
+	
+	proxy_host_port = arguments.get_proxy_from_args(parser, args)
 	
 	wire_filter = arguments.get_subset_from_args(parser, args)
 	
@@ -107,21 +112,33 @@ def main(args=None):
 	                                       wires_between_cabinets,
 	                                       cabinet.board_wire_offset)
 	
-	# Create a BMP connection
-	if len(bmp_ips) == 0:
-		if args.fix:
-			parser.error("--fix requires that all BMPs be listed")
-		bmp_controller = None
-		wiring_probe = None
+	# Create a BMP connection/wiring probe or connect to a proxy
+	if proxy_host_port is None:
+		if len(bmp_ips) == 0:
+			if args.fix:
+				parser.error("--fix requires that all BMPs be listed with --bmp")
+			bmp_controller = None
+			wiring_probe = None
+		else:
+			bmp_controller = BMPController(bmp_ips)
+		
+		# Create a wiring probe
+		if bmp_controller is not None and (not args.no_auto_advance or args.fix):
+			wiring_probe = WiringProbe(bmp_controller,
+			                           cabinet.num_cabinets,
+			                           num_frames,
+			                           num_boards)
 	else:
-		bmp_controller = BMPController(bmp_ips)
-	
-	# Create a wiring probe
-	if bmp_controller is not None and (not args.no_auto_advance or args.fix):
-		wiring_probe = WiringProbe(bmp_controller,
-		                           cabinet.num_cabinets,
-		                           num_frames,
-		                           num_boards)
+		# Fix is not supported since the proxy client does not recreate the
+		# discover_wires method of WiringProbe.
+		if args.fix:
+			parser.error("--fix cannot be used with --proxy")
+		
+		# The proxy object provides a get_link_target and set_led method compatible
+		# with those provided by bmp_controller and wiring_probe. Since these are
+		# the only methods used, we use the proxy client object in place of
+		# bmp_controller and wiring_probe.
+		bmp_controller = wiring_probe = ProxyClient(*proxy_host_port)
 	
 	# Create a TimingLogger if required
 	if args.log:

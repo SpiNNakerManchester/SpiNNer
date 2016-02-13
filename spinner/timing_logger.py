@@ -42,6 +42,9 @@ class TimingLogger(object):
 		"attempt_duration",
 		# Number of attempts made to install the current cable
 		"num_attempts",
+		# Temperature report values
+		"c", "f", "b", "temp_top", "temp_btm", "temp_ext_0", "temp_ext_1",
+		"fan_0", "fan_1",
 	]
 	
 	def __init__(self, file, add_header=True):
@@ -209,3 +212,18 @@ class TimingLogger(object):
 		               )
 		
 		self._pause_start_time = None
+	
+	def temperature(self, c, f, b, adc_info):
+		"""Event when logging has started."""
+		self._start_time = time.time()
+		self._write_row( event_type="temperature"
+		               , time=0.0
+		               , realtime=self._realtime()
+		               , c=c, f=f, b=b
+		               , temp_top=adc_info.temp_top
+		               , temp_btm=adc_info.temp_btm
+		               , temp_ext_0=adc_info.temp_ext_0
+		               , temp_ext_1=adc_info.temp_ext_1
+		               , fan_0=adc_info.fan_0
+		               , fan_1=adc_info.fan_1
+		               )

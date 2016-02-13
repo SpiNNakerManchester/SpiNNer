@@ -5,7 +5,9 @@ import colorsys
 
 import subprocess
 
-from six import iteritems, itervalues
+from itertools import cycle
+
+from six import iteritems, itervalues, next
 
 import cairocffi as cairo
 
@@ -141,6 +143,11 @@ class InteractiveWiringGuide(object):
 		# Human readable names for each socket
 		self.socket_names = {d: d.name.replace("_", " ") for d in Direction}
 		
+		# An infinately cycling iterator over all the boards in the machine.
+		self.board_iter = iter(cycle(set((c, f, b)
+		                                 for ((c, f, b, _1), _2, _3)
+		                                 in self.wires)))
+		
 		# A reference to any running TTS job
 		self.tts_process = None
 		
@@ -244,9 +251,14 @@ class InteractiveWiringGuide(object):
 		Set the LEDs for the given wire index to the given state (assuming the
 		board's IP is known).
 		"""
-		if self.bmp_controller is not None:
-			for c,f,b,p in self.wires[wire][:2]:
-				self.bmp_controller.set_led(self.bmp_led, state, c, f, b)
+		try:
+			if self.bmp_controller is not None:
+				for c,f,b,p in self.wires[wire][:2]:
+					self.bmp_controller.set_led(self.bmp_led, state, c, f, b)
+		except:
+			# Quit if this goes wrong
+			self.tk.destroy()
+			raise
 	
 	
 	def tts_delta(self, last_wire, this_wire):
@@ -579,45 +591,59 @@ class InteractiveWiringGuide(object):
 	
 	
 	def _poll_wiring_probe(self):
-		"""Poll the machine's hardware to determine if the wiring is complete."""
-		if self.wiring_probe is not None and self.auto_advance:
-			src, dst, length = self.wires[self.cur_wire]
+		"""Poll the machine's hardware to determine if the wiring is complete and
+		continue to poll the temperatures of boards in the machine.
+		"""
+		try:
+			# Poll temperature of next board
+			if self.bmp_controller is not None and self.timing_logger is not None:
+				c, f, b = next(self.board_iter)
+				print("Polling", c, f, b)
+				adc_info = self.bmp_controller.read_adc(c, f, b)
+				self.timing_logger.temperature(c, f, b, adc_info)
 			
-			# Check both ends of the cable
-			actual_dst = self.wiring_probe.get_link_target(*src)
-			actual_src = self.wiring_probe.get_link_target(*dst)
-			
-			advance = False
-			
-			if length is None:
-				# We're waiting for the wire to be disconnected
-				if actual_src is None and actual_dst is None:
-					# Disconnected! Advance to the next wire!
-					advance = True
-			else:
-				# We're waiting for a wire to be connected
-				if actual_src == src and actual_dst == dst:
-					# Connected correctly! Advance to the next wire!
-					advance = True
-					if self.timing_logger is not None:
-						self.timing_logger.unpause()
-						self.timing_logger.connection_complete()
-				elif actual_dst is not None or actual_src is not None:
-					# The wire was connected, but was connected incorrectly!
-					if not self.connected_incorrectly:
-						self._tts_speak("Wire inserted incorrectly.")
+			# Check wiring conncectivity
+			if self.wiring_probe is not None and self.auto_advance:
+				src, dst, length = self.wires[self.cur_wire]
+				
+				# Check both ends of the cable
+				actual_dst = self.wiring_probe.get_link_target(*src)
+				actual_src = self.wiring_probe.get_link_target(*dst)
+				
+				advance = False
+				
+				if length is None:
+					# We're waiting for the wire to be disconnected
+					if actual_src is None and actual_dst is None:
+						# Disconnected! Advance to the next wire!
+						advance = True
+				else:
+					# We're waiting for a wire to be connected
+					if actual_src == src and actual_dst == dst:
+						# Connected correctly! Advance to the next wire!
+						advance = True
 						if self.timing_logger is not None:
 							self.timing_logger.unpause()
-							self.timing_logger.connection_error()
-					self.connected_incorrectly = True
-				else:
-					# No wire is connected
-					self.connected_incorrectly = False
-				
-			# Actually advance, as required
-			if advance and self.cur_wire != len(self.wires) - 1:
-				self.go_to_wire(self.cur_wire + 1)
-				self._redraw()
+							self.timing_logger.connection_complete()
+					elif actual_dst is not None or actual_src is not None:
+						# The wire was connected, but was connected incorrectly!
+						if not self.connected_incorrectly:
+							self._tts_speak("Wire inserted incorrectly.")
+							if self.timing_logger is not None:
+								self.timing_logger.unpause()
+								self.timing_logger.connection_error()
+						self.connected_incorrectly = True
+					else:
+						# No wire is connected
+						self.connected_incorrectly = False
+					
+				# Actually advance, as required
+				if advance and self.cur_wire != len(self.wires) - 1:
+					self.go_to_wire(self.cur_wire + 1)
+					self._redraw()
+		except:
+			# Fail gracefully...
+			print(traceback.format_exc())
 		
 		# Schedule next poll
 		self.tk.after(InteractiveWiringGuide.POLL_INTERVAL_MS, self._poll_wiring_probe)

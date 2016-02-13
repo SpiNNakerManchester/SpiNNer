@@ -14,6 +14,8 @@ from spinner.utils import ideal_system_size, folded_torus, min_num_cabinets
 
 from spinner.cabinet import Cabinet
 
+from spinner.proxy import DEFAULT_PORT
+
 
 def CabinetAction(num_levels=4, append=False):
 	""""An argparse Action which accepts cabinet/frame/board/link references."""
@@ -512,10 +514,12 @@ def add_bmp_args(parser):
 def get_bmps_from_args(parser, args, num_cabinets, num_frames):
 	"""To be used with add_bmp_args.
 	
-	Check that the supplied arguments are valid and then return a dictionary
-	mapping (cabinet, frame) tuples to hostnames.
+	Check that the supplied arguments are valid and then return either a
+	dictionary mapping (cabinet, frame) tuples to hostnames or a (hostname, port)
+	tuple indicating the .
 	
-	Either no arguments must be supplied or exactly one per frame.
+	Either no arguments must be supplied or a proxy client or exactly one per
+	frame.
 	"""
 	# Special case when no arguments supplied.
 	if args.bmp is None:
@@ -560,6 +564,39 @@ def get_bmps_from_args(parser, args, num_cabinets, num_frames):
 					", ".join("C:{} F:{}".format(c, f) for c, f in extra)))
 		
 		return bmp_hostnames
+
+
+def add_proxy_args(parser):
+	"""Add arguments for specifying a proxy server connect to."""
+	proxy_group = parser.add_argument_group("SpiNNaker proxy connection details")
+	proxy_group.add_argument("--proxy", type=str, metavar="HOSTNAME",
+	                         help="specify the hostname of a "
+	                              "spinner-proxy-server instance to use "
+	                              "to communicate with the SpiNNaker system")
+	proxy_group.add_argument("--proxy-port", type=int, default=DEFAULT_PORT,
+	                         metavar="PORT",
+	                         help="specify the port to connect to "
+	                              "spinner-proxy-server with (default: "
+	                              "%(default)d)")
+
+
+def get_proxy_from_args(parser, args):
+	"""To be used with add_proxy_args.
+	
+	Returns a (hostname, port) or None if no proxy server details provided.
+	
+	This call checks that no conflicting --bmp arguments are present.
+	"""
+	# Make sure only one of the --bmp or --proxy arguments is given
+	if hasattr(args, "bmp"):
+		if args.bmp is not None and args.proxy is not None:
+			parser.error("--bmp and --proxy are mutually exclusive")
+	
+	# If proxy specified, return one
+	if args.proxy is not None:
+		return (args.proxy, args.proxy_port)
+	else:
+		return None
 
 
 def add_subset_args(parser):
