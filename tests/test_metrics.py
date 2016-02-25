@@ -85,33 +85,34 @@ def test_wire_lengths_multiple():
 	])
 
 
-@pytest.mark.parametrize("distance,minimum_arc_height,"
-                         "exp_wire_length,exp_arc_height",
-                         [# Special case: zero-length
-                          (0.0, 0.0, 0.15, 0.15/2),
-                          # Special case: zero-height arcs allowed, should just
-                          # pick available wire.
+@pytest.mark.parametrize("distance,min_slack,"
+                         "exp_wire_length,exp_slack",
+                         [# Zero-length
+                          (0.0, 0.0, 0.15, 0.15),
+                          # Zero-slack
                           (0.15, 0.0, 0.15, 0.0),
                           (0.30, 0.0, 0.30, 0.0),
                           (0.50, 0.0, 0.50, 0.0),
                           (1.00, 0.0, 1.00, 0.0),
-                          # Special case: wire is too long to form an arc,
-                          # should form a semi-circle at a distance instead.
-                          # (The example has an arc height of 0.0477 and thus
-                          # should fall under the limit).
-                          (0.0954929, 0.05, 0.30, 0.1227),
+                          # General case.
+                          (0.10, 0.04, 0.15, 0.05),
+                          (0.01, 0.05, 0.15, 0.14),
+                          (0.20, 0.05, 0.30, 0.10),
                          ])
-def test_physical_wire_length_cases(distance, minimum_arc_height,
-                                    exp_wire_length, exp_arc_height):
+def test_physical_wire_length_cases(distance, min_slack,
+                                    exp_wire_length, exp_slack):
 	"""Test a few specific cases of wire length to check basic behaviour."""
-	wire_length, arc_height = metrics.physical_wire_length(
-		distance, [0.15, 0.3, 0.5, 1.0], minimum_arc_height)
+	wire_length, slack = metrics.physical_wire_length(
+		distance, [0.15, 0.3, 0.5, 1.0], min_slack)
 	
-	assert wire_length == exp_wire_length
-	assert abs(arc_height - exp_arc_height) < 0.01
+	assert abs(wire_length - exp_wire_length) < 0.0001
+	assert abs(slack - exp_slack) < 0.0001
 
+def test_physical_wire_length_fail():
+	with pytest.raises(ValueError):
+		metrics.physical_wire_length(2.0, [1.0], 0.0)
 
-@pytest.mark.parametrize("distance,wire_lengths,minimum_arc_height",
+@pytest.mark.parametrize("distance,wire_lengths,min_slack",
                          [# No wire lengths provided
                           (0.0, [], 0.0),
                           # Longest wire is too short
@@ -120,30 +121,10 @@ def test_physical_wire_length_cases(distance, minimum_arc_height,
                           (0.5, [0.5], 0.1),
                          ])
 def test_physical_wire_length_impossible(distance, wire_lengths,
-                                         minimum_arc_height):
+                                         min_slack):
 	"""Check that impossible situations yield an error."""
 	with pytest.raises(ValueError):
-		wire_length, arc_height = metrics.physical_wire_length(
-			distance, wire_lengths, minimum_arc_height)
-
-
-
-@pytest.mark.parametrize("alpha",
-                         [((n+1) / 10.0) * pi
-                          for n in range(10)])
-def test_physical_wire_length_sweep(alpha):
-	"""Test a value sweep of allowable wire lengths."""
-	exp_wire_length = 1.0
-	
-	# Compute the model answer using straight forward trig
-	distance = 2.0 * (exp_wire_length/alpha) * sin(alpha / 2.0)
-	exp_arc_height = (exp_wire_length/alpha) - (exp_wire_length/alpha) * cos(alpha/2.0)
-	
-	wire_length, arc_height = metrics.physical_wire_length(
-		distance, [exp_wire_length], 0.0)
-	
-	assert wire_length == exp_wire_length
-	assert abs(arc_height - exp_arc_height) < 0.01
+		metrics.physical_wire_length(distance, wire_lengths, min_slack)
 
 
 @pytest.mark.parametrize("bins,exp_bin_counts",
@@ -158,21 +139,15 @@ def test_physical_wire_length_sweep(alpha):
 def test_wire_length_histogram(bins, exp_bin_counts):
 	test_case = sum([[n+1]*(n+1) for n in range(10)], [])
 	
-	bin_counts, bin_max_arc_heights =\
+	bin_counts, bin_min_slack, bin_max_slack =\
 		metrics.wire_length_histogram(test_case, 0.0, bins)
 	
 	# Make sure expected result appears
 	assert bin_counts == exp_bin_counts
 	
-	# Max arc heights should be populated for each bin
-	assert set(bin_counts) == set(bin_max_arc_heights)
-
-
-def test_wire_length_histogram_auto_bins_with_arc():
-	# Test that suitable bins can be found when an arc is required.
-	test_case = sum([[n+1]*(n+1) for n in range(10)], [])
-	bin_counts, bin_max_arc_heights =\
-		metrics.wire_length_histogram(test_case, 0.5, 10)
+	# Slacks should be populated for each bin
+	assert set(bin_counts) == set(bin_min_slack)
+	assert set(bin_counts) == set(bin_max_slack)
 
 
 def test_wire_length_histogram_bad():
@@ -180,7 +155,7 @@ def test_wire_length_histogram_bad():
 	with pytest.raises(ValueError):
 		metrics.wire_length_histogram([1.0], 0.0, [0.5])
 	
-	# Fail if arc height is not met
+	# Fail if slack is not met
 	with pytest.raises(ValueError):
 		metrics.wire_length_histogram([1.0], 0.5, [1.0])
 

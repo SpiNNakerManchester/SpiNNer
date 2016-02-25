@@ -28,8 +28,7 @@ machine and correcting wiring errors.
 	                            [--cabinet-frame-offset X Y Z]
 	                            [--inter-cabinet-spacing S] [--num-cabinets N]
 	                            [--num-frames N] [--wire-length L [L ...]]
-	                            [--minimum-wire-arc-height H]
-	                            [--bmp CABINET FRAME HOSTNAME]
+	                            [--minimum-slack H] [--bmp CABINET FRAME HOSTNAME]
 	
 	Interactively guide the user through the process of wiring up a SpiNNaker
 	machine.
@@ -103,14 +102,14 @@ machine and correcting wiring errors.
 	                        frame in meters (default: (0.06, 0.017, 0.0))
 	  --inter-frame-spacing S
 	                        physical spacing between frames in a cabinet in meters
-	                        (default: 0.089)
+	                        (default: 0.133)
 	
 	cabinet physical dimensions:
 	  --frames-per-cabinet FRAMES_PER_CABINET
 	                        number of frames per cabinet (default: 5)
 	  --cabinet-dimensions W H D
 	                        cabinet physical dimensions in meters (default: (0.6,
-	                        1.822, 0.25))
+	                        2.0, 0.25))
 	  --cabinet-frame-offset X Y Z
 	                        physical offset of the left-top-front corner of the
 	                        top frame from the left-top-front corner of a cabinet
@@ -128,15 +127,14 @@ machine and correcting wiring errors.
 	available wire lengths:
 	  --wire-length L [L ...], -l L [L ...]
 	                        specify one or more available wire lengths in meters
-	  --minimum-wire-arc-height H
-	                        the minimum height of the arc formed by a wire
-	                        connecting two boards in meters (a heuristic for
-	                        determining the slack to allow when selecting wires)
+	  --minimum-slack H     the minimum slack to allow in a wire connecting two
+	                        boards in meters
 	
 	SpiNNaker BMP connection details:
 	  --bmp CABINET FRAME HOSTNAME
 	                        specify the hostname of a BMP to use to communicate
 	                        with SpiNNaker boards in the given frame
+
 
 
 User Interface

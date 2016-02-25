@@ -373,12 +373,10 @@ def add_wire_length_args(parser):
 	                               action="append", nargs="+",
 	                               help="specify one or more available wire "
 	                                    "lengths in meters")
-	wire_length_group.add_argument("--minimum-wire-arc-height", type=float, metavar="H",
+	wire_length_group.add_argument("--minimum-slack", type=float, metavar="H",
 	                               default=0.05,
-	                               help="the minimum height of the arc formed by a "
-	                                    "wire connecting two boards in meters "
-	                                    "(a heuristic for determining the slack "
-	                                    "to allow when selecting wires)")
+	                               help="the minimum slack to allow in a "
+	                                    "wire connecting two boards in meters")
 
 
 def get_wire_lengths_from_args(parser, args, mandatory=False):
@@ -391,9 +389,9 @@ def get_wire_lengths_from_args(parser, args, mandatory=False):
 	
 	Returns
 	-------
-	([float, ...], min_arc_height)
-		Gives the wire lengths available (which may be empty) and the minimum arc
-		length requested.
+	([float, ...], min_slack)
+		Gives the wire lengths available (which may be empty) and the minimum slack
+		requested.
 	"""
 	if args.wire_length is None:
 		wire_lengths = []
@@ -412,13 +410,13 @@ def get_wire_lengths_from_args(parser, args, mandatory=False):
 		
 		wire_lengths = sorted(args.wire_length)
 	
-	if args.minimum_wire_arc_height < 0.0:
-		parser.error("--minimum-wire-arc-height must be positive")
+	if args.minimum_slack < 0.0:
+		parser.error("--minimum-slack must be positive")
 	
 	if mandatory and not wire_lengths:
 		parser.error("At least one --wire-length argument must be provided.")
 	
-	return (wire_lengths, args.minimum_wire_arc_height)
+	return (wire_lengths, args.minimum_slack)
 
 
 def add_image_args(parser):

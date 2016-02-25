@@ -317,7 +317,7 @@ def test_get_histogram_from_args_bad(argstring):
 
 
 @pytest.mark.parametrize("mandatory", [True, False])
-@pytest.mark.parametrize("argstring,wire_lengths,min_arc_height",
+@pytest.mark.parametrize("argstring,wire_lengths,min_slack",
                          [("", [], 0.05),
                           ("-l 1", [1.0], 0.05),
                           ("-l 1.5", [1.5], 0.05),
@@ -326,9 +326,10 @@ def test_get_histogram_from_args_bad(argstring):
                           ("-l 1 -l 2 -l 3", [1.0, 2.0, 3.0], 0.05),
                           ("-l 3 -l 2 -l 1", [1.0, 2.0, 3.0], 0.05),
                           ("-l 3 -l 2 1", [1.0, 2.0, 3.0], 0.05),
-                          ("--minimum-wire-arc-height 1.2", [], 1.2)
+                          ("--minimum-slack 1.2", [], 1.2)
                          ])
-def test_get_wire_lengths_from_args(mandatory, argstring, wire_lengths, min_arc_height):
+def test_get_wire_lengths_from_args(mandatory, argstring, wire_lengths,
+min_slack):
 	parser = ArgumentParser()
 	arguments.add_wire_length_args(parser)
 	
@@ -340,7 +341,7 @@ def test_get_wire_lengths_from_args(mandatory, argstring, wire_lengths, min_arc_
 	else:
 		# Should succeed otherwise
 		assert arguments.get_wire_lengths_from_args(parser, args, mandatory) ==\
-			(wire_lengths, min_arc_height)
+			(wire_lengths, min_slack)
 
 
 
@@ -365,8 +366,8 @@ def test_get_wire_lengths_from_args(mandatory, argstring, wire_lengths, min_arc_
                           "-l 1 2 1",
                           "-l 1 -l 1",
                           "-l 1 2 -l 1 3",
-                          # Negative minimum arc height
-                          "--minimum-wire-arc-height -0.1",
+                          # Negative minimum slack
+                          "--minimum-slack -0.1",
                          ])
 def test_get_wire_lengths_from_args_bad(argstring):
 	# Make sure bad arguments fail to validate

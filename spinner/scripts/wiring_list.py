@@ -43,7 +43,7 @@ def main(args=None):
 	
 	cabinet, num_frames = arguments.get_cabinets_from_args(parser, args)
 	
-	wire_lengths, min_arc_height = arguments.get_wire_lengths_from_args(
+	wire_lengths, min_slack = arguments.get_wire_lengths_from_args(
 		parser, args, mandatory=True)
 	
 	# Generate folded system
@@ -63,7 +63,7 @@ def main(args=None):
 	# Generate wiring plan
 	wires_between_boards, wires_between_frames, wires_between_cabinets =\
 		generate_wiring_plan(cabinetised_boards, physical_boards,
-		                     cabinet.board_wire_offset, wire_lengths, min_arc_height)
+		                     cabinet.board_wire_offset, wire_lengths, min_slack)
 	flat_wiring_plan = flatten_wiring_plan(wires_between_boards,
 	                                       wires_between_frames,
 	                                       wires_between_cabinets,
@@ -79,7 +79,9 @@ def main(args=None):
 		dc, df, db = b2c[dst_board]
 		wires.append(((sc, sf, sb, src_direction),
 		              (dc, df, db, dst_direction),
-		              wire_length))
+		              wire_length, src_board, dst_board))
+	
+	b2p = dict(physical_boards)
 	
 	# Order as requested on the command-line
 	if args.sort_by == "board":
@@ -91,12 +93,11 @@ def main(args=None):
 	
 	print("C  F  B  Socket      C  F  B  Socket      Length")
 	print("-- -- -- ----------  -- -- -- ----------  ------")
-	for ((sc, sf, sb, src_direction), (dc, df, db, dst_direction), wire_length) in wires:
+	for ((sc, sf, sb, src_direction), (dc, df, db, dst_direction), wire_length, src_board, dst_board) in wires:
 		print("{:2d} {:2d} {:2d} {:10s}  {:2d} {:2d} {:2d} {:10s}  {:0.2f}".format(
 			sc, sf, sb, src_direction.name.replace("_", " "),
 			dc, df, db, dst_direction.name.replace("_", " "),
-			wire_length
-		))
+			wire_length))
 	
 	return 0
 

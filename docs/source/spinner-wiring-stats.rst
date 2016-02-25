@@ -10,8 +10,7 @@ Prints basic statistics about the wiring of a specified configuration of boards.
 	                            [--transformation {shear,slice}]
 	                            [--uncrinkle-direction {columns,rows}]
 	                            [--folds X Y] [--histogram-bins N]
-	                            [--wire-length L [L ...]]
-	                            [--minimum-wire-arc-height H]
+	                            [--wire-length L [L ...]] [--minimum-slack H]
 	                            [--board-dimensions W H D]
 	                            [--board-wire-offset-south-west X Y Z]
 	                            [--board-wire-offset-north-east X Y Z]
@@ -61,10 +60,8 @@ Prints basic statistics about the wiring of a specified configuration of boards.
 	available wire lengths:
 	  --wire-length L [L ...], -l L [L ...]
 	                        specify one or more available wire lengths in meters
-	  --minimum-wire-arc-height H
-	                        the minimum height of the arc formed by a wire
-	                        connecting two boards in meters (a heuristic for
-	                        determining the slack to allow when selecting wires)
+	  --minimum-slack H     the minimum slack to allow in a wire connecting two
+	                        boards in meters
 	
 	board physical dimensions:
 	  --board-dimensions W H D
@@ -110,14 +107,14 @@ Prints basic statistics about the wiring of a specified configuration of boards.
 	                        frame in meters (default: (0.06, 0.017, 0.0))
 	  --inter-frame-spacing S
 	                        physical spacing between frames in a cabinet in meters
-	                        (default: 0.089)
+	                        (default: 0.133)
 	
 	cabinet physical dimensions:
 	  --frames-per-cabinet FRAMES_PER_CABINET
 	                        number of frames per cabinet (default: 5)
 	  --cabinet-dimensions W H D
 	                        cabinet physical dimensions in meters (default: (0.6,
-	                        1.822, 0.25))
+	                        2.0, 0.25))
 	  --cabinet-frame-offset X Y Z
 	                        physical offset of the left-top-front corner of the
 	                        top frame from the left-top-front corner of a cabinet
@@ -142,13 +139,13 @@ histogram gives a basic overview of the lengths of wires required::
 
 	$ spinner-wiring-stats -n 120
 	...snip...
-	| Range (meters)   | Count | Histogram       | Max Arc Height (meters) |
-	| ---------------- | ----- | --------------- | ----------------------- |
-	| 0.00 < x <= 0.16 | 200   | ############### | 0.07                    |
-	| 0.16 < x <= 0.32 | 0     |                 | 0.00                    |
-	| 0.32 < x <= 0.48 | 64    | #####           | 0.14                    |
-	| 0.48 < x <= 0.64 | 0     |                 | 0.00                    |
-	| 0.64 < x <= 0.80 | 96    | ########        | 0.17                    |
+	| Range (meters)   | Count | Histogram       | Min slack (meters) | Max slack (meters) |
+	| ---------------- | ----- | --------------- | ------------------ | ------------------ |
+	| 0.00 < x <= 0.17 | 200   | ############### | 0.11               | 0.15               |
+	| 0.17 < x <= 0.35 | 0     |                 | 0.35               | 0.00               |
+	| 0.35 < x <= 0.52 | 64    | #####           | 0.10               | 0.14               |
+	| 0.52 < x <= 0.69 | 0     |                 | 0.69               | 0.00               |
+	| 0.69 < x <= 0.87 | 96    | ########        | 0.05               | 0.09               |
 
 
 If the available wire lengths are known, these can be listed using the
@@ -157,32 +154,21 @@ accordingly::
 
 	$ spinner-wiring-stats -n 120 --wire-length 0.15 0.30 0.50 1.00
 	...snip...
-	| Range (meters)   | Count | Histogram       | Max Arc Height (meters) |
-	| ---------------- | ----- | --------------- | ----------------------- |
-	| 0.00 < x <= 0.15 | 200   | ############### | 0.07                    |
-	| 0.15 < x <= 0.30 | 0     |                 | 0.00                    |
-	| 0.30 < x <= 0.50 | 64    | #####           | 0.15                    |
-	| 0.50 < x <= 1.00 | 96    | ########        | 0.30                    |
-	...snip...
+	| Range (meters)   | Count | Histogram       | Min slack (meters) | Max slack (meters) |
+	| ---------------- | ----- | --------------- | ------------------ | ------------------ |
+	| 0.00 < x <= 0.15 | 200   | ############### | 0.09               | 0.13               |
+	| 0.15 < x <= 0.30 | 0     |                 | 0.30               | 0.00               |
+	| 0.30 < x <= 0.50 | 64    | #####           | 0.08               | 0.12               |
+	| 0.50 < x <= 1.00 | 96    | ########        | 0.18               | 0.22               |
 
-When deciding the length of wire to use, spinner automatically includes a
-certain amount of slack. To chose the amount of slack, SpiNNer assumes that
-installed wires form a perfect arc between their sockets::
 
-	                _ _ _ _ _ _ _ _ _ _
-	         , - ~ ~ ~ - ,           ^
-	     , '               ' ,       | arc height
-	   ,                       ,     V
-	--| |---------------------| |-------
+When deciding the length of wire to use, spinner automatically includes at
+least the slack specified by the ``--minimum-slack`` arugment which defaults to
+0.05 m.
 
-In order to introduce a sensible amount of slack, wires are required to form an
-arc of a minimimum height away from the boards. This value is controlled by the
-``--minimum-wire-arc-height`` option and defaults to 0.05 m.
-
-The histogram table also indicates the maximum arc height for each wire length.
-This number gives an indication of how much excess slackness there will be when
-the supplied wire lengths are used. This may be important when building systems
-whose wires are installed in an enclosed space.
+The histogram table also indicates the minimum and maximum slack for each wire
+length. This may be important when building systems whose wires are installed
+in an enclosed space.
 
 Determining the folding process
 -------------------------------
