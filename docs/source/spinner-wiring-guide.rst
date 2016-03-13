@@ -29,9 +29,8 @@ machine and correcting wiring errors.
 	                            [--cabinet-frame-offset X Y Z]
 	                            [--inter-cabinet-spacing S] [--num-cabinets N]
 	                            [--num-frames N] [--wire-length L [L ...]]
-	                            [--minimum-wire-arc-height H]
-	                            [--bmp CABINET FRAME HOSTNAME]
 	                            [--subset SUBSET [SUBSET ...]]
+	                            [--minimum-slack H] [--bmp CABINET FRAME HOSTNAME]
 	
 	Interactively guide the user through the process of wiring up a SpiNNaker
 	machine.
@@ -131,10 +130,8 @@ machine and correcting wiring errors.
 	available wire lengths:
 	  --wire-length L [L ...], -l L [L ...]
 	                        specify one or more available wire lengths in meters
-	  --minimum-wire-arc-height H
-	                        the minimum height of the arc formed by a wire
-	                        connecting two boards in meters (a heuristic for
-	                        determining the slack to allow when selecting wires)
+	  --minimum-slack H     the minimum slack to allow in a wire connecting two
+	                        boards in meters
 	
 	SpiNNaker BMP connection details:
 	  --bmp CABINET FRAME HOSTNAME
@@ -152,6 +149,7 @@ machine and correcting wiring errors.
 	
 	  --subset SUBSET [SUBSET ...]
 	                        specify the subset of wires to include
+
 
 
 User Interface

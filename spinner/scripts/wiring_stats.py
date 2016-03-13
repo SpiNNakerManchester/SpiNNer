@@ -64,7 +64,7 @@ def wire_counts_table(boards):
 	return table(table_data)
 
 
-def wire_length_table(boards, bins, min_arc_height,
+def wire_length_table(boards, bins, min_slack,
                       wire_offsets=None, bar_length=15):
 	"""Render a histogram of wire lengths in the system."""
 	wire_lengths = sum((list(metrics.wire_lengths(boards, d, wire_offsets))
@@ -73,19 +73,22 @@ def wire_length_table(boards, bins, min_arc_height,
 	                              Direction.west]),
 	                   [])
 	
-	bin_counts, bin_max_arc_heights = metrics.wire_length_histogram(wire_lengths, min_arc_height, bins)
+	bin_counts, bin_min_slack, bin_max_slack = metrics.wire_length_histogram(
+		wire_lengths, min_slack, bins)
 	
-	data = [["Range (meters)", "Count", "Histogram", "Max Arc Height (meters)"]]
+	data = [("Range (meters)", "Count", "Histogram", "Min slack (meters)", "Max slack (meters)")]
 	
 	max_count = max(itervalues(bin_counts))
 	last_bin = 0.0
 	for bin in sorted(bin_counts):
 		count = bin_counts[bin]
-		max_arc_height = bin_max_arc_heights[bin]
+		min_slack = bin_min_slack[bin]
+		max_slack = bin_max_slack[bin]
 		data.append(("%0.2f < x <= %0.2f"%(last_bin, bin),
 		             count,
 		             "#"*((count * bar_length + max_count - 1) // max_count),
-		             "%0.2f"%max_arc_height))
+		             "%0.2f"%min_slack,
+		             "%0.2f"%max_slack))
 		last_bin = bin
 	
 	return table(data)
@@ -106,7 +109,7 @@ def main(args=None):
 	(w, h), transformation, uncrinkle_direction, folds =\
 		arguments.get_topology_from_args(parser, args)
 	histogram_bins = arguments.get_histogram_from_args(parser, args)
-	wire_lengths, min_arc_height =\
+	wire_lengths, min_slack =\
 		arguments.get_wire_lengths_from_args(parser, args)
 	cabinet, num_frames = arguments.get_cabinets_from_args(parser, args)
 	
@@ -151,12 +154,11 @@ def main(args=None):
 	
 	# Generate a histogram of wire lengths
 	print(heading("Wire length histogram", 2))
-	print("Wire lengths are chosen to include enough slack such that each wire "
-	      "forms an arc protruding no less than {} meters from the "
-	      "system.\n".format(min_arc_height))
+	print("Wire lengths are selected which include at least {} meters "
+	      "of slack.\n".format(min_slack))
 	print(wire_length_table(physical_boards,
 	                        wire_lengths if wire_lengths else histogram_bins,
-	                        min_arc_height,
+	                        min_slack,
 	                        cabinet.board_wire_offset))
 	
 	return 0
