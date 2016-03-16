@@ -16,12 +16,12 @@ Installation
 
 SpiNNer has the following external dependencies (aside from Python 2.7+ or 3.4+):
 
-| Dependency                                                  | Ubuntu Package | Fedora Package(s)          | Arch Package |
-| ----------------------------------------------------------- | -------------- | -------------------------- | ------------ |
-| [Cairo](http://cairographics.org/)                          | libcairo2-dev  | cairo-devel                | cairo        |
-| [libffi](https://sourceware.org/libffi/)                    | libffi-dev     | libffi-devel               | libffi       |
-| [Tkinter](https://docs.python.org/3.4/library/tkinter.html) | python-tk      | tkinter, python-imaging-tk | tk           |
-| [Espeak](http://espeak.sourceforge.net/)                    | espeak         | espeak                     | espeak       |
+| Dependency                                                  | Ubuntu Package               | Fedora Package(s)          | Arch Package |
+| ----------------------------------------------------------- | ---------------------------- | -------------------------- | ------------ |
+| [Cairo](http://cairographics.org/)                          | libcairo2-dev                | cairo-devel                | cairo        |
+| [libffi](https://sourceware.org/libffi/)                    | libffi-dev                   | libffi-devel               | libffi       |
+| [Tkinter](https://docs.python.org/3.4/library/tkinter.html) | python-tk, python-imaging-tk | tkinter, python-imaging-tk | tk           |
+| [Espeak](http://espeak.sourceforge.net/)                    | espeak                       | espeak                     | espeak       |
 
 NB: the `python-imaging-tk` package only appeared in more recent Fedora
 releases; for older releases this package is not needed.
