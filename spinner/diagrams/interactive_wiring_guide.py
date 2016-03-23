@@ -5,6 +5,8 @@ import colorsys
 
 import subprocess
 
+import traceback
+
 from itertools import cycle
 
 from six import iteritems, itervalues, next
@@ -591,17 +593,9 @@ class InteractiveWiringGuide(object):
 	
 	
 	def _poll_wiring_probe(self):
-		"""Poll the machine's hardware to determine if the wiring is complete and
-		continue to poll the temperatures of boards in the machine.
+		"""Poll the machine's hardware to determine if the wiring is complete.
 		"""
 		try:
-			# Poll temperature of next board
-			if self.bmp_controller is not None and self.timing_logger is not None:
-				c, f, b = next(self.board_iter)
-				print("Polling", c, f, b)
-				adc_info = self.bmp_controller.read_adc(c, f, b)
-				self.timing_logger.temperature(c, f, b, adc_info)
-			
 			# Check wiring conncectivity
 			if self.wiring_probe is not None and self.auto_advance:
 				src, dst, length = self.wires[self.cur_wire]

@@ -177,6 +177,7 @@ def main(args=None):
 		# If running in fix mode, generate a list of fixes to make
 		correct_wires = set((src, dst) for src, dst, length in wires)
 		actual_wires = set(wiring_probe.discover_wires())
+		print(len(actual_wires), len(correct_wires))
 		
 		to_remove = actual_wires - correct_wires
 		to_add = correct_wires - actual_wires

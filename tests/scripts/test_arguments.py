@@ -12,6 +12,8 @@ from spinner.scripts import arguments
 
 from spinner import utils
 
+from spinner.proxy import DEFAULT_PORT
+
 from example_cabinet_params import board_wire_offset_fields, unique
 
 
@@ -626,3 +628,47 @@ def test_get_subset_from_args_bad(argstring):
 	with pytest.raises(SystemExit):
 		args = parser.parse_args(argstring.split())
 		arguments.get_subset_from_args(parser, args)
+
+
+@pytest.mark.parametrize("argstring",
+                         [# Supplying no proxy
+                          "--proxy",
+                          # Invalid port number
+                          "--proxy-port",
+                          "--proxy-port fool",
+                         ])
+def test_get_proxy_from_args_bad(argstring):
+	# Make sure bad arguments fail to validate
+	parser = ArgumentParser()
+	arguments.add_proxy_args(parser)
+	
+	with pytest.raises(SystemExit):
+		parser.parse_args(argstring.split())
+
+
+def test_get_proxy_from_args_bad_bmp():
+	# Should fail if BMP arguments also given
+	parser = ArgumentParser()
+	arguments.add_bmp_args(parser)
+	arguments.add_proxy_args(parser)
+	
+	with pytest.raises(SystemExit):
+		args = parser.parse_args("--bmp 0 0 localhost --proxy foo".split())
+		arguments.get_proxy_from_args(parser, args)
+
+
+@pytest.mark.parametrize("with_bmp", [True, False])
+@pytest.mark.parametrize("argstring,result",
+                         [("", None),
+                          ("--proxy foo", ("foo", DEFAULT_PORT)),
+                          ("--proxy foo --proxy-port 123", ("foo", 123)),
+                          ("--proxy-port 123", None),
+                         ])
+def test_get_proxy_from_args(argstring, result, with_bmp):
+	parser = ArgumentParser()
+	if with_bmp:
+		arguments.add_bmp_args(parser)
+	arguments.add_proxy_args(parser)
+	
+	args = parser.parse_args(argstring.split())
+	assert arguments.get_proxy_from_args(parser, args) == result

@@ -46,6 +46,15 @@ def iwg(monkeypatch):
 	return iwg
 
 
+@pytest.fixture
+def p(monkeypatch):
+	# Mock out the proxy
+	p = Mock()
+	p.return_value = p
+	monkeypatch.setattr(wiring_guide, "ProxyClient", p)
+	return p
+
+
 @pytest.yield_fixture
 def logdir():
 	logdir = mkdtemp()
@@ -59,7 +68,9 @@ def logdir():
                           # --fix without any BMPs
                           "-l 1 -n 3 --fix",
                           # --log without a filename
-                          "--log",
+                          "-l 1 -n 3 --log",
+                          # --proxy with --fix
+                          "-l 1 -n 3 --proxy foobar --fix",
                          ])
 def test_bad_args(argstring):
 	with pytest.raises(SystemExit):
@@ -171,6 +182,13 @@ def test_logging(logdir, bc, wp, iwg):
 	with open(filename, "r") as f:
 		data = f.read()
 		assert len(data.split("\n")) == 6
+
+
+def test_proxy(iwg, p):
+	wiring_guide.main("-n 3 -l1 --proxy foobar --proxy-port 1234".split())
+	p.assert_called_once_with("foobar", 1234)
+	assert iwg.mock_calls[0][2]["wiring_probe"] is p
+	assert iwg.mock_calls[0][2]["bmp_controller"] is p
 
 
 @pytest.mark.parametrize("argstring,num_wires",

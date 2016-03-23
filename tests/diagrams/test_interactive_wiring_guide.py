@@ -395,6 +395,15 @@ def test_leds(iwg, led_states, wires):
 	# Upon closing, the LEDs should all be turned off
 	iwg._on_close()
 	assert led_states == {(c,f,b): False for (c,f,b) in led_states}
+	
+	# If setting the LED state fails, should exit
+	iwg.bmp_controller = Mock()
+	iwg.bmp_controller.set_led.side_effect = IOError
+	iwg.tk.destroy.reset_mock()
+	with pytest.raises(IOError):
+		iwg.go_to_wire(0)
+	
+	iwg.tk.destroy.assert_called_once_with()
 
 
 def test_no_bmp(iwg):
@@ -668,6 +677,10 @@ def test_wiring_probe(iwg, wires, wiring_probe, installed_wires,
 	assert len(timing_logger.connection_started.mock_calls) == 4
 	assert iwg.cur_wire == len(wires) - 1
 	assert not iwg._redraw.called
+	
+	# If the wiring probe crashes, should just carry on
+	iwg.wiring_probe.get_link_target.side_effect = IOError
+	iwg._poll_wiring_probe()
 
 
 def test_auto_advance_toggle(iwg, wires, installed_wires):
