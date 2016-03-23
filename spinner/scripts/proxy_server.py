@@ -5,23 +5,11 @@ A proxy server which enables multiple interactive wiring sessions to interact
 with the same SpiNNaker machine.
 """
 
-import sys
-
 import argparse
 
 import logging
 
-import os.path
-
-from spinner.utils import folded_torus
-
-from spinner import transforms
-
 from spinner.scripts import arguments
-
-from spinner.plan import generate_wiring_plan, flatten_wiring_plan
-
-from spinner.diagrams.interactive_wiring_guide import InteractiveWiringGuide
 
 from spinner.probe import WiringProbe
 
