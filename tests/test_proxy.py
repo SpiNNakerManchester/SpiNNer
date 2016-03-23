@@ -4,11 +4,11 @@ from mock import Mock, call
 
 from spinner import __version__
 
-from rig.links import Links
-
 import spinner.proxy
 
 from spinner.proxy import ProxyServer, ProxyClient, ProxyError
+
+from spinner.topology import Direction
 
 
 class TestServer(object):
@@ -295,15 +295,15 @@ class TestProxyClient(object):
 		client_sock.reset_mock()
 		client_sock.recv.return_value = b"1,2,3,4\n"
 		
-		assert pc.get_link_target(0, 1, 2, Links.east) == (1, 2, 3, Links.south_west)
+		assert pc.get_link_target(0, 1, 2, Direction.east) == (1, 2, 3, Direction.south_west)
 		client_sock.send.assert_called_once_with(b"TARGET,0,1,2,0\n")
 		client_sock.reset_mock()
 		
 		client_sock.recv.return_value = b"None\n"
-		pc.get_link_target(4, 5, 6, Links.west) == None
+		pc.get_link_target(4, 5, 6, Direction.west) == None
 		client_sock.send.assert_called_once_with(b"TARGET,4,5,6,3\n")
 		client_sock.reset_mock()
 		
 		client_sock.recv.return_value = b"Fail\n"
 		with pytest.raises(ProxyError):
-			pc.get_link_target(4, 5, 6, Links.north)
+			pc.get_link_target(4, 5, 6, Direction.north)
