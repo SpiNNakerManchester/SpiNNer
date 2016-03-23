@@ -6,7 +6,6 @@ machine and correcting wiring errors.
 
 ::
 
-	$ spinner-wiring-guide -h
 	usage: spinner-wiring-guide [-h] [--version] [--no-tts] [--no-auto-advance]
 	                            [--fix] [--log LOGFILE]
 	                            (--num-boards N | --triads W H)
@@ -29,8 +28,9 @@ machine and correcting wiring errors.
 	                            [--cabinet-frame-offset X Y Z]
 	                            [--inter-cabinet-spacing S] [--num-cabinets N]
 	                            [--num-frames N] [--wire-length L [L ...]]
-	                            [--subset SUBSET [SUBSET ...]]
 	                            [--minimum-slack H] [--bmp CABINET FRAME HOSTNAME]
+	                            [--proxy HOSTNAME] [--proxy-port PORT]
+	                            [--subset SUBSET [SUBSET ...]]
 	
 	Interactively guide the user through the process of wiring up a SpiNNaker
 	machine.
@@ -138,6 +138,13 @@ machine and correcting wiring errors.
 	                        specify the hostname of a BMP to use to communicate
 	                        with SpiNNaker boards in the given frame
 	
+	SpiNNaker proxy connection details:
+	  --proxy HOSTNAME      specify the hostname of a spinner-proxy-server
+	                        instance to use to communicate with the SpiNNaker
+	                        system
+	  --proxy-port PORT     specify the port to connect to spinner-proxy-server
+	                        with (default: 6512)
+	
 	wire subset selection:
 	  These arguments allow the specificiation of subsets of wires to install,
 	  for example, selecting only particular wires within a particular cabinet
@@ -205,8 +212,9 @@ Toggle Auto-Advance           a
 Pause logging                 p
 ============================  ==========================
 
-Future versions of this tool hope to include the ability to organise multiple
-people simultaneously in the installation of very large systems.
+See the :ref:`spinner-proxy-server documentation <multi-person-wiring>` to see
+how this tool may be used by multiple people at once to share the task of
+installing cables in large machines.
 
 Standalone Usage
 ----------------
@@ -228,6 +236,15 @@ on -b 0-23`` for each frame) and then use::
 
 Note that the ``--bmp`` argument must be given once for each frame in the
 system.
+
+Parallel, multi-person cable installation
+-----------------------------------------
+
+Several instances of ``spinner-wiring-guide`` can be used in parallel along
+with ``--proxy`` argument and the ``spinner-proxy-server`` tool to share the
+work of installing cables in very large SpiNNaker machines between multiple
+people. See the :ref:`proxy server documentation <multi-person-wiring>` for a
+complete example of how to do this.
 
 Just Illuminating LEDs
 ----------------------
@@ -274,7 +291,7 @@ For example:
   and cabinet 1.
 
 If multiple subsets are defined, cables matched by at least one of the subsets
-will be defined. For example, the screenshot below was produced by the
+will be selected. For example, the screenshot below was produced by the
 following command-line which defines two subsets::
 
 	$ spinner-wiring-guide -n 360 -l 0.15 0.3 0.5 0.9 --subset 0.*.* 0-1.*.*

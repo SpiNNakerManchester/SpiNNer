@@ -73,6 +73,7 @@ def main(args=None):
 	proxy_server = ProxyServer(bmp_controller, wiring_probe,
 	                           args.host, args.port)
 	
+	print("Proxy server starting...")
 	proxy_server.main()
 	
 	return 0

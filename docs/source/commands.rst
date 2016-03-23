@@ -51,6 +51,7 @@ Example of common uses for each command can be found below:
 	spinner-wiring-validator
 	spinner-machine-map
 	spinner-ethernet-chips
+	spinner-proxy-server
 
 Backwards compatibility
 -----------------------
