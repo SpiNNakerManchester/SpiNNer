@@ -1,5 +1,18 @@
-"""A proxy enabling multiple wiring guide instances to interact with the same
+r"""A proxy enabling multiple wiring guide instances to interact with the same
 SpiNNaker boards.
+
+A very simple protocol is used between the client and server. Clients may send
+the following new-line delimited commands to the server:
+
+* ``VERSION,[versionstring]\n`` The server will disconnect any client with an
+  incompatible version number reported for ``[versionstring]``. Returns
+  ``OK\n``.
+* ``LED,[c],[f],[b],[lednum],[state]\n`` Turn on or off the specified LED. Note
+  that the LED remains switched on while *any* client wants it to be on.
+  Returns ``OK\n``.
+* ``TARGET,[c],[f],[b],[link]\n`` Discover what link is at the other end of the
+  supplied link. Returns ``[c],[f],[b],[link]\n`` or ``None\n`` if no link is
+	connected. Note that links are represented by their number, not their name.
 """
 
 import traceback
@@ -17,6 +30,7 @@ from six import iteritems
 from spinner.version import __version__
 
 from spinner.topology import Direction
+
 
 DEFAULT_PORT = 6512
 
@@ -62,6 +76,23 @@ class ProxyServer(object):
 		self.client_buffer[sock] = b""
 	
 	
+	def remove_client(self, sock):
+		"""Disconnect and cleanup after a particular child."""
+		logging.info("Closing socket {}".format(sock))
+		
+		# Remove buffer
+		self.client_buffer.pop(sock)
+		
+		# Turn off any LEDs left on by the client
+		for (c, f, b, led), socks in iteritems(self.led_setters):
+			if sock in socks:
+				self.set_led(sock, c, f, b, led, False)
+		
+		# Close socket
+		self.client_socks.remove(sock)
+		sock.close()
+	
+	
 	def set_led(self, sock, c, f, b, led, state):
 		"""Set the state of a diagnostic LED.
 		
@@ -83,23 +114,6 @@ class ProxyServer(object):
 		
 		if cur_led_state != new_led_state:
 			self.bmp_controller.set_led(led, new_led_state, c, f, b)
-	
-	
-	def remove_client(self, sock):
-		"""Disconnect and cleanup after a particular child."""
-		logging.info("Closing socket {}".format(sock))
-		
-		# Remove buffer
-		self.client_buffer.pop(sock)
-		
-		# Turn off any LEDs left on by the client
-		for (c, f, b, led), socks in iteritems(self.led_setters):
-			if sock in socks:
-				self.set_led(sock, c, f, b, led, False)
-		
-		# Close socket
-		self.client_socks.remove(sock)
-		sock.close()
 	
 	
 	def handle_version(self, sock, args):
@@ -177,22 +191,13 @@ class ProxyServer(object):
 				}[cmd](sock, args)
 		
 		except Exception as e:
-			logging.error(traceback.format_exc())
-			logging.error(
+			logging.exception(
 				"Disconnected client {} due to bad command (above)".format(sock))
 			self.remove_client(sock)
 			return
 		
 		# Retain any remaining unprocessed data
 		self.client_buffer[sock] = data
-		
-		# Drop the connection if the buffer gets too big
-		if len(data) > 1024:
-			logging.error(
-				"Disconnected {} due to excessively long command: {}.".format(
-					sock, data))
-			self.remove_client(sock)
-			return
 	
 	
 	def main(self):
@@ -210,11 +215,11 @@ class ProxyServer(object):
 						# Data arrived from a client
 						try:
 							data = sock.recv(1024)
-						except IOError as exc:
+						except (IOError, OSError) as exc:
 							logging.error(
 								"Socket {} failed to receive: {}".format(sock, exc))
 							# Cause socket to get closed
-							data = b""
+							data = b""  # pragma: no branch
 							
 						if len(data) == 0:
 							# Connection closed
@@ -284,5 +289,8 @@ class ProxyClient(object):
 		if response == b"None":
 			return None
 		else:
-			c, f, b, d = map(int, response.split(b","))
-			return (c, f, b, Direction(d))
+			try:
+				c, f, b, d = map(int, response.split(b","))
+				return (c, f, b, Direction(d))
+			except ValueError:
+				raise ProxyError("Got unexpected response to TARGET command.")
