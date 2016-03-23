@@ -8,7 +8,8 @@ machine and correcting wiring errors.
 
 	$ spinner-wiring-guide -h
 	usage: spinner-wiring-guide [-h] [--version] [--no-tts] [--no-auto-advance]
-	                            [--fix] (--num-boards N | --triads W H)
+	                            [--fix] [--log LOGFILE]
+	                            (--num-boards N | --triads W H)
 	                            [--transformation {shear,slice}]
 	                            [--uncrinkle-direction {columns,rows}]
 	                            [--folds X Y] [--board-dimensions W H D]
@@ -28,6 +29,7 @@ machine and correcting wiring errors.
 	                            [--cabinet-frame-offset X Y Z]
 	                            [--inter-cabinet-spacing S] [--num-cabinets N]
 	                            [--num-frames N] [--wire-length L [L ...]]
+	                            [--subset SUBSET [SUBSET ...]]
 	                            [--minimum-slack H] [--bmp CABINET FRAME HOSTNAME]
 	
 	Interactively guide the user through the process of wiring up a SpiNNaker
@@ -40,6 +42,7 @@ machine and correcting wiring errors.
 	  --no-auto-advance     disable auto-advancing through wiring steps
 	  --fix                 detect errors in existing wiring and just show
 	                        corrective steps
+	  --log LOGFILE         record the times at which each cable is installed
 	
 	machine topology dimensions:
 	  --num-boards N, -n N  build the 'squarest' system with this many boards
@@ -134,6 +137,18 @@ machine and correcting wiring errors.
 	  --bmp CABINET FRAME HOSTNAME
 	                        specify the hostname of a BMP to use to communicate
 	                        with SpiNNaker boards in the given frame
+	
+	wire subset selection:
+	  These arguments allow the specificiation of subsets of wires to install,
+	  for example, selecting only particular wires within a particular cabinet
+	  or frame. If no subsets are specified, all wires will be included,
+	  otherwise the union of all specified subsets are included. Use '1.2.*' to
+	  select all wires between boards in cabinet 1, frame 2. Use '1.*.*' to
+	  select all wires between boards in cabinet 1. Use '1-2.*.*' to select all
+	  wires which cross between cabinets 1 and 2.
+	
+	  --subset SUBSET [SUBSET ...]
+	                        specify the subset of wires to include
 
 
 
@@ -187,6 +202,7 @@ Go to first wire              Home
 Go to last wire               End
 Toggle Text-to-Speech         t
 Toggle Auto-Advance           a
+Pause logging                 p
 ============================  ==========================
 
 Future versions of this tool hope to include the ability to organise multiple
@@ -231,3 +247,96 @@ Adding the ``--fix`` option will check all installed wires in the machine and
 guide you through any corrections which must be made::
 
 	$ spinner-wiring-guide -n 24 -l 0.15 0.30 0.50 1.00 --bmp 0 0 BMP_HOSTNAME --fix
+
+.. _subset-argument:
+
+Installing subsets of machines
+------------------------------
+
+If installation is to be split into multiple phases focusing on one subsection
+at a time, the ``--subset`` argument may be used to filter the wires displayed
+or repaired by the wiring guide.
+
+The ``--subset`` argument takes a set of arguments in the form ``c.f.b`` where
+``c``, ``f``, and ``b`` are described below and specify a range of cabinets,
+frames or boards. The three parts must be in one of the following formats:
+
+* A number (e.g. ``3``) specifying a specific cabinet, frame or board.
+* A pair (e.g. ``1-2``) specifying a specific pair of cabinets, frames or
+  boards.
+* A wildcard (``*``).
+
+For example:
+
+* Subset ``0.1.*`` would select wires going between any boards within cabinet
+  0, frame 1.
+* Subset ``0-1.*.*`` would select any cable which connects between cabinet 0
+  and cabinet 1.
+
+If multiple subsets are defined, cables matched by at least one of the subsets
+will be defined. For example, the screenshot below was produced by the
+following command-line which defines two subsets::
+
+	$ spinner-wiring-guide -n 360 -l 0.15 0.3 0.5 0.9 --subset 0.*.* 0-1.*.*
+
+.. image:: wiring_guide_subset_screenshot.png
+
+Logging
+-------
+
+The ``--log FILENAME`` argument causes the wiring guide to log (into a CSV
+file) how long it took to install each ceable. This may be useful for research
+comparing ease of installation and maintainance of a SpiNNaker system. Note
+that this system does not currently log cables being removed.
+
+The CSV file contains the set of columns defined below. Various types of events
+are recorded in the log and not every event has a sensible value for every
+column. Columns without a sensible value are set to NA.
+
+:event_type:
+  The type of event being logged (see list below).
+
+:realtime:
+  The real time and date the event occurred.
+
+:time:
+	Time that the event occurred, in seconds since the start of logging and
+	excluding any time spent paused.
+
+:sc, sf, sb, sd, dc, df, db, dd:
+  Source and destination cabinet, frame, board and direction of a cable being
+  installed.
+
+:duration:
+  Overall time, in seconds, to connect a cable correctly (or time spent paused for pause
+  events).
+
+:attempt_duration:
+  Time since last attempt to connect the cable, in seconds.
+
+:num_attempts:
+  Number of attempts made to install the current cable.
+
+The following event types are defined:
+
+:logging_started:
+  This event is produced when a new wiring session begins. All relative times
+  are measured in seconds from this point.
+
+:logging_stopped:
+  Produced when logging ceases.
+
+:connection_started:
+  Produced when a new cable to install is displayed on the screen.
+
+:connection_error:
+  Produced each time a cable is connected incorrectly according the the wiring
+  probe.
+
+:connection_complete:
+  Produced when the wiring probe detects that the cable has been installed
+  correctly.
+
+:pause:
+  Produced *after* logging has been paused for some period of time. Relative
+  timings reported by other events will not include any time spent paused.

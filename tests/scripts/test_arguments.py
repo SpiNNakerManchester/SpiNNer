@@ -12,6 +12,8 @@ from spinner.scripts import arguments
 
 from spinner import utils
 
+from spinner.proxy import DEFAULT_PORT
+
 from example_cabinet_params import board_wire_offset_fields, unique
 
 
@@ -525,3 +527,148 @@ def test_get_bmps_from_args_bad(argstring):
 	with pytest.raises(SystemExit):
 		args = parser.parse_args(argstring.split())
 		arguments.get_bmps_from_args(parser, args, 1, 2)
+
+
+def test_get_subset_from_args():
+	parser = ArgumentParser()
+	arguments.add_subset_args(parser)
+	
+	def w(frm, to):
+		"""Make a wire between two points."""
+		return ((frm[0], frm[1], frm[2], None),
+		        (to[0], to[1], to[2], None),
+		        None)
+	
+	# With no arguments the filter should always match
+	args = parser.parse_args([])
+	f = arguments.get_subset_from_args(parser, args)
+	assert f(w((0,0,0), (0,0,0)))
+	assert f(w((0,0,0), (1,2,3)))
+	assert f(w((1,2,3), (0,0,0)))
+	assert f(w((1,2,3), (1,2,3)))
+	
+	# Exact specification should only match exactly
+	args = parser.parse_args("--subset 1.2.3".split())
+	f = arguments.get_subset_from_args(parser, args)
+	assert not f(w((0,0,0), (0,0,0)))
+	assert not f(w((0,0,0), (1,2,3)))
+	assert not f(w((1,2,3), (0,0,0)))
+	assert f(w((1,2,3), (1,2,3)))
+	
+	# Between specification should only match when crossing
+	args = parser.parse_args("--subset 10-11.2.3".split())
+	f = arguments.get_subset_from_args(parser, args)
+	assert not f(w((10,2,3), (10,2,3)))
+	assert f(w((10,2,3), (11,2,3)))
+	assert f(w((11,2,3), (10,2,3)))
+	assert not f(w((11,2,3), (11,2,3)))
+	assert not f(w((10,20,30), (10,20,30)))
+	assert not f(w((10,20,30), (11,20,30)))
+	assert not f(w((11,20,30), (10,20,30)))
+	assert not f(w((11,20,30), (11,20,30)))
+	
+	# Wildcard should match anything
+	args = parser.parse_args("--subset 1.*.3".split())
+	f = arguments.get_subset_from_args(parser, args)
+	assert f(w((1,0,3), (1,0,3)))
+	assert f(w((1,1,3), (1,2,3)))
+	assert not f(w((0,2,3), (3,2,1)))
+	
+	# Fully wildcard should be allowed
+	args = parser.parse_args("--subset *.*.*".split())
+	f = arguments.get_subset_from_args(parser, args)
+	assert f(w((0,0,0), (0,0,0)))
+	assert f(w((1,2,3), (3,2,1)))
+	
+	# OR-ing together subsets should work but matches must be for both sides of a
+	# wire.
+	args = parser.parse_args("--subset 1.*.* 2.*.*".split())
+	f = arguments.get_subset_from_args(parser, args)
+	assert not f(w((0,0,0), (0,0,0)))
+	assert f(w((1,0,0), (1,0,0)))
+	assert f(w((2,0,0), (2,0,0)))
+	assert not f(w((1,0,0), (2,0,0)))
+	assert not f(w((2,0,0), (1,0,0)))
+
+
+@pytest.mark.parametrize("argstring",
+                         [# Supplying insufficient number of subsets
+                          "--subset",
+                          # Wrong number of digits
+                          "--subset 0",
+                          "--subset 0.0",
+                          "--subset 0.0.0.0",
+                          # Wrong seperator
+                          "--subset 0:0:0",
+                          # No digits
+                          "--subset ..",
+                          # Non-numerical
+                          "--subset a.0.0",
+                          "--subset 0.+.0",
+                          "--subset 0.0.\t",
+                          "--subset 0*.0.0",
+                          "--subset *0.0.0",
+                          "--subset -0.0.0",
+                          "--subset 0-.0.0",
+                          # Non-numerical ranges
+                          "--subset a-1.0.0",
+                          "--subset 1-b.0.0",
+                          "--subset a-b.0.0",
+                          # Wrong wildcard
+                          "--subset ?.0.0",
+                          "--subset #.0.0",
+                          "--subset *?.0.0",
+                          "--subset ?*.0.0",
+                         ])
+def test_get_subset_from_args_bad(argstring):
+	# Make sure bad arguments fail to validate
+	parser = ArgumentParser()
+	arguments.add_subset_args(parser)
+	
+	with pytest.raises(SystemExit):
+		args = parser.parse_args(argstring.split())
+		arguments.get_subset_from_args(parser, args)
+
+
+@pytest.mark.parametrize("argstring",
+                         [# Supplying no proxy
+                          "--proxy",
+                          # Invalid port number
+                          "--proxy-port",
+                          "--proxy-port fool",
+                         ])
+def test_get_proxy_from_args_bad(argstring):
+	# Make sure bad arguments fail to validate
+	parser = ArgumentParser()
+	arguments.add_proxy_args(parser)
+	
+	with pytest.raises(SystemExit):
+		parser.parse_args(argstring.split())
+
+
+def test_get_proxy_from_args_bad_bmp():
+	# Should fail if BMP arguments also given
+	parser = ArgumentParser()
+	arguments.add_bmp_args(parser)
+	arguments.add_proxy_args(parser)
+	
+	with pytest.raises(SystemExit):
+		args = parser.parse_args("--bmp 0 0 localhost --proxy foo".split())
+		arguments.get_proxy_from_args(parser, args)
+
+
+@pytest.mark.parametrize("with_bmp", [True, False])
+@pytest.mark.parametrize("argstring,result",
+                         [("", None),
+                          ("--proxy foo", ("foo", DEFAULT_PORT)),
+                          ("--proxy foo --proxy-port 123", ("foo", 123)),
+                          ("--proxy-port 123", None),
+                         ])
+def test_get_proxy_from_args(argstring, result, with_bmp):
+	parser = ArgumentParser()
+	if with_bmp:
+		arguments.add_bmp_args(parser)
+	arguments.add_proxy_args(parser)
+	
+	args = parser.parse_args(argstring.split())
+	assert arguments.get_proxy_from_args(parser, args) == result

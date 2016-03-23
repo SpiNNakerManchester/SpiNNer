@@ -2,6 +2,12 @@ import pytest
 
 from mock import Mock
 
+import os.path
+
+from tempfile import mkdtemp
+
+from shutil import rmtree
+
 from spinner.scripts import wiring_guide
 
 from spinner.topology import Direction
@@ -40,6 +46,20 @@ def iwg(monkeypatch):
 	return iwg
 
 
+@pytest.fixture
+def p(monkeypatch):
+	# Mock out the proxy
+	p = Mock()
+	p.return_value = p
+	monkeypatch.setattr(wiring_guide, "ProxyClient", p)
+	return p
+
+
+@pytest.yield_fixture
+def logdir():
+	logdir = mkdtemp()
+	yield logdir
+	rmtree(logdir)
 
 
 @pytest.mark.parametrize("argstring",
@@ -47,6 +67,10 @@ def iwg(monkeypatch):
                           "-l 1 -n 48 --bmp 0 0 localhost",
                           # --fix without any BMPs
                           "-l 1 -n 3 --fix",
+                          # --log without a filename
+                          "-l 1 -n 3 --log",
+                          # --proxy with --fix
+                          "-l 1 -n 3 --proxy foobar --fix",
                          ])
 def test_bad_args(argstring):
 	with pytest.raises(SystemExit):
@@ -84,6 +108,9 @@ def test_bad_args(argstring):
 def test_argument_parsing(argstring, to_check, bc, wp, iwg):
 	# Command should exit happily
 	assert wiring_guide.main(argstring.split()) == 0
+	
+	# The timing logger should not be provided
+	assert iwg.mock_calls[0][2]["timing_logger"] is None
 	
 	# Check if the BMP is used
 	if "bmp" in to_check:  # pragma: no branch
@@ -129,3 +156,53 @@ def test_focus(argstring, focus, bc, wp, iwg):
 	assert wiring_guide.main(argstring.split()) == 0
 	
 	assert iwg.mock_calls[0][2]["focus"] == focus
+
+
+def test_logging(logdir, bc, wp, iwg):
+	filename = os.path.join(logdir, "test.log")
+	
+	def iwg_constructor(*args, **kwargs):
+		# Pretend to drive the timing logger
+		tl = kwargs["timing_logger"]
+		tl.logging_started()
+		tl.logging_stopped()
+		return Mock()
+	iwg.side_effect = iwg_constructor
+	
+	# First time the file is written, the header should be included
+	assert wiring_guide.main(["-n3", "-l1", "--log", filename]) == 0
+	assert iwg.mock_calls[0][2]["timing_logger"] is not None
+	with open(filename, "r") as f:
+		assert len(f.read().split("\n")) == 4
+	
+	# Second time the file is written, we should have opened for append and no
+	# additional header should be included
+	assert wiring_guide.main(["-n3", "-l1", "--log", filename]) == 0
+	assert iwg.mock_calls[0][2]["timing_logger"] is not None
+	with open(filename, "r") as f:
+		data = f.read()
+		assert len(data.split("\n")) == 6
+
+
+def test_proxy(iwg, p):
+	wiring_guide.main("-n 3 -l1 --proxy foobar --proxy-port 1234".split())
+	p.assert_called_once_with("foobar", 1234)
+	assert iwg.mock_calls[0][2]["wiring_probe"] is p
+	assert iwg.mock_calls[0][2]["bmp_controller"] is p
+
+
+@pytest.mark.parametrize("argstring,num_wires",
+                         [ # By default should include everything
+                           ("-n 48 -l1", 144)
+                           # If subset selected, should include that subset
+                         , ("-n 48 -l1 --subset 0.*.*", 144)
+                         , ("-n 48 -l1 --subset 0.0.*", 56)
+                         ])
+def test_subset(argstring, num_wires, bc, wp, iwg):
+	assert wiring_guide.main(argstring.split()) == 0
+	assert len(iwg.mock_calls[0][2]["wires"]) == num_wires
+
+
+def test_subset_empty(bc, wp, iwg):
+	with pytest.raises(SystemExit):
+		wiring_guide.main("-n 48 -l1 --subset 1.0.0".split())

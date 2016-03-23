@@ -192,3 +192,26 @@ def test_highlight(pdf_file, add_highlight, monkeypatch):
 		assert sorted(c[1] for c in add_highlight_mock.mock_calls) == expected_highlights
 	else:
 		assert not add_highlight_mock.called
+
+
+@pytest.mark.parametrize("argstring,num_wires",
+                         [ # By default should include everything
+                           ("", 144)
+                           # If subset selected, should include that subset
+                         , ("--subset 0.*.*", 144)
+                         , ("--subset 0.0.*", 56)
+                           # If empty subset produced, that should be allowed
+                         , ("--subset 1.0.0", 0)
+                         ])
+def test_subset(argstring, num_wires, monkeypatch, pdf_file):
+	"""
+	Test that subset commands are obeyed
+	"""
+	add_wire_mock = Mock()
+	monkeypatch.setattr(MachineDiagram, "add_wire", add_wire_mock)
+	
+	# Shouldn't crash
+	assert main("{} 123 234 -n 48 {}".format(pdf_file, argstring).split()) == 0
+	
+	# Should have the correct number of wires
+	assert len(add_wire_mock.mock_calls) == num_wires

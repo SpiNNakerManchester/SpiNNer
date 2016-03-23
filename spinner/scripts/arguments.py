@@ -2,6 +2,8 @@
 
 import argparse
 
+import re
+
 from six import itervalues
 
 import spinner
@@ -11,6 +13,8 @@ from spinner.topology import Direction
 from spinner.utils import ideal_system_size, folded_torus, min_num_cabinets
 
 from spinner.cabinet import Cabinet
+
+from spinner.proxy import DEFAULT_PORT
 
 
 def CabinetAction(num_levels=4, append=False):
@@ -508,10 +512,12 @@ def add_bmp_args(parser):
 def get_bmps_from_args(parser, args, num_cabinets, num_frames):
 	"""To be used with add_bmp_args.
 	
-	Check that the supplied arguments are valid and then return a dictionary
-	mapping (cabinet, frame) tuples to hostnames.
+	Check that the supplied arguments are valid and then return either a
+	dictionary mapping (cabinet, frame) tuples to hostnames or a (hostname, port)
+	tuple indicating the .
 	
-	Either no arguments must be supplied or exactly one per frame.
+	Either no arguments must be supplied or a proxy client or exactly one per
+	frame.
 	"""
 	# Special case when no arguments supplied.
 	if args.bmp is None:
@@ -558,6 +564,115 @@ def get_bmps_from_args(parser, args, num_cabinets, num_frames):
 		return bmp_hostnames
 
 
+def add_proxy_args(parser):
+	"""Add arguments for specifying a proxy server connect to."""
+	proxy_group = parser.add_argument_group("SpiNNaker proxy connection details")
+	proxy_group.add_argument("--proxy", type=str, metavar="HOSTNAME",
+	                         help="specify the hostname of a "
+	                              "spinner-proxy-server instance to use "
+	                              "to communicate with the SpiNNaker system")
+	proxy_group.add_argument("--proxy-port", type=int, default=DEFAULT_PORT,
+	                         metavar="PORT",
+	                         help="specify the port to connect to "
+	                              "spinner-proxy-server with (default: "
+	                              "%(default)d)")
+
+
+def get_proxy_from_args(parser, args):
+	"""To be used with add_proxy_args.
+	
+	Returns a (hostname, port) or None if no proxy server details provided.
+	
+	This call checks that no conflicting --bmp arguments are present.
+	"""
+	# Make sure only one of the --bmp or --proxy arguments is given
+	if hasattr(args, "bmp"):
+		if args.bmp is not None and args.proxy is not None:
+			parser.error("--bmp and --proxy are mutually exclusive")
+	
+	# If proxy specified, return one
+	if args.proxy is not None:
+		return (args.proxy, args.proxy_port)
+	else:
+		return None
+
+
+def add_subset_args(parser):
+	"""Add arguments for specifying a subset of wires to connect."""
+	subset_group = parser.add_argument_group(
+		"wire subset selection",
+		description="""
+			These arguments allow the specificiation of subsets of wires
+			to install, for example, selecting only particular wires
+			within a particular cabinet or frame. If no subsets are
+			specified, all wires will be included, otherwise the union
+			of all specified subsets are included. Use '1.2.*' to select all wires
+			between boards in cabinet 1, frame 2. Use '1.*.*' to select all wires
+			between boards in cabinet 1. Use '1-2.*.*' to select all
+			wires which cross between cabinets 1 and 2.
+		"""
+	)
+	subset_group.add_argument("--subset", nargs="+", type=str, metavar="SUBSET",
+	                    help="specify the subset of wires to include")
+
+
+def get_subset_from_args(parser, args):
+	"""To be used with add_subset_args.
+	
+	Check that the supplied arguments are valid and then return a function with
+	the prototype fn(wire) -> bool where wire is a tuple ((c, f, b, d), (c, f, b,
+	d), length).
+	"""
+	if args.subset is None:
+		# Special case when no arguments supplied: accept everything
+		return (lambda wire: True)
+	else:
+		rules = []
+		for subset in args.subset:
+			# Split into cabinet, frame and board rules
+			parts = re.split(r"\s*[,.]\s*", subset)
+			if len(parts) != 3:
+				parser.error(
+					"--subset arguments must be of the form '???.???.???'"
+					", not {}".format(subset))
+			
+			rule_fragments = []
+			for i, part in enumerate(parts):
+				# For each part, work out the rule
+				match = re.match(r"^("
+				                   r"(?P<single>[0-9]+)|"  # Specific c/f/b
+				                   r"((?P<from>[0-9]+)-(?P<to>[0-9]+))|"  # Between two c/f/b
+				                   r"(?P<wildcard>[*])"  # Wildcard
+				                 r")$", part)
+				if not match:
+					parser.error(
+						"--subset components must be either 'N', 'N-M' or '*', "
+						"not {}".format(part))
+				elif match.group("single"):
+					value = int(match.group("single"))
+					rule_fragments.append(
+						lambda wire, i=i, value=value: (wire[0][i] == value and
+					                                  wire[1][i] == value))
+				elif match.group("from") and match.group("to"):
+					frm = int(match.group("from"))
+					to = int(match.group("to"))
+					rule_fragments.append(
+						lambda wire, i=i, frm=frm, to=to: (wire[0][i] == frm and
+					                                     wire[1][i] == to)
+					                                    or (wire[1][i] == frm and
+					                                        wire[0][i] == to))
+				elif match.group("wildcard"):
+					# Don't append any rules: the wildcard always matches
+					pass
+				else:  # pragma: no cover
+					assert False
+			
+			rules.append(lambda wire, rule_fragments=rule_fragments:
+			             all(rf(wire) for rf in rule_fragments))
+		
+		return (lambda wire: any(r(wire) for r in rules))
+
+
 
 
 if __name__=="__main__":  # pragma: no cover
@@ -570,6 +685,7 @@ if __name__=="__main__":  # pragma: no cover
 	add_cabinet_args(parser)
 	add_histogram_args(parser)
 	add_bmp_args(parser)
+	add_subset_args(parser)
 	
 	args = parser.parse_args()
 	print(get_image_from_args(parser, args, 0.5))
@@ -577,3 +693,4 @@ if __name__=="__main__":  # pragma: no cover
 	print(get_cabinets_from_args(parser, args))
 	print(get_histogram_from_args(parser, args))
 	print(get_bmps_from_args(parser, args, 2, 2))
+	print(get_subset_from_args(parser, args))

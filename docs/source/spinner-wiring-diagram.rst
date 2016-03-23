@@ -10,7 +10,7 @@ Generates illustrations of SpiNNaker machine wiring.
 	$ spinner-wiring-diagram -h
 	usage: spinner-wiring-diagram [-h] [--version]
 	                              [--wire-thickness {thick,normal,thin}]
-	                              [--highlight CABINET [FRAME [BOARD [{south,north,north-east,east,west,south-west}]]]
+	                              [--highlight CABINET [FRAME [BOARD [{east,south-west,north,south,north-east,west}]]]
 	                              [...]] [--hide-labels]
 	                              (--num-boards N | --triads W H)
 	                              [--transformation {shear,slice}]
@@ -31,7 +31,7 @@ Generates illustrations of SpiNNaker machine wiring.
 	                              [--cabinet-dimensions W H D]
 	                              [--cabinet-frame-offset X Y Z]
 	                              [--inter-cabinet-spacing S] [--num-cabinets N]
-	                              [--num-frames N]
+	                              [--num-frames N] [--subset SUBSET [SUBSET ...]]
 	                              filename [width] [height]
 	
 	Generate illustrations of SpiNNaker machine wiring.
@@ -41,7 +41,7 @@ Generates illustrations of SpiNNaker machine wiring.
 	  --version, -V         show program's version number and exit
 	  --wire-thickness {thick,normal,thin}
 	                        set the thickness of wires drawn (default: normal)
-	  --highlight CABINET [FRAME [BOARD [{south,north,north-east,east,west,south-west}]]] [ ...]
+	  --highlight CABINET [FRAME [BOARD [{east,south-west,north,south,north-east,west}]]] [ ...]
 	                        highlight a particular cabinet/frame/board/socket with
 	                        a red border
 	  --hide-labels, -L     hide socket/board/frame/cabinet number labels
@@ -115,14 +115,14 @@ Generates illustrations of SpiNNaker machine wiring.
 	                        frame in meters (default: (0.06, 0.017, 0.0))
 	  --inter-frame-spacing S
 	                        physical spacing between frames in a cabinet in meters
-	                        (default: 0.089)
+	                        (default: 0.133)
 	
 	cabinet physical dimensions:
 	  --frames-per-cabinet FRAMES_PER_CABINET
 	                        number of frames per cabinet (default: 5)
 	  --cabinet-dimensions W H D
 	                        cabinet physical dimensions in meters (default: (0.6,
-	                        1.822, 0.25))
+	                        2.0, 0.25))
 	  --cabinet-frame-offset X Y Z
 	                        physical offset of the left-top-front corner of the
 	                        top frame from the left-top-front corner of a cabinet
@@ -137,6 +137,18 @@ Generates illustrations of SpiNNaker machine wiring.
 	                        frames within that cabinet the system should be spread
 	                        across (default: the minimum possible)
 	
+	wire subset selection:
+	  These arguments allow the specificiation of subsets of wires to install,
+	  for example, selecting only particular wires within a particular cabinet
+	  or frame. If no subsets are specified, all wires will be included,
+	  otherwise the union of all specified subsets are included. Use '1.2.*' to
+	  select all wires between boards in cabinet 1, frame 2. Use '1.*.*' to
+	  select all wires between boards in cabinet 1. Use '1-2.*.*' to select all
+	  wires which cross between cabinets 1 and 2.
+	
+	  --subset SUBSET [SUBSET ...]
+	                        specify the subset of wires to include
+
 
 Wiring diagrams
 ---------------
@@ -157,6 +169,14 @@ be modified with the ``--wire-thickness`` option to make them easier to follow::
 
 .. image:: single_frame_machine_thin.png
 
+
+Diagrams showing just a subset of the wires can also be shown using the
+``--subset`` argument (see :ref:`more detailed introduction <subset-argument>`). For example, the command below generates a diagram
+showing only wires crossing between cabinets::
+
+	$ spinner-wiring-diagram -n 600 out.png --subset 0-1.*.* 1-2.*.* 2-3.*.* 3-4.*.*
+
+.. image:: subset_diagram.png
 
 .. _spinner-wiring-diagram-map:
 

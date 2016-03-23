@@ -5,7 +5,15 @@ import colorsys
 
 import subprocess
 
+import traceback
+
+from itertools import cycle
+
+from six import iteritems, itervalues, next
+
 import cairocffi as cairo
+
+from math import pi
 
 try:  # pragma: no cover
 	# Python 3
@@ -59,15 +67,16 @@ class InteractiveWiringGuide(object):
 	            , cabinet
 	            , wire_lengths
 	            , wires
-	            , starting_wire = 0
+	            , starting_wire=0
 	            , focus=[]
-	            , bmp_controller = None
-	            , bmp_led = 7
+	            , bmp_controller=None
+	            , bmp_led=7
 	            , wiring_probe=None
 	            , auto_advance=True
-	            , use_tts = True
-	            , show_installed_wires = True
-	            , show_future_wires    = False
+	            , use_tts=True
+	            , show_installed_wires=True
+	            , show_future_wires=False
+	            , timing_logger=None
 	            ):
 		"""
 		cabinet defines the size of cabinets in the system.
@@ -104,6 +113,9 @@ class InteractiveWiringGuide(object):
 		
 		show_future_wires selects whether to-be-installed wires should be shown
 		(feintly) at all times.
+		
+		timing_logger is a TimingLogger into which the cabling connections made
+		will be logged. If None, no timings are logged.
 		"""
 		
 		self.cabinet      = cabinet
@@ -128,17 +140,30 @@ class InteractiveWiringGuide(object):
 		self.show_installed_wires = show_installed_wires
 		self.show_future_wires    = show_future_wires
 		
+		self.timing_logger = timing_logger
+		
 		# Human readable names for each socket
 		self.socket_names = {d: d.name.replace("_", " ") for d in Direction}
 		
+		# An infinately cycling iterator over all the boards in the machine.
+		self.board_iter = iter(cycle(set((c, f, b)
+		                                 for ((c, f, b, _1), _2, _3)
+		                                 in self.wires)))
+		
 		# A reference to any running TTS job
 		self.tts_process = None
+		
+		# A dict {fn: ([key, ...], description), ...} giving the keybindings and
+		# homan-readable help string for all bound keyboard shortcuts.
+		self.bindings = {}
 		
 		# Set up the Tk UI
 		self.tk = Tk()
 		self._init_ui()
 		
 		# Get started
+		if self.timing_logger is not None:
+			self.timing_logger.logging_started()
 		self.go_to_wire(starting_wire)
 	
 	
@@ -167,22 +192,31 @@ class InteractiveWiringGuide(object):
 		self.tk.protocol("WM_DELETE_WINDOW", self._on_close)  # Window closed
 		
 		# Setup key bindings
-		self.tk.bind("<Button-1>", self._on_next)
-		for key in "space Down Right Return Tab".split():
-			self.tk.bind("<Key-{}>".format(key), self._on_next)
+		self.bindings = {
+			self._on_next:
+				(["<Button-1>", "<Key-space>", "<Key-Down>", "<Key-Right>",
+				  "<Key-Return>", "<Key-Tab>"],
+				 "Next wire"),
+			self._on_prev:
+				(["<Button-3>", "<Key-Up>", "<Key-Left>", "<Key-BackSpace>"],
+				 "Previous wire"),
+			self._on_skip_next: (["<Key-Next>"], "Skip forward"),
+			self._on_skip_prev: (["<Key-Prior>"], "Skip backward"),
+			self._on_first: (["<Key-Home>"], "First wire"),
+			self._on_last: (["<Key-End>"], "Last wire"),
+			self._on_tts_toggle: (["<Key-t>"], "Toggle speech"),
+		}
 		
-		self.tk.bind("<Button-3>", self._on_prev)
-		for key in "Up Left BackSpace".split():
-			self.tk.bind("<Key-{}>".format(key), self._on_prev)
+		if self.wiring_probe is not None:  # pragma: no branch
+			self.bindings[self._on_auto_advance_toggle] = (
+				["<Key-a>"], "Toggle auto-advance")
 		
-		self.tk.bind("<Key-Next>".format(key), self._on_skip_next)  # PgDown
-		self.tk.bind("<Key-Prior>".format(key), self._on_skip_prev)  # PgUp
+		if self.timing_logger is not None: # pragma: no branch
+			self.bindings[self._on_pause] = (["<Key-p>"], "Pause")
 		
-		self.tk.bind("<Key-Home>".format(key), self._on_first)
-		self.tk.bind("<Key-End>".format(key), self._on_last)
-		
-		self.tk.bind("<Key-t>".format(key), self._on_tts_toggle)
-		self.tk.bind("<Key-a>".format(key), self._on_auto_advance_toggle)
+		for fn, (keys, help) in iteritems(self.bindings):
+			for key in keys:
+				self.tk.bind(key, fn)
 	
 	
 	def go_to_wire(self, wire):
@@ -199,6 +233,16 @@ class InteractiveWiringGuide(object):
 		self.set_leds(last_wire, False)
 		self.set_leds(self.cur_wire, True)
 		
+		# Log the start of *insertion* of a new wire
+		src, dst, length = self.wires[wire]
+		if self.timing_logger is not None:
+			self.timing_logger.unpause()
+			if length is not None:
+				sc, sf, sb, sd = self.wires[wire][0]
+				dc, df, db, dd = self.wires[wire][1]
+				self.timing_logger.connection_started(sc, sf, sb, sd,
+				                                      dc, df, db, dd)
+		
 		# Announce via TTS the distance relative to the last position
 		if self.use_tts:
 			self.tts_delta(last_wire, self.cur_wire)
@@ -209,9 +253,14 @@ class InteractiveWiringGuide(object):
 		Set the LEDs for the given wire index to the given state (assuming the
 		board's IP is known).
 		"""
-		if self.bmp_controller is not None:
-			for c,f,b,p in self.wires[wire][:2]:
-				self.bmp_controller.set_led(self.bmp_led, state, c, f, b)
+		try:
+			if self.bmp_controller is not None:
+				for c,f,b,p in self.wires[wire][:2]:
+					self.bmp_controller.set_led(self.bmp_led, state, c, f, b)
+		except:
+			# Quit if this goes wrong
+			self.tk.destroy()
+			raise
 	
 	
 	def tts_delta(self, last_wire, this_wire):
@@ -357,7 +406,37 @@ class InteractiveWiringGuide(object):
 		ctx.show_text(text)
 		
 		ctx.restore()
+	
+	
+	def _draw_help_text(self, ctx, width, height, rgba = (0.5,0.5,0.5, 1.0)):
+		"""
+		Draw the help text along the bottom of the screen, return the height of the
+		text in pixels.
+		"""
+		# Generate help string
+		help_text = "  |  ".join("{} {}".format(keys[0], help)
+		                         for keys, help in 
+		                         sorted(itervalues(self.bindings),
+		                                key=(lambda kh: kh[0])))
 		
+		ctx.save()
+		
+		# Determine font size which will fill the width of the screen
+		ctx.select_font_face("Sans")
+		ctx.set_source_rgba(*rgba)
+		ctx.set_font_size(1.0)
+		x,y, w,h, _w,_h = ctx.text_extents(help_text)
+		scale_factor = (width * 0.95) / w
+		
+		# Draw the text along the bottom of the screen
+		ctx.set_font_size(scale_factor)
+		x,y, w,h, _w,_h = ctx.text_extents(help_text)
+		ctx.move_to(x + ((width - w) / 2), height + y)
+		ctx.show_text(help_text)
+		
+		ctx.restore()
+		
+		return h
 	
 	
 	def _render_gui(self, ctx, width, height):
@@ -368,6 +447,9 @@ class InteractiveWiringGuide(object):
 		ctx.set_source_rgba(1.0,1.0,1.0,1.0);
 		ctx.rectangle(0,0, width, height)
 		ctx.fill()
+		
+		# Draw help text along bottom of screen.
+		height -= self._draw_help_text(ctx, width, height)
 		
 		md = self._get_machine_diagram()
 		
@@ -460,6 +542,33 @@ class InteractiveWiringGuide(object):
 			               , height*self.TEXT_ROW_HEIGHT
 			               )
 			ctx.restore()
+		
+		# Draw a full-screen "paused" indicator, if paused
+		if self.timing_logger is not None and self.timing_logger.paused:
+			ctx.save()
+			
+			ctx.translate(width / 2.0, height / 2.0)
+			scale = min(width, height) * 0.4
+			ctx.scale(scale, scale)
+			
+			ctx.move_to(0, 0)
+			ctx.new_sub_path()
+			ctx.arc(0, 0, 1.0, 0.0, 2.0 * pi)
+			ctx.set_source_rgba(0.0,0.0,0.0,0.8);
+			ctx.fill_preserve()
+			ctx.set_source_rgba(0.0,0.0,0.0,1.0);
+			ctx.set_line_width(0.1)
+			ctx.stroke()
+			
+			ctx.move_to(-0.25, -0.5);
+			ctx.rel_line_to(0.0, 1.0);
+			ctx.move_to(0.25, -0.5);
+			ctx.rel_line_to(0.0, 1.0);
+			ctx.set_source_rgba(0.7,0.7,0.7,1.0);
+			ctx.set_line_width(0.2)
+			ctx.stroke()
+			
+			ctx.restore()
 	
 	
 	def _redraw(self):
@@ -484,39 +593,51 @@ class InteractiveWiringGuide(object):
 	
 	
 	def _poll_wiring_probe(self):
-		"""Poll the machine's hardware to determine if the wiring is complete."""
-		if self.wiring_probe is not None and self.auto_advance:
-			src, dst, length = self.wires[self.cur_wire]
-			
-			# Check both ends of the cable
-			actual_dst = self.wiring_probe.get_link_target(*src)
-			actual_src = self.wiring_probe.get_link_target(*dst)
-			
-			advance = False
-			
-			if length is None:
-				# We're waiting for the wire to be disconnected
-				if actual_src is None and actual_dst is None:
-					# Disconnected! Advance to the next wire!
-					advance = True
-			else:
-				# We're waiting for a wire to be connected
-				if actual_src == src and actual_dst == dst:
-					# Connected correctly! Advance to the next wire!
-					advance = True
-				elif actual_dst is not None or actual_src is not None:
-					# The wire was connected, but was connected incorrectly!
-					if not self.connected_incorrectly:
-						self._tts_speak("Wire inserted incorrectly.")
-					self.connected_incorrectly = True
-				else:
-					# No wire is connected
-					self.connected_incorrectly = False
+		"""Poll the machine's hardware to determine if the wiring is complete.
+		"""
+		try:
+			# Check wiring conncectivity
+			if self.wiring_probe is not None and self.auto_advance:
+				src, dst, length = self.wires[self.cur_wire]
 				
-			# Actually advance, as required
-			if advance and self.cur_wire != len(self.wires) - 1:
-				self.go_to_wire(self.cur_wire + 1)
-				self._redraw()
+				# Check both ends of the cable
+				actual_dst = self.wiring_probe.get_link_target(*src)
+				actual_src = self.wiring_probe.get_link_target(*dst)
+				
+				advance = False
+				
+				if length is None:
+					# We're waiting for the wire to be disconnected
+					if actual_src is None and actual_dst is None:
+						# Disconnected! Advance to the next wire!
+						advance = True
+				else:
+					# We're waiting for a wire to be connected
+					if actual_src == src and actual_dst == dst:
+						# Connected correctly! Advance to the next wire!
+						advance = True
+						if self.timing_logger is not None:
+							self.timing_logger.unpause()
+							self.timing_logger.connection_complete()
+					elif actual_dst is not None or actual_src is not None:
+						# The wire was connected, but was connected incorrectly!
+						if not self.connected_incorrectly:
+							self._tts_speak("Wire inserted incorrectly.")
+							if self.timing_logger is not None:
+								self.timing_logger.unpause()
+								self.timing_logger.connection_error()
+						self.connected_incorrectly = True
+					else:
+						# No wire is connected
+						self.connected_incorrectly = False
+					
+				# Actually advance, as required
+				if advance and self.cur_wire != len(self.wires) - 1:
+					self.go_to_wire(self.cur_wire + 1)
+					self._redraw()
+		except:
+			# Fail gracefully...
+			print(traceback.format_exc())
 		
 		# Schedule next poll
 		self.tk.after(InteractiveWiringGuide.POLL_INTERVAL_MS, self._poll_wiring_probe)
@@ -579,6 +700,16 @@ class InteractiveWiringGuide(object):
 			self._tts_speak("Auto advance not supported.")
 	
 	
+	def _on_pause(self, event):
+		"""Toggle whether timings are being recorded."""
+		if self.timing_logger is not None:
+			if self.timing_logger.paused:
+				self.timing_logger.unpause()
+			else:
+				self.timing_logger.pause()
+		self._redraw()
+	
+	
 	def _on_resize(self, event):
 		"""Window has been resized, trigger a redraw."""
 		new_size = (event.width, event.height)
@@ -590,6 +721,9 @@ class InteractiveWiringGuide(object):
 	
 	def _on_close(self, event=None):
 		"""The window has been closed."""
+		if self.timing_logger is not None:
+			self.timing_logger.logging_stopped()
+		
 		# Turn off LEDs before leaving
 		self.set_leds(self.cur_wire, False)
 		self.tk.destroy()
@@ -599,6 +733,3 @@ class InteractiveWiringGuide(object):
 		"""Start the interactive wiring guide GUI. Returns when the window is
 		closed."""
 		return self.tk.mainloop()
-
-
-
