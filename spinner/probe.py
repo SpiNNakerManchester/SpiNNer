@@ -161,26 +161,23 @@ class WiringProbe(object):
 			for ff in range(self.frames_per_cabinet):
 				for fb in range(self.boards_per_frame):
 					for fd in Direction:
+						source = (fc, ff, fb, fd)
 						target = self.get_link_target(fc, ff, fb, fd)
 						if target is None:
 							# Not connected...
 							continue
-						tc, tf, tb, td = target
 						
 						# Flip the from/to so that the from is going from north, east,
 						# south_west (if neither end of the wire is from these then things are
 						# very weird (connectors are electrically polarised so this isn't
 						# possible) so just put up with the wrong order here).
 						if fd in [Direction.south, Direction.west, Direction.north_east]:
-							fc, tc = tc, fc
-							ff, tf = tf, ff
-							fb, tb = tb, fb
-							fd, td = td, fd
+							target, source = source, target
 							wires = to_wires
 						else:
 							wires = from_wires
 						
-						wires.add(((fc, ff, fb, fd), (tc, tf, tb, td)))
+						wires.add((source, target))
 		
 		# Return only those wires which were discovered travelling in both
 		# directions

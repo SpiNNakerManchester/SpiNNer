@@ -177,7 +177,6 @@ def main(args=None):
 		# If running in fix mode, generate a list of fixes to make
 		correct_wires = set((src, dst) for src, dst, length in wires)
 		actual_wires = set(wiring_probe.discover_wires())
-		print(len(actual_wires), len(correct_wires))
 		
 		to_remove = actual_wires - correct_wires
 		to_add = correct_wires - actual_wires
@@ -186,9 +185,13 @@ def main(args=None):
 		# just reset to cabinets right-to-left, frames top-to-bottom and boards
 		# left-to-right).
 		wiring_plan = [(src, dst, None) for src, dst in sorted(to_remove)]
-		for src, dst, length in sorted(wires):
+		for src, dst, length in wires:
 			if (src, dst) in to_add:
 				wiring_plan.append((src, dst, length))
+		
+		if len(wiring_plan) == 0:
+			print("No corrections required.")
+			return 0
 
 	
 	# Intialise the GUI and launch the mainloop
