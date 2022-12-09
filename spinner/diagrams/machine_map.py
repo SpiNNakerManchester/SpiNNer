@@ -308,13 +308,6 @@ def draw_machine_map(ctx, image_width, image_height,
 
     ctx.save()
 
-    # Number of chips in the system
-    width_chips = width * 12
-    height_chips = height * 12
-    if include_boards is not None:
-        width_chips = max(x for x, _y in include_boards) + 8
-        height_chips = max(y for _x, y in include_boards) + 8
-
     # Get the extent of the cabinets used
     max_cabinet = None
     max_frame = None
@@ -327,8 +320,8 @@ def draw_machine_map(ctx, image_width, image_height,
 
     # Rescale the drawing such that the diagram is rescaled to nicely fit in
     # the space given
-    diagram_width = width_chips + (2.0 * MARGIN)
-    diagram_height = height_chips + (2.0*MARGIN)
+    diagram_width = width + (2.0 * MARGIN)
+    diagram_height = height + (2.0*MARGIN)
     scale = min(image_width/diagram_width, image_height/diagram_height)
     ctx.translate((image_width - (diagram_width*scale)) / 2,
                   (image_height - (diagram_height*scale)) / 2)
@@ -337,10 +330,10 @@ def draw_machine_map(ctx, image_width, image_height,
     ctx.set_line_cap(cairo.LINE_CAP_ROUND)
 
     # Move to bottom-left chip
-    ctx.translate(MARGIN, height_chips+MARGIN)
+    ctx.translate(MARGIN, height+MARGIN)
 
     # Draw coordinates around edge
-    _draw_coords(ctx, width_chips, height_chips)
+    _draw_coords(ctx, width, height)
 
     # Draw each board
     for board, board_pos in hex_boards:
@@ -353,7 +346,7 @@ def draw_machine_map(ctx, image_width, image_height,
             label = (("C%d " % c if max_cabinet else "") +
                      ("F%d " % f if max_frame else "") +
                      ("B%d" % b))
-        _draw_board(ctx, x, y, width_chips, height_chips, "(%d,%d)" % (x, y),
+        _draw_board(ctx, x, y, width, height, "(%d,%d)" % (x, y),
                     label, board_colours)
 
     ctx.restore()

@@ -52,6 +52,8 @@ def main(args=None):
     # Render the image
     Context = {"png": PNGContextManager, "pdf": PDFContextManager}[file_type]
     with Context(output_filename, image_width, image_height) as ctx:
+        w = w * 12
+        h = h * 12
         draw_machine_map(ctx, image_width, image_height,
                          w, h, hex_boards, cabinetised_boards)
 
